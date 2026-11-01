@@ -37,6 +37,18 @@ the same commit as any change.
 | Render loop | `Cc()` | all ambient animation happens here, per frame |
 | Clock | `eg` | use `eg.elapsedTime` for long-period motion |
 
+Voxel rendering notes (keep blocky, not Minecraft-flat):
+
+- Detail voxels are subdivided at **0.35u** (`ce()` voxel step); ground /
+  terrain cells pass `{solid:1}` and stay single 1u cubes for perf
+  (~211k instances, 50 instanced groups).
+- Voxel materials get an `onBeforeCompile` gradient: a smooth vertical
+  brightness ramp (×0.85→×1.15 per voxel) so faces are not flat
+  single colors. Cubes stay sharp-edged — no rounding.
+- `os()` terrain height blends smoothly to 0 across ~6u from the road /
+  station-pad rectangles (smoothstep on the distance to their union), so the
+  street is level with its surroundings instead of a sunken trench.
+
 ## Phase 1 — Dusk-to-night cycle ✅ (implemented)
 
 The core ask: a **slow (≈5 min), one-way transition from last-light dusk to
