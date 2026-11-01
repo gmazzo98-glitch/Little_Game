@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Gas — Route 66 Dusk</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0714; }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+  #vignette {
+    position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(5,2,12,0.55) 100%);
+  }
+  #crosshair {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.85); box-shadow: 0 0 6px rgba(255,255,255,0.9);
+    display: none; pointer-events: none;
+  }
+  #hud {
+    position: fixed; left: 16px; bottom: 14px; pointer-events: none;
+    font-family: "Courier New", monospace; font-size: 12px; letter-spacing: 1px;
+    color: rgba(255, 220, 180, 0.75); text-shadow: 0 0 6px rgba(255,120,60,0.6);
+    display: none;
+  }
+  #overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; cursor: pointer;
+    background: linear-gradient(180deg, rgba(10,6,24,0.88) 0%, rgba(40,12,40,0.82) 55%, rgba(90,30,20,0.85) 100%);
+    font-family: "Courier New", monospace; color: #ffd9a0; text-align: center;
+    z-index: 10; user-select: none;
+  }
+  #overlay h1 {
+    font-size: 42px; margin: 0 0 6px; letter-spacing: 8px; color: #ff4d6d;
+    text-shadow: 0 0 12px #ff2d55, 0 0 40px #ff2d55, 0 0 80px #ff7a3d;
+  }
+  #overlay h2 {
+    font-size: 15px; font-weight: normal; letter-spacing: 6px; margin: 0 0 28px;
+    color: #7df9ff; text-shadow: 0 0 10px #00e5ff, 0 0 30px #00e5ff;
+  }
+  #overlay p { font-size: 13px; letter-spacing: 2px; line-height: 1.9; margin: 4px 0; opacity: 0.85; }
+  #overlay .go {
+    margin-top: 30px; padding: 10px 26px; border: 1px solid #ffd166;
+    color: #ffd166; letter-spacing: 4px; font-size: 14px;
+    text-shadow: 0 0 8px rgba(255,209,102,0.9); box-shadow: 0 0 18px rgba(255,209,102,0.35), inset 0 0 12px rgba(255,209,102,0.15);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="vignette"></div>
+<div id="crosshair"></div>
+<div id="hud">WASD move &nbsp;·&nbsp; MOUSE look &nbsp;·&nbsp; SHIFT run &nbsp;·&nbsp; SPACE jump &nbsp;·&nbsp; ESC release</div>
+<div id="overlay">
+  <h1>NEON GAS</h1>
+  <h2>ROUTE 66 &nbsp;·&nbsp; DUSK</h2>
+  <p>A lone 1960s gas station in the desert dark.</p>
+  <p>Walk the pumps, the canopy, the highway.</p>
+  <div class="go">CLICK TO ENTER</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* ---------------- deterministic rng / noise ---------------- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const rng = mulberry32(1966);
+const rand = (a,b) => a + rng()*(b-a);
+function hash2(x,z){ const s = Math.sin(x*127.1 + z*311.7) * 43758.5453; return s - Math.floor(s); }
+function smooth(t){ return t*t*(3-2*t); }
+function noise2(x,z){
+  const xi=Math.floor(x), zi=Math.floor(z), xf=x-xi, zf=z-zi;
+  const a=hash2(xi,zi), b=hash2(xi+1,zi), c=hash2(xi,zi+1), d=hash2(xi+1,zi+1);
+  const u=smooth(xf), v=smooth(zf);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+function fbm(x,z){ return noise2(x,z)*0.55 + noise2(x*2.1,z*2.1)*0.30 + noise2(x*4.3,z*4.3)*0.15; }
+
+/* ---------------- terrain height (shared by mesh + player) ---------------- */
+function heightAt(x,z){
+  if(Math.abs(z) <= 3.2 && Math.abs(x) <= 62) return 0;                       // highway corridor
+  if(x > -10.5 && x < 10.5 && z > -17.5 && z < -0.5) return 0;                 // station pad
+  let h = Math.round(fbm(x*0.07, z*0.07) * 4);
+  if(Math.hypot(x,z) < 18) h = Math.min(h, 1);
+  return Math.max(0, h);
+}
+
+/* ---------------- voxel batching ---------------- */
+const batches = new Map();
+function vox(x,y,z, sx,sy,sz, color, opts={}){
+  const c = (color instanceof THREE.Color) ? color.getHexString() : new THREE.Color(color).getHexString();
+  const e = opts.emissive ? new THREE.Color(opts.emissive).getHexString() : '';
+  const ei = opts.emissiveIntensity || 0;
+  const k = c + '|' + e + '|' + ei;
+  if(!batches.has(k)) batches.set(k, []);
+  batches.get(k).push({x,y,z,sx,sy,sz});
+}
+function buildVoxels(scene){
+  const geo = new THREE.BoxGeometry(1,1,1);
+  for(const [k, list] of batches){
+    const [c, e, ei] = k.split('|');
+    const mat = new THREE.MeshStandardMaterial({ color: parseInt(c,16), roughness: 0.92, metalness: 0.04 });
+    if(e !== ''){ mat.emissive = new THREE.Color(parseInt(e,16)); mat.emissiveIntensity = parseFloat(ei) || 1; }
+    const mesh = new THREE.InstancedMesh(geo, mat, list.length);
+    const m = new THREE.Matrix4();
+    for(let i=0;i<list.length;i++){
+      const b = list[i];
+      m.makeScale(b.sx, b.sy, b.sz);
+      m.setPosition(b.x, b.y, b.z);
+      mesh.setMatrixAt(i, m);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.frustumCulled = false;
+    scene.add(mesh);
+  }
+  batches.clear();
+}
+
+/* ---------------- colliders ---------------- */
+const colliders = [];
+function addCollider(minX,minZ,maxX,maxZ,minY=0,maxY=100){
+  colliders.push({minX,minZ,maxX,maxZ,minY,maxY});
+}
+function collide(px,py,pz){
+  const r = 0.35;
+  for(const b of colliders){
+    if(py + 1.6 < b.minY || py - 0.2 > b.maxY) continue;
+    if(px + r < b.minX || px - r > b.maxX || pz + r < b.minZ || pz - r > b.maxZ) continue;
+    const cx = Math.max(b.minX, Math.min(px, b.maxX));
+    const cz = Math.max(b.minZ, Math.min(pz, b.maxZ));
+    let dx = px - cx, dz = pz - cz;
+    const d2 = dx*dx + dz*dz;
+    if(d2 < r*r){
+      if(d2 > 1e-8){ const d = Math.sqrt(d2); px = cx + dx/d*r; pz = cz + dz/d*r; }
+      else {
+        const pl = px-b.minX, pr = b.maxX-px, pt = pz-b.minZ, pb = b.maxZ-pz;
+        const m = Math.min(pl,pr,pt,pb);
+        if(m===pl) px = b.minX - r; else if(m===pr) px = b.maxX + r;
+        else if(m===pt) pz = b.minZ - r; else pz = b.maxZ + r;
+      }
+    }
+  }
+  return [px, pz];
+}
+
+/* ---------------- 5x7 pixel font for neon lettering ---------------- */
+const FONT = {
+  'A':["01110","10001","10001","11111","10001","10001","10001"],
+  'E':["11111","10000","10000","11110","10000","10000","11111"],
+  'G':["01110","10001","10000","10111","10001","10001","01110"],
+  'O':["01110","10001","10001","10001","10001","10001","01110"],
+  'P':["11110","10001","10001","11110","10000","10000","10000"],
+  'S':["01111","10000","10000","01110","00001","00001","11110"],
+  'T':["11111","00100","00100","00100","00100","00100","00100"],
+  '6':["01110","10000","10000","11110","10001","10001","01110"]
+};
+function drawText(str, cx, cy, cz, s, color, emissive, ei){
+  const totalW = str.length*5*s + (str.length-1)*s;
+  let ox = cx - totalW/2 + 2.5*s;
+  for(const ch of str){
+    const g = FONT[ch];
+    if(g){
+      for(let r=0;r<7;r++) for(let c=0;c<5;c++){
+        if(g[r][c] === '1')
+          vox(ox + c*s, cy + (3-r)*s, cz, s*0.92, s*0.92, 0.28, color,
+              emissive ? {emissive, emissiveIntensity: ei} : {});
+      }
+    }
+    ox += 6*s;
+  }
+}
+
+/* ---------------- renderer / scene / camera ---------------- */
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+document.getElementById('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x2a1633, 45, 230);
+
+const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.1, 2000);
+camera.position.set(0, heightAt(0,10) + 1.7, 10);
+camera.lookAt(0, 2.5, -10);
+
+/* ---------------- dusk gradient skybox + stars ---------------- */
+const sky = new THREE.Mesh(
+  new THREE.SphereGeometry(900, 32, 20),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { sunDir: { value: new THREE.Vector3(-0.55, 0.055, -0.83).normalize() } },
+    vertexShader: `
+      varying vec3 vDir;
+      void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      varying vec3 vDir; uniform vec3 sunDir;
+      void main(){
+        float h = clamp(vDir.y, -0.05, 1.0);
+        vec3 zenith  = vec3(0.020, 0.028, 0.095);
+        vec3 mid     = vec3(0.300, 0.120, 0.360);
+        vec3 horizon = vec3(0.980, 0.420, 0.160);
+        vec3 col = mix(horizon, mid, smoothstep(0.00, 0.28, h));
+        col = mix(col, zenith, smoothstep(0.22, 0.75, h));
+        float s = max(dot(normalize(vDir), sunDir), 0.0);
+        col += vec3(1.0, 0.60, 0.28) * pow(s, 500.0) * 1.6;   // sun disc
+        col += vec3(1.0, 0.45, 0.18) * pow(s, 10.0)  * 0.38;  // horizon glow
+        col += vec3(0.55, 0.20, 0.45) * pow(max(dot(normalize(vDir), normalize(vec3(0.7,0.05,0.7))),0.0), 6.0) * 0.12;
+        gl_FragColor = vec4(col, 1.0);
+      }`
+  })
+);
+scene.add(sky);
+
+{
+  const N = 900, pos = new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const t = rng()*Math.PI*2, p = Math.acos(rand(0.06, 1));   // upper hemisphere
+    const r = 850;
+    pos[i*3]   = r * Math.sin(p) * Math.cos(t);
+    pos[i*3+1] = r * Math.cos(p);
+    pos[i*3+2] = r * Math.sin(p) * Math.sin(t);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const stars = new THREE.Points(g, new THREE.PointsMaterial({
+    color: 0xcfd8ff, size: 2.0, sizeAttenuation: false, transparent: true, opacity: 0.85, fog: false, depthWrite: false
+  }));
+  scene.add(stars);
+}
+
+/* ---------------- lighting ---------------- */
+scene.add(new THREE.HemisphereLight(0x4a3b6b, 0x3a2a1a, 0.65));
+
+const moon = new THREE.DirectionalLight(0x8fa3ff, 0.85);
+moon.position.set(40, 55, 30);
+moon.castShadow = true;
+moon.shadow.mapSize.set(2048, 2048);
+moon.shadow.camera.left = -55; moon.shadow.camera.right = 55;
+moon.shadow.camera.top = 55;   moon.shadow.camera.bottom = -55;
+moon.shadow.camera.far = 160;
+moon.shadow.bias = -0.0006;
+scene.add(moon);
+
+const signLight = new THREE.PointLight(0xff2d55, 60, 45, 2);
+signLight.position.set(12, 8, -2.6);
+signLight.castShadow = true;
+signLight.shadow.mapSize.set(1024, 1024);
+signLight.shadow.camera.near = 0.5;
+signLight.shadow.camera.far = 60;
+signLight.shadow.bias = -0.002;
+scene.add(signLight);
+
+const canopyLightA = new THREE.PointLight(0xffd9a0, 30, 22, 2);
+canopyLightA.position.set(-4.5, 4.2, -3);
+scene.add(canopyLightA);
+const canopyLightB = new THREE.PointLight(0xffd9a0, 30, 22, 2);
+canopyLightB.position.set(4.5, 4.2, -3);
+scene.add(canopyLightB);
+
+const interiorLight = new THREE.PointLight(0xffc98a, 14, 12, 2);
+interiorLight.position.set(0, 3, -11);
+scene.add(interiorLight);
+
+const pumpGlow = new THREE.PointLight(0x66f6ff, 8, 9, 2);
+pumpGlow.position.set(0, 1.4, -2.8);
+scene.add(pumpGlow);
+
+/* ---------------- terrain + highway ---------------- */
+const SANDS = [0xd9b380, 0xd0a878, 0xe2c294, 0xc79f6a];
+const SANDS_HI = [0xc49a62, 0xb98a5e];
+for(let x=-62; x<=62; x++){
+  for(let z=-62; z<=62; z++){
+    const h = heightAt(x, z);
+    if(Math.abs(z) <= 3){
+      vox(x, h-0.5, z, 1, 1, 1, hash2(x,z) < 0.12 ? 0x232329 : 0x2a2a31);   // asphalt
+      if(Math.abs(z) >= 2.55 && Math.abs(z) <= 2.85)
+        vox(x, h+0.025, z, 1, 0.05, 0.3, 0xd8d8d8);                          // edge lines
+      if(z === 0 && ((x % 4) + 4) % 4 < 2)
+        vox(x, h+0.025, z, 2, 0.05, 0.35, 0xffd23f, {emissive: 0xffb62e, emissiveIntensity: 0.7}); // dashed center
+    } else {
+      const c = h >= 2 ? SANDS_HI[Math.floor(hash2(x*3+7, z*3+13)*2)] : SANDS[Math.floor(hash2(x*3+7, z*3+13)*4)];
+      vox(x, h-0.5, z, 1, 1, 1, c);
+    }
+  }
+}
+// dark ground skirt far below the voxel field
+const skirt = new THREE.Mesh(
+  new THREE.BoxGeometry(1600, 1, 1600),
+  new THREE.MeshStandardMaterial({ color: 0x241a18, roughness: 1 })
+);
+skirt.position.y = -1.6;
+skirt.receiveShadow = true;
+scene.add(skirt);
+
+/* ---------------- gas station building ---------------- */
+const CREAM = 0xe8dcc0, TEAL = 0x2a9d8f, ROOF = 0xb0563c;
+// front wall (z=-7 plane), door opening |x|<=1, height 2
+vox(-3.5, 2, -6.7, 5, 4, 0.6, CREAM);
+vox( 3.5, 2, -6.7, 5, 4, 0.6, CREAM);
+vox( 0.0, 3, -6.7, 2, 2, 0.6, CREAM);                    // lintel
+vox( 0.0, 1, -6.45, 2, 2, 0.3, 0x0a0a14);                // dark doorway
+// side + back walls
+vox(-5.7, 2, -11, 0.6, 4, 8, CREAM);
+vox( 5.7, 2, -11, 0.6, 4, 8, CREAM);
+vox( 0.0, 2, -14.7, 12, 4, 0.6, CREAM);
+// teal base trim + roof
+vox( 0.0, 0.3, -6.66, 12.1, 0.6, 0.7, TEAL);
+vox(-5.72, 0.3, -11, 0.7, 0.6, 8.1, TEAL);
+vox( 5.72, 0.3, -11, 0.7, 0.6, 8.1, TEAL);
+vox( 0.0, 4.35, -11, 13, 0.7, 9, ROOF);
+// glowing window glass (front warm, sides cyan) + frames
+vox(-3.5, 1.8, -6.36, 2.4, 1.4, 0.15, 0x201408, {emissive: 0xffc46b, emissiveIntensity: 2.2});
+vox( 3.5, 1.8, -6.36, 2.4, 1.4, 0.15, 0x201408, {emissive: 0xffc46b, emissiveIntensity: 2.2});
+vox(-3.5, 2.62, -6.35, 2.8, 0.22, 0.18, TEAL);
+vox( 3.5, 2.62, -6.35, 2.8, 0.22, 0.18, TEAL);
+vox(-3.5, 0.98, -6.35, 2.8, 0.22, 0.18, TEAL);
+vox( 3.5, 0.98, -6.35, 2.8, 0.22, 0.18, TEAL);
+vox( 6.06, 1.8, -11, 0.15, 1.4, 2.4, 0x081420, {emissive: 0x35e0ff, emissiveIntensity: 2.4});
+vox(-6.06, 1.8, -11, 0.15, 1.4, 2.4, 0x081420, {emissive: 0x35e0ff, emissiveIntensity: 2.4});
+// neon roof-edge trim
+vox( 0.0, 4.02, -6.98, 12, 0.22, 0.18, 0x111111, {emissive: 0x00e5ff, emissiveIntensity: 3.0});
+// interior: floor, counter, register
+vox( 0.0, -0.06, -11, 12, 0.12, 8, 0x3a3230);
+vox(-3.0, 0.6, -13.6, 4, 1.2, 0.9, 0x6b4a2f);
+vox(-3.0, 1.3, -13.6, 0.8, 0.25, 0.7, 0x222222, {emissive: 0x7CFF6B, emissiveIntensity: 2.5});
+// building colliders (doorway stays open)
+addCollider(-6.4, -7.05, -1.0, -6.35);
+addCollider( 1.0, -7.05,  6.4, -6.35);
+addCollider(-6.05, -15.0, -5.35, -7.0);
+addCollider( 5.35, -15.0,  6.05, -7.0);
+addCollider(-6.4, -15.35, 6.4, -14.65);
+
+/* ---------------- canopy ---------------- */
+vox(0, 5.0, -3, 17, 1.0, 8, 0xf5f0e6);                       // slab
+vox(0, 5.0, 1.02, 17, 1.0, 0.14, 0xc1272d);                   // red stripe on fascia
+vox(0, 4.44, 0.95, 17, 0.16, 0.16, 0x0a0a0a, {emissive: 0x00e5ff, emissiveIntensity: 3.2});  // neon trim
+vox( 8.4, 4.44, -3, 0.16, 0.16, 7.7, 0x0a0a0a, {emissive: 0x00e5ff, emissiveIntensity: 3.2});
+vox(-8.4, 4.44, -3, 0.16, 0.16, 7.7, 0x0a0a0a, {emissive: 0x00e5ff, emissiveIntensity: 3.2});
+vox( 8.4, 5.06, -3, 0.16, 0.16, 8, 0x0a0a0a, {emissive: 0xff2d55, emissiveIntensity: 2.6});
+vox(-8.4, 5.06, -3, 0.16, 0.16, 8, 0x0a0a0a, {emissive: 0xff2d55, emissiveIntensity: 2.6});
+for(const px of [-7.5, 7.5]){
+  for(const pz of [-6.4, 0.4]){
+    vox(px, 2.25, pz, 0.7, 4.5, 0.7, 0xf5f0e6);
+    addCollider(px-0.35, pz-0.35, px+0.35, pz+0.35);
+  }
+}
+for(const lx of [-5, 0, 5])
+  vox(lx, 4.45, -3, 1.6, 0.22, 1.6, 0x333333, {emissive: 0xffd9a0, emissiveIntensity: 3.0});  // canopy lights
+
+/* ---------------- vintage pumps ---------------- */
+for(const px of [-3, 3]){
+  vox(px, 0.25, -3.5, 1.5, 0.5, 1.5, 0x222226);                 // base
+  vox(px, 1.25, -3.5, 1.2, 2.0, 1.2, 0xb3242e);                 // red body
+  vox(px, 2.35, -3.5, 1.45, 0.35, 1.45, 0xf2ede2);              // white cap
+  vox(px, 1.35, -2.86, 0.8, 1.0, 0.12, 0x0a141a, {emissive: 0x66f6ff, emissiveIntensity: 2.6}); // glass
+  vox(px, 2.35, -2.86, 1.0, 0.3, 0.12, 0x111111, {emissive: 0xff2d55, emissiveIntensity: 2.8});  // top neon
+  vox(px + (px>0? -0.75 : 0.75), 1.2, -3.9, 0.18, 1.4, 0.18, 0x151515); // hose
+  addCollider(px-0.75, -4.25, px+0.75, -2.75);
+}
+
+/* ---------------- neon pole sign ---------------- */
+vox(12, 1.5, -4.4, 0.7, 3.0, 0.7, 0x8a8f98);
+vox(12, 7.0, -4.4, 19, 11, 0.7, 0x101a33);                     // board
+vox(12, 7.0, -4.02, 19.4, 0.35, 0.18, 0x0a0a0a, {emissive: 0xff2d55, emissiveIntensity: 3.4}); // border top
+vox(12, 7.0, -4.02, 19.4, 11.4, 0.0 + 0.18, 0x0a0a0a, {emissive: 0xff2d55, emissiveIntensity: 3.4});
+vox(12, 1.55, -4.02, 19.4, 0.35, 0.18, 0x0a0a0a, {emissive: 0xff2d55, emissiveIntensity: 3.4}); // border bottom
+drawText('GAS', 12, 8.6, -4.0, 0.95, 0x2a0008, 0xff2d55, 3.6);
+drawText('OIL', 12, 4.3, -4.0, 0.5, 0x001418, 0x00e5ff, 3.2);
+addCollider(11.6, -4.8, 12.4, -4.0);
+
+/* ---------------- road signs ---------------- */
+vox(18, 1.5, 5.4, 0.35, 3.0, 0.35, 0x9aa0a6);
+vox(18, 3.5, 5.4, 2.3, 2.3, 0.22, 0xc1272d, {emissive: 0xff3040, emissiveIntensity: 1.4});
+vox(18, 3.5, 5.28, 1.9, 1.9, 0.06, 0xf2f2f2);
+drawText('STOP', 18, 3.5, 5.24, 0.26, 0xc1272d, null, 0);
+addCollider(17.8, 5.2, 18.2, 5.6);
+
+vox(-22, 1.5, 5.4, 0.35, 3.0, 0.35, 0x9aa0a6);
+vox(-22, 3.6, 5.4, 2.5, 2.1, 0.22, 0xf2f2f2);
+vox(-22, 3.6, 5.4, 2.1, 1.7, 0.24, 0x14141a);
+drawText('66', -22, 3.6, 5.27, 0.42, 0xf2f2f2, null, 0);
+addCollider(-22.2, 5.2, -21.8, 5.6);
+
+/* ---------------- telephone poles + wires along the highway ---------------- */
+for(let x=-50; x<=50; x+=20){
+  vox(x, 3.5, 5.8, 0.5, 7, 0.5, 0x4a3a2c);
+  vox(x, 6.6, 5.8, 2.4, 0.3, 0.3, 0x4a3a2c);
+  addCollider(x-0.3, 5.5, x+0.3, 6.1);
+}
+for(let x=-50; x<50; x+=20){
+  for(const wz of [5.65, 5.95]){
+    for(let i=0; i<=24; i++){
+      const t = i/24;
+      const px = x + (20)*t;
+      const py = 6.5 - Math.sin(t*Math.PI)*1.5;
+      vox(px, py, wz, 0.9, 0.07, 0.07, 0x14110f);
+    }
+  }
+}
+
+/* ---------------- cacti + rocks ---------------- */
+const GREENS = [0x4a7c3a, 0x3f6b31, 0x588a44];
+function cactus(x, z){
+  const h = 3 + Math.floor(rng()*4);
+  for(let y=0; y<h; y++)
+    vox(x, y+0.5, z, 1, 1, 1, GREENS[Math.floor(hash2(x+y, z)*3)]);
+  if(h >= 4){
+    const s1 = rng() < 0.5 ? -1 : 1;
+    const ay = 2 + Math.floor(rng()*(h-2));
+    vox(x+s1, ay+0.5, z, 1, 1, 1, GREENS[0]);
+    vox(x+s1, ay+1.5, z, 1, 1, 1, GREENS[1]);
+    if(rng() < 0.6){
+      const s2 = -s1, ay2 = 2 + Math.floor(rng()*(h-2));
+      vox(x+s2, ay2+0.5, z, 1, 1, 1, GREENS[2]);
+      vox(x+s2, ay2+1.5, z, 1, 1, 1, GREENS[0]);
+    }
+  }
+  addCollider(x-0.5, z-0.5, x+0.5, z+0.5, 0, h+2);
+}
+let placed = 0, guard = 0;
+while(placed < 16 && guard++ < 400){
+  const x = rand(-55, 55), z = rand(-55, 55);
+  if(Math.abs(z) < 6.5) continue;
+  if(x > -12 && x < 13 && z > -19 && z < 1) continue;
+  if(Math.hypot(x, z-10) < 6) continue;
+  cactus(Math.round(x), Math.round(z));
+  placed++;
+}
+const ROCKS = [0x8a8378, 0x7a7268, 0x968b7d];
+guard = 0;
+while(guard++ < 300){
+  const x = rand(-58, 58), z = rand(-58, 58);
+  if(Math.abs(z) < 4.5) continue;
+  if(x > -11 && x < 11 && z > -18 && z < 0.5) continue;
+  const s = rand(0.4, 1.3), h = heightAt(Math.round(x), Math.round(z));
+  vox(x, h + s/2 - 0.08, z, s, s, s, ROCKS[Math.floor(rng()*3)]);
+  if(guard % 15 === 0) break;
+}
+
+/* ---------------- distant mesas ---------------- */
+const MESA = [0xa35a3a, 0x8f4c31, 0xb06a44];
+function mesa(cx, cz){
+  const e0 = rand(6, 9);
+  const layers = 3 + Math.floor(rng()*3);
+  let base = heightAt(Math.round(cx), Math.round(cz)) - 1;
+  let total = 0;
+  for(let l=0; l<layers; l++){
+    const e = e0 - l*1.7;
+    const h = rand(2, 3.4);
+    vox(cx, base + h/2, cz, e*2, h, e*2, MESA[l % 3]);
+    base += h; total += h;
+  }
+  addCollider(cx-e0, cz-e0, cx+e0, cz+e0, 0, base);
+}
+mesa(-48, -40); mesa(46, -46); mesa(-52, 32); mesa(50, 38); mesa(-32, -54); mesa(38, 54);
+
+/* build all batched voxels into the scene */
+buildVoxels(scene);
+
+/* ---------------- post-processing (bloom) ---------------- */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.05, 0.6, 0.68);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+
+/* ---------------- first-person controls ---------------- */
+const controls = new PointerLockControls(camera, document.body);
+const overlay = document.getElementById('overlay');
+const crosshair = document.getElementById('crosshair');
+const hud = document.getElementById('hud');
+overlay.addEventListener('click', () => controls.lock());
+controls.addEventListener('lock', () => {
+  overlay.style.display = 'none';
+  crosshair.style.display = 'block';
+  hud.style.display = 'block';
+});
+controls.addEventListener('unlock', () => {
+  overlay.style.display = 'flex';
+  crosshair.style.display = 'none';
+  hud.style.display = 'none';
+});
+
+const keys = {};
+addEventListener('keydown', e => { keys[e.code] = true; if(e.code === 'Space') e.preventDefault(); });
+addEventListener('keyup',   e => { keys[e.code] = false; });
+addEventListener('contextmenu', e => e.preventDefault());
+
+const EYE = 1.7;
+let vy = 0, grounded = true;
+const clock = new THREE.Clock();
+const fwd = new THREE.Vector3(), right = new THREE.Vector3(), move = new THREE.Vector3();
+
+function update(dt){
+  camera.getWorldDirection(fwd);
+  fwd.y = 0; fwd.normalize();
+  right.crossVectors(fwd, new THREE.Vector3(0,1,0)).normalize();
+  move.set(0,0,0);
+  if(keys['KeyW']) move.add(fwd);
+  if(keys['KeyS']) move.sub(fwd);
+  if(keys['KeyD']) move.add(right);
+  if(keys['KeyA']) move.sub(right);
+  if(move.lengthSq() > 0) move.normalize();
+  const speed = keys['ShiftLeft'] || keys['ShiftRight'] ? 10 : 5.5;
+
+  const p = camera.position;
+  let nx = p.x + move.x * speed * dt;
+  let r = collide(nx, p.y, p.z); p.x = r[0];
+  let nz = p.z + move.z * speed * dt;
+  r = collide(p.x, p.y, nz); p.z = r[1];
+
+  const ground = heightAt(p.x, p.z) + EYE;
+  if(keys['Space'] && grounded){ vy = 5.2; grounded = false; }
+  vy -= 13 * dt;
+  p.y += vy * dt;
+  if(p.y <= ground){ p.y = ground; vy = 0; grounded = true; }
+}
+
+function loop(){
+  requestAnimationFrame(loop);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if(controls.isLocked) update(dt);
+  composer.render();
+}
+loop();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  bloomPass.resolution.set(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
