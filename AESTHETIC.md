@@ -1,81 +1,86 @@
-# Aesthetic Direction — "Neon Gas: Route 66 Dusk"
+# Aesthetic direction — Neon Gas: Route 66 Dusk
 
-This document is the reference for the look, mood, and feel of the demo in
-`index.html`. Any change to the scene should be checked against this list.
+This is the canonical visual and emotional reference for `index.html`. Use [ROADMAP.md](ROADMAP.md) for implementation order and acceptance status.
 
-## The core feeling
+## The feeling
 
-The single feeling this demo must evoke: **a lone gas station on a desert
-highway, caught in the last minutes of dusk.**
+One lone 1960s gas station on an empty desert highway, caught in the last minutes of dusk. Nostalgia should ache: a memory of a memory, weathered Americana seen from decades later. Gloom without horror. The station's neon is a small act of defiance against an enormous desert and sky.
 
-It is nostalgic — but not warmly so. The nostalgia is the aching kind:
+The player is present; the world gives no evidence of anyone else being here now. Nothing demands attention, triggers a quest, or rewards searching. Stillness and negative space are part of the composition.
 
-- **The 1960s, seen from decades later.** Chrome trim, porcelain pumps, a
-  hand-painted GAS/OIL pole sign, Route 66 shields. Everything is period-
-  correct, but nothing works anymore. It reads as a memory of a memory.
-- **Loneliness as a design goal.** There is no one here. No cars pass. No
-  second building breaks the horizon. The player should feel like the last
-  person on the road. Isolation is not a bug in the scene — it *is* the scene.
-- **Gloom without horror.** Dusk fading to a deep, star-heavy night. The
-  darkness is melancholic, not threatening. The station is lit only by its own
-  neon — the last lights — which makes it feel like a small, futile act of
-  defiance against an enormous empty desert and an even bigger sky.
-- **Stillness.** Nothing moves except the light. No music, no crowd, no
-  traffic. The only sound the player brings is their own footsteps in the
-  gravel. The scene should feel like it has been waiting here, alone, since
-  1965.
+## Compose the scene before decorating it
 
-## Light: the slow dusk-to-night transition
+- At the starting eye height, read the station, its canopy, the two pumps, and GAS/OIL sign as distinct silhouettes. The sign supports the station rather than dwarfing it; the canopy does not hide the pumps or front windows.
+- Reserve broad areas for empty road, desert, and sky. Both highway directions must appear straight, continuous, and unoccupied through the fog. Terrain seams, abrupt road ends, and a ring of nearby block mesas must not reveal a small square play area.
+- Make three useful review views: the initial approach, a view beneath the canopy toward the windows, and a view along the highway toward the horizon. Review the reverse direction too.
+- Keep detail concentrated around the station and pump island. Simplify distant forms into low, layered mesa silhouettes. Let fog and color separation create depth.
+- At thumbnail size, the focal point should still be the small illuminated station within a much larger dark landscape. If the first impression is a brightly colored toy set, revise scale, palette, and lighting.
 
-Light is the protagonist. The demo must run a **slow, continuous transition
-from late dusk to full night**:
+## Light is the protagonist
 
-1. **Late dusk (start).** The sun has just set. The sky is a gradient of
-   burnt orange to deep indigo, with the last warm light clinging to the
-   horizon. The desert is dim; the station's neon is already on, but not yet
-   the dominant light source.
-2. **Blue hour.** The horizon warmth drains away. The sky becomes a cold,
-   desaturated blue-violet. The neon (reds, pinks, cyan) starts to bloom and
-   dominate — the station becomes the only color in the world.
-3. **Full night.** The sky is near-black. **The stars take over.** A dense,
-   rich star field — the kind of sky you only see far from any city — is
-   essential. The Milky Way band should be faintly suggested. The moon is a
-   single, cold, low directional light casting soft shadows. From here the
-   cycle may hold or slowly return toward dusk again; it should never feel
-   like a fast day/night toggle.
+Use a slow, continuous, approximately five-minute transition. One progress value should coordinate sky, fog, ambient fill, moonlight, and star visibility. Reach night once and hold until reload; never loop, toggle, or restart on entering or leaving pointer lock.
 
-Transition speed: deliberately slow — on the order of several minutes of real
-time for the full arc. It must feel inevitable, like watching the last light
-leave. Easing should be gentle; no visible "switching" moments.
+| Moment | Sky and landscape | Station |
+| --- | --- | --- |
+| Late dusk, fresh reload | Burnt orange low on the horizon, draining into desaturated violet and deep indigo overhead; no visible stars | Neon already on; cream walls retain dim shape and warmth |
+| Blue hour, around two minutes | Warmth recedes continuously into blue-violet; distant layers soften; the first faint stars emerge | Neon becomes the strongest local color; forms remain readable |
+| Full night, around five minutes | Near-black sky, dense remote-desert stars, faint Milky Way suggestion once Phase 2 lands, cold moonlight | Small pools of cyan and red light, quiet window glow, readable dark silhouettes |
 
-## Scene content cues
+Do not force the horizon to become completely black at exactly two minutes: the existing five-minute smoothstep is still blending then. Judge continuity across the whole arc.
 
-- **The station:** blocky 1960s single-story building. Flat roof, large
-  window panes, a modest canopy over the pump island. Faded paint —
-  cream/white walls with weathered teal or red trim.
-- **Neon:** the main emotional carrier. Roof trim, window frames, and the
-  GAS/OIL pole sign all glow. Red neon for GAS, cooler tones elsewhere. Neon
-  flickers subtly and occasionally — an old sign that isn't fully healthy.
-- **Pumps:** two vintage rounded pumps, slightly rotated, one cap possibly
-  off or leaning — small hints of abandonment.
-- **Signage:** Route 66 shield, a STOP sign at the empty intersection of the
-  highway and the access road, maybe a faded "COLD DRINKS" or "OPEN 24 HRS"
-  that no longer tells the truth.
-- **Desert:** procedural flat-to-mesa terrain, sand and scrub tones pushed
-  toward desaturation. Cacti. Telephone poles marching into the distance,
-  their wires sagging — evidence that people were once here.
-- **What must NOT be present:** people, cars, other buildings, campfires,
-  signs of recent life. The highway is perfect, straight, and completely
-  empty in both directions.
+Neon needs a bright narrow source, a soft nearby glow, and light falling onto neighboring surfaces. Keep the letterforms and tube shapes readable inside the glow. A large flat emissive panel or a thick bloom halo is not a substitute. Shadows ground pumps and canopy columns; avoid crushed black objects, floating props, sharp shadow acne, or white clipped walls.
 
-## Audio direction (if/when added)
+The GAS sign may occasionally falter like an unhealthy tube. Canopy trim is steadier, windows almost constant. Eventually emissive surfaces and their local lights must flicker together. Flicker remains incidental, never a strobe or a horror cue.
 
-Sparse and diegetic only: wind over gravel, a distant neon hum or buzz, an
-occasional electrical tick. Crickets. No music. Silence should be the
-default state.
+## Palette and surfaces
 
-## Reference keywords
+Use these as color relationships, not mandatory final shader values:
 
-`liminal` `americana` `dusk` `blue hour` `isolation` `starfield`
-`route 66` `retro signage` `gas station at night` `melancholy` `stillness`
-`empty highway` `last light`
+| Role | Direction |
+| --- | --- |
+| Walls / pump enamel | Aged cream, chalky ivory, dusty porcelain |
+| Trim | Faded teal or restrained oxidized red |
+| Sand / scrub / mesas | Dusty ochre, gray olive, muted mauve; saturation decreases with distance |
+| Dusk | Burnt orange near the horizon; indigo above |
+| Neon | Small, saturated warm red/pink accents and cooler cyan trim |
+| Night | Blue-black sky and restrained cold moonlight |
+
+Use broad, quiet color fields with sparse wear at seams, edges, lower walls, and sun-exposed trim. Avoid random color noise on every cube, uniform glossy plastic, saturated green cacti, or equal contrast on every surface. Weathering must read from viewing distance; micro-detail comes last. Generate all variation inside the HTML without external texture files.
+
+## Period shapes and content
+
+- **Station:** single story, flat roof, large dark window panes, modest canopy over a pump island, cream walls and faded trim. Create a clear hierarchy of wall, roof edge, canopy thickness, columns, and window recesses.
+- **Pumps:** exactly two vintage pumps with a base, softly stepped or rounded upper silhouette, inset meter face, nozzle, and hanging hose. Slightly different angles and restrained wear suggest abandonment. Straight identical cuboids are only blockout placeholders.
+- **Signage:** a proportionate hand-painted GAS/OIL cabinet with thin neon; a recognizable Route 66 shield and STOP silhouette. Keep letters within their panels and readable from the approach. No new novelty signs to fill empty space.
+- **Desert:** a level road and station apron, blended terrain around them, sparse grounded cacti and scrub, distant low mesas, and telephone poles with sagging wires receding toward the horizon. Avoid a visible trench or raised berm across the driveway.
+- **Absence:** no people, cars, traffic, trains or train lights, other buildings, campfires, animals, music, or signs of recent life. Sparse moths and insect sounds are only permitted at their planned phases. Tumbleweed is optional wind-driven debris, never constant activity.
+
+## Two approved rendering directions
+
+Choose one coherent direction per change set and state the choice. Keep the scene, mood, cycle, controls, and offline contract the same in a comparison.
+
+### A. Crisp voxel — current implementation
+
+Sharp cube edges, deliberate stepped silhouettes, and restrained per-face shading. Batch cubes into instanced groups by color and emissive properties. The current implementation subdivides detail at roughly 0.35 units and keeps terrain cells at 1 unit; this is a baseline to audit, not a requirement to fill solid volumes with invisible internal cubes.
+
+Keep MeshStandardMaterial with high roughness and ACES tone mapping if it earns its cost. Reduce hidden geometry and unnecessary shadow work before raising density. The current moon and GAS point light both cast shadows; the sign's six shadow-map faces deserve particular scrutiny. Finer voxels alone do not solve the art direction.
+
+### B. Painterly flat-shade — preferred alternative to evaluate
+
+Softer forms, simpler surfaces, broad tonal planes, and layered dusk color. Use coarse 0.5–1 unit construction or surface panels, plus finer geometry only where silhouettes and lettering need it. Thin neon must not disappear into the coarse grid. Keep wear selective and procedural.
+
+Merge static boxes by material **and spatial region**, allowing useful frustum culling; one world-spanning mesh per color does not by itself improve culling. Use flat-shaded MeshLambertMaterial where appropriate, hemisphere fill, and a few cheap local point lights. Retain ACES, the coordinated sky/fog palette, and emissive neon.
+
+Use at most one shadow-casting light, the moon directional. The GAS point light must not cast shadows. Test a 1024-square moon map or soft procedural contact quads if they preserve grounding. Do not stack expensive effects to simulate softness.
+
+The suggested 3–5 times lower frame cost versus the voxel baseline is an **experiment target, not a promise**. Compare actual whole-frame times on the same hardware and view; choose by visual quality and sustained performance. Neither path may use bloom to hide unresolved geometry.
+
+## Stillness and sound
+
+The default idle camera is fixed. No compulsory breathing, head bob, drifting horizon, or cinematic camera motion. The light may change without making the world busy.
+
+If added, sound is sparse, procedural, and diegetic: wind, a distant electrical hum, occasional ticks, and later faint insect chirps. No music or human/vehicle cues. Respect browser user-gesture requirements and provide mute. Footsteps are not currently a promised feature.
+
+## Review rule
+
+Assess actual game captures at dusk, blue hour, and night, from matching views. `preview.jpg` is an AI-generated concept illustration, not an achieved render and not evidence of acceptance. Pass the graphics foundation before adding decorative effects; see the roadmap for the exact gates.
