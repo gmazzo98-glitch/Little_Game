@@ -209,6 +209,8 @@ For each `index.html` change:
 
 ### 2026-11-02b — G0 style comparison, G1 hero models, G2 materials, G3 checks (this change set)
 
+> Note: a parallel agent independently implemented G0–G2 in commit `b75071a` (no browser evidence; its own record marked captures/controls/frame-times unverified). This branch's implementation, with the capture/measurement/collision evidence below, was kept as the integrated version; the parallel implementation remains in git history.
+
 - **Scope:** `index.html` only (plus this status update). Three.js bundle and license untouched; game still starts at `function Vm(i)` / `pn=Vm(1966)`; one inline script.
 - **G0 style comparison:** instrumented temporary copies (never committed) of the crisp-voxel baseline `4eb3782` and the painterly revision exposed camera/scene/lights to a headless Chromium (SwiftShader software GL, 960×540 and 640×360). Matching poses (approach / canopy / highway / reverse / pump-close) were captured at forced cycle states dusk (t=2 s), blue hour (120 s), night (305 s). Whole-frame cost measured as `composer.render()` + forced `toDataURL` readback, 3 samples/view after warm-up:
   - voxel baseline: median ≈22,011–23,385 ms/frame (and compositing a single screenshot timed out at 180 s);
