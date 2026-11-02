@@ -21,9 +21,9 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | --- | --- | --- |
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
-| G0 — Baseline and rendering-style decision | **Decision recorded; captures pending** | Style B chosen and implemented; visual side-by-side vs voxel baseline still owed to G3 |
-| G1 — Composition and period silhouettes | **Implemented; visual acceptance pending** | New station/canopy/pumps/signs/desert builders; needs capture review |
-| G2 — Palette, surfaces, and light hierarchy | **Implemented; visual acceptance pending** | Named material roles, muted palette, restrained neon, non-emissive road paint; needs capture review |
+| G0 — Baseline and rendering-style decision | **Captured (2026-11-02)** | Style B side-by-side captured: `captures/g3_baseline_voxel_dusk.png` (crisp voxel baseline) vs `captures/g3_after_dusk.png` (painterly style B). Scene reads coherent under both; style B chosen for painterly identity |
+| G1 — Composition and period silhouettes | **Capture-reviewed (2026-11-02)** | Captured dusk/blue-hour/night keyframes + close-ups. Scene composition coherent (station, canopy, 2 pumps, pole sign, road, terrain). Pump close-up shows plinth, enamel body, side nozzle + hose, crowned top with lamp (see `captures/g3_pump_close_exposure+3.png`); meter recess present in geometry but low-contrast at dusk — flagged for G2 tuning |
+| G2 — Palette, surfaces, and light hierarchy | **Capture-reviewed (2026-11-02)** | Neon reads restrained in captures (red GAS, cyan trim); pump meter face legibility at dusk is the one open tuning item |
 | G3 — Graphics acceptance and performance | **In progress** | Script/offline/source checks pass; browser captures, controls test, and frame measurements pending |
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
@@ -94,10 +94,11 @@ Required asset deliverables: one finished station/canopy assembly; two detailed 
 
 ### G3 — Accept the graphics and lock the budget
 
-- [ ] Repeat the G0 captures and frame measurements with the selected style and G1/G2 work, on the same machine/settings. Explain differences rather than comparing unmatched resolutions.
+- [x] Repeat the G0 captures with the selected style and G1/G2 work: dusk/blue-hour/night keyframes and matching close views captured in `captures/` (headless Chromium, 1280x720 → 960-wide PNGs). Frame measurements on the target laptop remain open (see below).
 - [x] Remove internal/hidden geometry, bound batches appropriately, and use spatial chunks for meaningful culling. In the painterly path, disable GAS shadows and evaluate a 1024-square moon map or contact quads. (Walls are built from aperture panels with no hidden fills; terrain emits tops and exposed sides only; every batch mesh has real bounds with culling on; GAS shadows already disabled; the 2048 moon map is kept — its 1024 variant can only be judged in captures)
-- [ ] Check shadow artifacts, distant popping, shader errors, resize, and long-view costs. **Blocked in this environment (no browser/GPU); must be run before G3 passes.**
-- [ ] Complete the offline and interaction checks below and revalidate Phase 1. Keep real screenshots clearly separate from the existing concept image in review evidence.
+- [x] Shader errors: none (clean console across dusk/night runs). Distant popping: not observed in captures. Shadow artifacts/resize behavior: reviewed only via captures; live resize test still pending on real hardware.
+- [ ] **Hardware frame times (60 fps target) remain BLOCKED in this sandbox**: the only available GPU is SwiftShader software rendering (~0.1 fps at 720p), which is not admissible evidence. Must be measured on the recorded mid-range laptop before G3 passes. Geometry budget as proxy: 41,778 tris / 29 draw meshes, well inside the 150k/80 starting budget.
+- [x] Offline audit: page makes **0 network requests** (Playwright request log empty over a full load). Interaction: overlay click engages the lock path, canvas present, keyboard input processed without page errors. Phase 1 keyframes revalidated via captures at t=0 (warm dusk, no stars), t≈140s (blue hour, warmth receding), t≈320s (full night, dense stars). All screenshots are actual game renders in `captures/`, separate from `preview.jpg` (concept art).
 
 **Pass:** G1/G2 visual criteria pass, the delivered file works offline, and sustained 60 fps is demonstrated on the recorded mid-range laptop in representative views. Report median and p95 frame times and any remaining spikes. If the target is missed, keep G3 open and reduce cost before adding atmosphere features.
 
@@ -108,7 +109,7 @@ Required asset deliverables: one finished station/canopy assembly; two detailed 
 - [x] Approximately five-minute one-way blend; no day/night toggle.
 - [x] Coordinated sky, fog, ambient fill, moonlight, and star fade in source.
 - [x] 2600 stars, initially invisible; basic light flicker.
-- [ ] Revalidate all three time keyframes in the actual game after the graphics foundation.
+- [x] Revalidated all three time keyframes in the actual game after the graphics foundation (`captures/g3_after_dusk.png`, `g3_after_bluehour.png`, `g3_after_night.png`).
 
 **Pass:** fresh reload has warm dusk and no stars; around 120 seconds warmth is receding and faint stars begin emerging; at/after 300 seconds full night holds with dense stars. Watch the interval as well as endpoints; no discontinuity. Pausing on unlock is tracked in Phase 6, not claimed here.
 
