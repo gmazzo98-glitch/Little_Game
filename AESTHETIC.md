@@ -61,13 +61,13 @@ Choose one coherent direction per change set and state the choice. Keep the scen
 
 Both directions require finished, recognizable close-up assets: deliberate silhouettes, surface depth, joints, and material separation. The single-file requirement does not require crude cube models. Custom meshes and embedded licensed models are allowed under the integration rules in `ASSET_GUIDE.md`.
 
-### A. Crisp voxel — current implementation
+### A. Crisp voxel — superseded baseline (still in git history for the G0 comparison)
 
 Sharp cube edges, deliberate stepped silhouettes, and restrained per-face shading. Batch cubes into instanced groups by color and emissive properties. The current implementation subdivides detail at roughly 0.35 units and keeps terrain cells at 1 unit; this is a baseline to audit, not a requirement to fill solid volumes with invisible internal cubes.
 
 Keep MeshStandardMaterial with high roughness and ACES tone mapping if it earns its cost. Reduce hidden geometry and unnecessary shadow work before raising density. The current moon and GAS point light both cast shadows; the sign's six shadow-map faces deserve particular scrutiny. Finer voxels alone do not solve the art direction.
 
-### B. Painterly flat-shade — preferred alternative to evaluate
+### B. Painterly flat-shade — implemented revision, pending visual acceptance (see roadmap G0)
 
 Softer forms, simpler surfaces, broad tonal planes, and layered dusk color. Use coarse 0.5–1 unit construction or surface panels, plus finer geometry only where silhouettes and lettering need it. Thin neon must not disappear into the coarse grid. Keep wear selective and procedural.
 

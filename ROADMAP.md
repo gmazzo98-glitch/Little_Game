@@ -1,8 +1,10 @@
 # Roadmap — Neon Gas: Route 66 Dusk
 
-The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02 after checking `a941316` on `vibe/neon-gas-voxel-f660eb` (PR #1). The runtime is unchanged between those commits.
+The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02 after checking `a941316` on `vibe/neon-gas-voxel-f660eb` (PR #1). The painterly flat-shade rendering revision was implemented on 2026-11-02 in the same PR; see the validation record for what is and is not verified.
 
 **Next: G0, capture the graphics baseline and compare the approved styles.** Graphics quality is the priority. Complete G0–G3 before adding Phase 2–6 features. Preserve the implemented Phase 1 cycle throughout. This document records a plan and source audit; it does not claim the visual overhaul has already shipped.
+
+**Style state:** the painterly flat-shade revision (style B) is now the implemented renderer — coarsened boxes merged per material key, Lambert flat shading, moon as the only shadow-caster, no bloom pass. It replaces crisp voxel as the working tree state, not as an accepted style decision; G0 captures and measurements against the crisp-voxel baseline are still required before the decision is recorded.
 
 ## Delivery contract
 
@@ -19,7 +21,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | --- | --- | --- |
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
-| G0 — Baseline and rendering-style decision | **Next / not started** | Actual game captures and comparable frame measurements |
+| G0 — Baseline and rendering-style decision | **In progress** | Painterly flat-shade revision implemented; actual game captures and frame measurements still pending |
 | G1 — Composition and period silhouettes | Planned | G0 style decision recorded |
 | G2 — Palette, surfaces, and light hierarchy | Planned | G1 accepted |
 | G3 — Graphics acceptance and performance | Planned | G2 accepted; pass before feature expansion |
@@ -40,9 +42,9 @@ The current code establishes a useful blockout and an implemented light cycle. I
 | --- | --- |
 | Same box assembly is used for both pumps; rectangular STOP and Route 66 panels | G1 must establish period silhouettes, asymmetry, and proper sign shapes |
 | Road cells run from x = -62 to 62, while fog extends to 230 units | G1 must check and conceal/extend road and terrain termination in both directions |
-| Detail boxes are filled with approximately 0.35-unit sub-cubes, including internal cubes; terrain uses 1-unit solid cells | G0/G3 must profile waste before adding finer detail |
-| Instanced groups set `frustumCulled = false`; PBR materials and bloom are used | Audit bounds, grouping, pixel ratio, and shading cost; do not assume batching alone solves performance |
-| Moon has a 2048-square shadow map; GAS point light has a 1024-square cubemap | Prioritize shadow cost in the style comparison; painterly path permits only the moon to cast shadows |
+| Detail boxes were filled with approximately 0.35-unit sub-cubes, including internal cubes; terrain used 1-unit solid cells | Resolved in the painterly revision: one box per `ce` call, merged per material key with cheap hidden-face culling |
+| Instanced groups set `frustumCulled = false`; PBR materials and bloom were used | Resolved in the painterly revision: merged meshes with real bounds (culling on), Lambert flat shading, no bloom pass |
+| The moon has a 2048-square shadow map; the GAS point light cubemap was removed | Only the moon casts shadows now; verify grounding in captures |
 | Road center marks and the STOP panel have emissive values; surfaces use broad repeated colors | G2 must reserve luminous accents for credible light sources and add selective material variation |
 | Cactus stems are built from world y = 0 without the terrain offset used by poles/signs | G1 must ground cacti and their collision bounds on actual terrain |
 | Cycle uses `eg.elapsedTime`, including time with the overlay visible | Phase 6 must pause progression while unlocked without resetting it |
@@ -57,6 +59,8 @@ These are source observations, not a substitute for viewing the scene. Validate 
 
 - [ ] Capture the actual starting view, a canopy view, and a highway horizon view at dusk, blue hour, and night. Inspect the reverse highway view too. Keep matching camera poses and settings for comparisons.
 - [ ] Record hardware/GPU, browser, viewport, pixel ratio, frame-time median and p95, draw calls, rendered triangles, and shadow configuration. Sample at least 30 seconds per representative view after warm-up. Include the bloom/shadow passes in measurements.
+- [x] Implement the painterly flat-shade revision of the same whole scene: one box per surface call instead of 0.35-unit sub-cube grids, per-material-key merged BufferGeometry with cheap hidden-face culling and working frustum culling, MeshLambertMaterial-style flat shading (`Lm`, `flatShading = true`) with per-key color/emissive/emissiveIntensity preserved, GAS point light `castShadow = false`, moon as the only shadow-caster, UnrealBloomPass removed so neon glow is carried by emissive materials + fog + the existing flicker loop.
+- [ ] Capture and measure the voxel baseline (git history) and this painterly revision from matching views and camera poses; sky/fog/cycle/controls/collision code is unchanged between the two revisions.
 - [ ] Compare the current crisp-voxel approach with a focused painterly flat-shade revision of the **same whole scene**. Use separate revisions/captures, rather than a mixed-style scene or a new player-facing style selector.
 - [ ] Evaluate silhouette quality, material readability, horizon depth, and neon source/spill at all three light stages. Choose the style that best fits the brief within the measured budget; record the decision below.
 - [ ] Record an asset plan using `ASSET_GUIDE.md`: custom station/pumps/signs by default; select licensed free secondary props only where suitable. Prove the embedding route with one representative hero pump before adding an importer or growing the asset set.
@@ -158,14 +162,14 @@ The game begins at `function Vm(i)` / `var pn=Vm(1966)` inside the single minifi
 | System | Current symbol / location |
 | --- | --- |
 | Seeded scene RNG | `Vm`, `pn`, `Dn` |
-| Terrain height / voxel collection / instanced flush | `os` / `ce` / `Gm` |
+| Terrain height / box collection / merged flush | `os` / `ce` / `Gm`; Lambert material class `Lm` |
 | AABB registry / collision | `Mc`, `Dt` / `vc` |
 | Renderer / scene / camera | `mn` / `Nt` / `Nn` |
 | Sky / night blend uniform | `Xm` / `Xm.material.uniforms.uNight` |
 | Stars / hemisphere | `Nt.userData.stars` / `hhem` (`Nt.userData.hemi`) |
 | Moon / GAS point light | `Qt` / `$n` at `(11, 5.6, -8.4)` |
 | Canopy lights / interior warm light | `Sc`, `bc` / `Ec` at `(0, 3, -17)` |
-| Composer / bloom | `ls` / `wc` |
+| Composer / output pass | `ls` (RenderPass + OutputPass; bloom pass `wc` was removed in the painterly revision) |
 | Pointer lock / movement keys / player update | `wr` / `fn` / `tg` |
 | Clock / animation loop | `eg` / `Cc` |
 
@@ -199,6 +203,15 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-02 — Painterly flat-shade revision implemented (G0, not accepted yet)
+
+- Scope: rendering pipeline only. `index.html` scene content, layout, cycle timing, fog/sky/star logic, flicker personalities, collision AABBs, and controls are unchanged. The bundled Three.js code and license are untouched; the painterly material (`Lm`) extends the bundled Material base class and uses the already-bundled `ShaderLib.lambert` path.
+- Changes: `ce` now emits one box per call (no 0.35-unit sub-cube subdivision); `Gm` merges each color/emissive key into a single non-indexed BufferGeometry with per-face normals, culling faces fully covered by a same-key neighbor plus terrain bottoms at or below y ≤ −0.9; meshes use Lambert flat shading (`flatShading = true`), keep `castShadow`/`receiveShadow`, and restore default frustum culling; the GAS point light no longer casts shadows (its 1024² cube map is gone; the moon keeps its 2048² map); the UnrealBloomPass was removed, so neon glow is carried by emissive materials + fog + the existing light-flicker loop; ACES tone mapping and the sky/fog/star/cycle code are unchanged.
+- Static verification: the extracted inline script passes `node --check`. A headless Node harness executed the real scene-build code for both revisions: voxel baseline 52 instanced meshes / 249,442 instances / ≈5,986,608 vertices (≈2,993,304 triangles, shaded up to 8× per frame with the point-light cubemap); painterly revision 52 merged meshes / 439,692 vertices (≈146,564 triangles, one shadow pass) — ≈13.6× fewer vertices than the baseline and 7 of 8 scene shadow passes removed. These are source-level counts, not frame-time evidence.
+- URL scan of the delivered script finds only the pre-existing W3C namespace and Three.js documentation strings; no new external references, no runtime requests; file remains `file://`-runnable.
+- Pending / unverified: no browser was available in the sandbox, so the reload test at t=0 (orange dusk), t≈2 min (blue hour), t≈5 min (full night), movement/collision/pointer-lock checks, shader-error checks, and hardware frame-time measurements were NOT run. Visual acceptance of style B over style A remains open until matching captures and measurements exist.
+- Rendering-style decision: still pending G0. The implemented revision changes which style the working tree shows; it does not close the comparison.
 
 ### 2026-11-01 — Direction and repository cleanup
 
