@@ -2,9 +2,9 @@
 
 The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02. The G0 style decision and the G1/G2 graphical overhaul were implemented on 2026-11-02 on `vibe/neon-gas-voxel-f660eb` (PR #1); see the validation record for what is and is not verified.
 
-**Next: G3 hardware verification on a real GPU (frame-time evidence), then Phase 2.** G0's style decision is recorded (style B, painterly flat-shade). G1/G2 hero models and material work are implemented and captured in a software renderer; G3's 60 fps evidence still requires a real GPU. Preserve the implemented Phase 1 cycle throughout.
+**Next: finish G1/G2 close-up asset/light review and the remaining G3 interaction/offline checks.** The user confirmed the painterly, non-voxel direction. The residual cube ground and box mesas have now been replaced with continuous terrain, a world-space highway, and remote layered mountains. Do not restore them. Preserve the implemented Phase 1 cycle and finish the visual foundation before Phase 2.
 
-**Style state:** the painterly flat-shade revision (style B) is the implemented and now **selected** renderer — coarsened boxes merged per material key, Lambert flat shading, moon as the only shadow-caster, no bloom pass, plus named hero-model builders. G0's comparison against the crisp-voxel baseline was completed on 2026-11-02 with matching captures and frame-cost measurements (see validation record).
+**Style state:** painterly surfaces and modeled props (style B) are selected. Architecture uses hard-surface meshes; the desert has continuous heights and interpolated normals. The old voxel emitter, cube terrain grid, road-extension boxes, and rectangular mesa solids are removed. The moon remains the only shadow-caster. See the newest validation record and [actual landscape comparison](captures/landscape-comparison.jpg).
 
 ## Delivery contract
 
@@ -22,9 +22,9 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
-| G1 — Composition and period silhouettes | Implemented; visual acceptance partial | Hero models built and captured (pumps/canopy/station/signs/desert); close-view lettering quality still needs review on real GPU |
+| G1 — Composition and period silhouettes | Implemented; landscape correction rendered and checked | Smooth ground, world-space road, and distant mountains verified in both highway directions; close-up hero-model acceptance remains partial |
 | G2 — Palette, surfaces, and light hierarchy | Implemented; visual acceptance partial | Named roles + palette applied, neon tubes flicker-synced, road paint de-emissived; night-pool tuning needs real-GPU review |
-| G3 — Graphics acceptance and performance | Checks run in software renderer; hardware pass pending | 143k tris / 79 objects / 35 colliders; offline+script+cycle+collision verified; 60 fps on real GPU not yet measured |
+| G3 — Graphics acceptance and performance | Geometry/render checks passed; full acceptance still open | 35,862 built mesh triangles; 60-second Intel Iris Xe highway sample: median 16.7ms / p95 17.2ms at 1280×720, DPR 1.25; full controls/file:// and remaining views pending |
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Planned | Phase 2 accepted; G2 already establishes basic glow |
@@ -36,19 +36,23 @@ G0–G3 are an added visual foundation, not a renumbering of the original six at
 
 ## What the source actually contains
 
-After the G0–G2 overhaul the game code is a set of named custom builders (no imported models), a batched-geometry renderer with Lambert flat-shaded materials, and the original light cycle. It does **not** yet carry measured visual or performance acceptance.
+The selected painterly scene uses code-native hero builders and surface meshes. The latest correction removes the legacy voxel terrain rather than merely changing its material.
 
-| Source finding | Consequence for the plan |
+| Current implementation | Verification / remaining work |
 | --- | --- |
-| Hero assets are code-native builders: station walls with real apertures/jambs, thin canopy with fascia and neon trim, two pumps with stepped bodies, elliptical crowns, inset meters with faces/ticks, metal trim, nozzles and sagging hoses; ear-clipped octagon STOP and Route 66 shield; GAS/OIL cabinet with rim, inset face, tube outline | G1 model work implemented; silhouette and close-view quality must be confirmed in captures |
-| Terrain is a vertex-colored heightfield (tops plus exposed sides only) with road/driveway/shoulder blending, dashes as non-emissive paint, far sand plane, and road strips extending to ±260 | G1 road-continuity work implemented; check both horizon views in captures |
-| Cacti, scrub, rocks, and mesas are seeded builders grounded on `os(x,z)`; poles are tapered with cross-arms, insulators, and sagging wire tubes between actual pole tops | Desert kit implemented; verify variety and grounding visually |
-| All static geometry is merged per named material role (28 roles, ~74k triangles, 28 draw calls); frustum culling is on; the moon is the only shadow-caster; no bloom | Within the ASSET_GUIDE budget; G3 must measure the real frame |
-| Cycle uses `eg.elapsedTime`, including time with the overlay visible | Phase 6 must pause progression while unlocked without resetting it |
-| GAS light flickers; the emissive tube materials (`MT.neonGas`, `MT.neonTrim`, `MT.windowGlow`) exist as named references but are not animated with it | Phase 3 must synchronize the visible tube and its spill |
-| `preview.jpg` was introduced as an AI-generated illustration | Treat it as concept intent, never an achieved screenshot |
+| `os(x,z)` is continuous; no rounded/integer height levels. A single adaptive 123×123 shared-vertex terrain surface follows the player in 64m steps, with its outer edge 12km from its center | 15,129 vertices / 29,768 triangles; finite samples, unit normals, gentle slopes, and recentering tested out to 100km |
+| Asphalt, apron, shoulders, center dashes, and edge paint are continuous world-space shading on that surface | Road stays level at z = ±3.2 and 0 for x samples up to ±1,000km; browser views show both highway directions without a road-end box |
+| Three periodic angular mountain layers are part of the sky shader; the six rectangular mesa solids are gone | Shallow remote silhouettes, open highway vanishing directions, no seam at the angle wrap; browser dusk/blue-hour/night views checked |
+| Sky and stars follow the camera; sky renders as an explicit background pass | Four-kilometer camera view checked with no exposed terrain edge; star band starts above the highest mountain layer |
+| Named custom hero builders use `PAL`, `ROLE_MATS`, `roleMat`, `addRoleMesh`, and mesh helpers | Station, pumps, signs, poles, and grounded desert props retained; close-up model/lighting acceptance remains partial |
+| Custom Lambert materials enable fog; ground uses smooth normals while hard-surface props keep deliberate edges | No shader or application errors in the review captures; fog and mountain colors follow the same night progress |
+| The scene contains 64 meshes / 35,862 built mesh triangles, including the sky, versus the prior recorded 79 meshes / 143,228 triangles | Intel Iris Xe browser highway sample: 75 whole-frame draw calls / 38,707 submitted triangles including shadows/output, median 16.7ms and p95 17.2ms over 60 seconds at 1280×720 / DPR 1.25 |
+| The existing five-minute clock still advances with the entry overlay visible | Pause-on-unlock remains Phase 6; no change is claimed here |
+| `preview.jpg` is concept art; `captures/landscape-comparison.jpg` is an actual browser-render comparison | Never use the concept image as proof of achieved quality |
 
-These are source observations, not a substitute for viewing the scene. G3 owns the capture pass.
+## Landscape acceptance guard
+
+The old code had already switched to Lambert materials while still emitting cube ground and box mesas. A shader/material change alone does not satisfy the non-voxel requirement. Preserve the continuous surface, unquantized heights, remote mountain layers, and world-space road. Any replacement must demonstrate the same continuity, scale, and both highway views in actual captures.
 
 ## Graphics foundation — highest priority
 
@@ -76,8 +80,8 @@ Do this baseline/decision once, then build. If rendering evidence is unavailable
 - [x] Set the approach framing and station/canopy/sign proportions. Keep negative space dominant and the station small within the desert. (Composition preserved from the accepted blockout layout; capture review pending)
 - [x] Replace pump blockout shapes with vintage rounded or stepped crowns, meter recesses, nozzle and hose silhouettes; introduce slight rotation/age differences. Keep exactly two pumps and align collisions with the final shapes. (`pump()` builder: chamfered plinth, stepped enamel body, metal trim band, elliptical crown dome with tiny lamp, inset dark meter with ivory face/ticks/digits, side cradle, nozzle, per-seed sagging rubber hose; opposite ±3° yaw, seeded hose variation, inflated rotated-footprint AABBs)
 - [x] Shape a STOP octagon and Route 66 shield; keep text contained and readable. Keep GAS/OIL cabinet scale credible beside the roofline. (Ear-clipped extruded true octagon and shield outline with rims, posts, contained cube-built lettering; GAS/OIL cabinet with rim, inset face, neon tube outline)
-- [x] Make the road read as continuing to the horizon in both directions. Blend sand, apron, and driveway; eliminate visible tile borders, road-end cutoffs, floating vegetation, and intersecting or buried props. (Vertex-colored terrain with road/shoulder/driveway blending, non-emissive paint dashes, height falloff beyond r=50, far sand plane, road strips to ±260; capture confirmation pending)
-- [x] Ground cacti and their AABBs on `os(x,z)`. Establish fewer, broader, more distant mesa layers and receding telephone poles/wires. (Seeded tapered cactus builder grounded on `os` with rounded caps and jointed arms; 6 hull mesas at r≈60–90; poles to ±90 with cross-arms, insulators, sagging tube wires between actual pole tops)
+- [x] Make the road read as continuing to the horizon in both directions. Blend sand, apron, and driveway; eliminate tile borders, road-end cutoffs, and terrain steps. (Corrected in the continuous-desert pass: one shared surface, smooth height/normals, world-space road/paint, player-centered patch, and both highway directions captured.)
+- [x] Ground cacti and their AABBs on `os(x,z)`. Keep receding telephone poles/wires and truly remote mountain layers. (Props now use the same continuous height function as the player/terrain; the six box mesas are removed and replaced by shallow angular sky layers.)
 
 **Pass:** station, canopy, pumps, and sign are distinct at the starting viewpoint and at thumbnail scale; each close prop reads as its period object; both highway views feel expansive and empty. Walking under the canopy and through the doorway produces no new collision issues.
 
@@ -156,24 +160,21 @@ Required asset deliverables: one finished station/canopy assembly; two detailed 
 
 ## Code orientation — current inline bundle
 
-The game begins at `function Vm(i)` / `var pn=Vm(1966)` inside the single minified IIFE. The bundled license notice follows the IIFE at the **end** of the script. Do not edit the library prefix or assume the license precedes the game. Re-locate symbols by structure if the bundle changes.
+The game begins at `function Vm(i)` / `var pn=Vm(1966)` inside the IIFE; the license follows it. The current game does not contain the alternate branch's `MT`, `GB`, or `finishBatches` implementation. Locate helpers by their definitions, not by an old branch's symbol table.
 
 | System | Current symbol / location |
 | --- | --- |
-| Seeded scene RNG | `Vm`, `pn`, `Dn` |
-| Terrain height / shared dust tint | `os` / `tint` (onBeforeCompile injection on every material) |
-| Materials (named roles) | `MT` (wallCream, fadedTeal, fadedRed, darkGlass, metal, rubber, sand, neonGas, neonTrim, windowGlow, …); Lambert class `Lm` |
-| Geometry batches / batch registry / flush | `GB` (quad/box/cyl/dome/tube/polyEx) / `B(role)`, `BT` / `finishBatches` |
-| Hero builders | `buildStation`, `buildCanopy`, `pump`, `buildGasSign`, `buildStop`, `buildRoute`, `pole`+`wires`, `cactus`, `rock`, `mesa`, `scrub`, `buildTerrain` |
-| Lettering | `Tr` (cube letters, `Wm` font map) |
+| Continuous height / moving terrain patch | `os` / `recenterDesert`, `desertSurface`, `desertGeometry`, `desertCoords` |
+| World-space road/sand/apron shader | `desertMaterial.onBeforeCompile` |
+| Material palette / named roles | `PAL` / `ROLE_MATS`, `roleMat`; Lambert helper `Lm` |
+| Surface helpers / material assembly | `boxPart`, `latheGeom`, `tubeGeom`, `extrudeGeom`, `mergeParts` / `addRoleMesh` |
+| Hero builders | `buildVintagePumpParts`, `buildStationShell`, `buildCanopy`, `buildGasSign`, `buildRoadSigns`, `buildPoles`, `buildDesert` |
 | AABB registry / collision | `Mc`, `Dt` / `vc` |
 | Renderer / scene / camera | `mn` / `Nt` / `Nn` |
-| Sky / night blend uniform | `Xm` / `Xm.material.uniforms.uNight` |
-| Stars / hemisphere | `Nt.userData.stars` / `hhem` (`Nt.userData.hemi`) |
-| Moon / GAS point light | `Qt` / `$n` at `(11, 5.6, -8.4)` |
-| Canopy lights / interior warm light | `Sc`, `bc` / `Ec` at `(0, 3, -17)` |
-| Composer / output pass | `ls` (RenderPass + OutputPass; bloom pass `wc` was removed in the painterly revision) |
-| Pointer lock / movement keys / player update | `wr` / `fn` / `tg` |
+| Sky, angular mountains, night uniform | `Xm.material.fragmentShader` / `Xm.material.uniforms.uNight` |
+| Stars / hemisphere / moon | `Nt.userData.stars` / `hhem` / `Qt` |
+| GAS / canopy / interior lights | `$n` / `Sc`, `bc` / `Ec` |
+| Composer / pointer lock / movement | `ls` / `wr` / `tg`, `fn` |
 | Clock / animation loop | `eg` / `Cc` |
 
 ## Verification and completion
@@ -206,6 +207,17 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-02c — Continuous non-voxel desert and remote mountain horizon
+
+- **Request and style decision:** remove the large background boxes and blocky ground; make the desert feel enormous with mountains at the absolute distance. Painterly/non-voxel rendering is the selected direction, not another optional comparison.
+- **Implementation:** removed the legacy `ce`/`Gm` cube emitter/merge path, 1m terrain cells, finite box road extensions, giant base box, and all six rectangular mesas. Added a smooth shared-vertex surface with height-derived interpolated normals; world-space procedural sand/asphalt/apron/shoulder/paint shading; camera-following terrain patches; a continuous flat highway; three periodic mountain silhouette layers in the sky. The sky and stars follow the camera; the sky is an explicit background pass. Lambert fog is enabled and its color is coordinated with the mountain/sky night blend. Hero props, collisions, controls, the five-minute cycle, and the bundled library/license are retained.
+- **Geometry checks:** executing the actual bundled scene with the WebGL renderer stubbed produced 64 meshes / 35,862 triangles, including sky. Ground: 15,129 vertices / 29,768 triangles. Samples are finite, normals are unit-length/upward, maximum sampled slope ≈0.133, and the road height is zero through ±1,000km test samples. Recenter tests at 0, 64m, several km, and ±100km preserve the same world-space height field. No large background solid remains. These numerical checks are not browser interaction claims.
+- **Browser evidence:** actual Three.js renders through a temporary local HTTP review server, at 1280×720 / DPR 1.25. Matching before/after highway views show the old stepped grid/box horizon replaced by a continuous surface and remote mountain layers; saved in [captures/landscape-comparison.jpg](captures/landscape-comparison.jpg). Approach, highway, reverse, far-from-station (x=4096m), and forced t=0/120/305s views inspected. No application or shader errors in those review views. Forced keyframes/hidden overlay exist only in the temporary review server, not the delivered HTML.
+- **Frame-time sample:** a live-clock highway view on `ANGLE / Intel Iris Xe / Direct3D11`, 1280×720 / DPR 1.25, collected 3,600 post-warmup rAF intervals over 60.0532 seconds: median 16.7ms, p95 17.2ms. Render diagnostics report 75 complete-frame draw calls and 38,707 submitted triangles including shadow/output passes. This demonstrates approximately 60fps for that static view/configuration; it does not close all G3 views or interactive performance checks.
+- **Static delivery checks:** all inline scripts pass `node --check`; the library prefix and embedded license are unchanged; no new external resource tags/URL literals; documentation links and the documented script extraction are checked. The single HTML remains about 540KB; no assets or decoders are fetched by the implementation.
+- **Still pending:** final `file://` offline/network confirmation, pointer-lock/WASD/run/jump in a browser that supports it (the in-app browser's Pointer Lock API rejects entry), close-up model/light polish, and performance across remaining interactive views. G1/G2/G3 overall acceptance stays partial. The unrelated alternate implementation/verification PR is not merged by this correction.
+
 
 ### 2026-11-02b — G0 style comparison, G1 hero models, G2 materials, G3 checks (this change set)
 

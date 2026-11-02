@@ -3914,29 +3914,145 @@ void main() {
 			#endif
 
 
-		}`};var Sr=class extends Ut{constructor(){super();let e=_c;this.uniforms=Ln.clone(e.uniforms),this.material=new cr({name:e.name,uniforms:this.uniforms,vertexShader:e.vertexShader,fragmentShader:e.fragmentShader}),this.fsQuad=new In(this.material),this._outputColorSpace=null,this._toneMapping=null}render(e,t,n){this.uniforms.tDiffuse.value=n.texture,this.uniforms.toneMappingExposure.value=e.toneMappingExposure,(this._outputColorSpace!==e.outputColorSpace||this._toneMapping!==e.toneMapping)&&(this._outputColorSpace=e.outputColorSpace,this._toneMapping=e.toneMapping,this.material.defines={},Ge.getTransfer(this._outputColorSpace)===qe&&(this.material.defines.SRGB_TRANSFER=""),this._toneMapping===$a?this.material.defines.LINEAR_TONE_MAPPING="":this._toneMapping===Ka?this.material.defines.REINHARD_TONE_MAPPING="":this._toneMapping===Qa?this.material.defines.CINEON_TONE_MAPPING="":this._toneMapping===ns?this.material.defines.ACES_FILMIC_TONE_MAPPING="":this._toneMapping===ja&&(this.material.defines.AGX_TONE_MAPPING=""),this.material.needsUpdate=!0),this.renderToScreen===!0?(e.setRenderTarget(null),this.fsQuad.render(e)):(e.setRenderTarget(t),this.clear&&e.clear(e.autoClearColor,e.autoClearDepth,e.autoClearStencil),this.fsQuad.render(e))}dispose(){this.material.dispose(),this.fsQuad.dispose()}};function Vm(i){return function(){i|=0,i=i+1831565813|0;let e=Math.imul(i^i>>>15,1|i);return e=e+Math.imul(e^e>>>7,61|e)^e,((e^e>>>14)>>>0)/4294967296}}var pn=Vm(1966),Dn=(i,e)=>i+pn()*(e-i);function Un(i,e){let t=Math.sin(i*127.1+e*311.7)*43758.5453;return t-Math.floor(t)}function xc(i){return i*i*(3-2*i)}function ao(i,e){let t=Math.floor(i),n=Math.floor(e),s=i-t,r=e-n,o=Un(t,n),a=Un(t+1,n),l=Un(t,n+1),c=Un(t+1,n+1),h=xc(s),d=xc(r);return o+(a-o)*h+(l-o)*d+(o-a-l+c)*h*d}function Hm(i,e){return ao(i,e)*.55+ao(i*2.1,e*2.1)*.3+ao(i*4.3,e*4.3)*.15}function os(i,e){let t=Math.round(Hm(i*.07,e*.07)*4);Math.hypot(i,e)<18&&(t=Math.min(t,1));let r=Math.hypot(Math.max(Math.abs(i)-62,0),Math.max(Math.abs(e)-3.2,0)),o=Math.abs(i)<=13&&e>-20&&e<-5.5?0:Math.hypot(Math.max(Math.abs(i)-13,0),e>=-5.5?e+5.5:e<=-20?-20-e:0),a=Math.abs(i)<=5&&e>-6.2&&e<-3.2?0:Math.hypot(Math.max(Math.abs(i)-5,0),e>=-3.2?e+3.2:e<=-6.2?-6.2-e:0);return t*xc(Math.min(Math.min(r,o,a)/6,1))}var as=new Map;var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0}};function ce(i,e,t,n,s,r,o,a={}){let l=o instanceof Me?o.getHexString():new Me(o).getHexString(),c=a.emissive?new Me(a.emissive).getHexString():"",h=a.emissiveIntensity||0,d=l+"|"+c+"|"+h;as.has(d)||as.set(d,[]);as.get(d).push({x:i,y:e,z:t,sx:n,sy:s,sz:r})}function Gm(i){for(let[t,n]of as){let[s,r,o]=t.split("|"),a=new Lm({color:parseInt(s,16)});r!==""&&(a.emissive=new Me(parseInt(r,16)),a.emissiveIntensity=parseFloat(o)||1);a.onBeforeCompile=sh=>{sh.vertexShader=sh.vertexShader.replace("#include <common>","#include <common>\nvarying vec3 vG;").replace("#include <begin_vertex>","#include <begin_vertex>\nvG=position;"),sh.fragmentShader=sh.fragmentShader.replace("#include <common>","#include <common>\nvarying vec3 vG;").replace("#include <color_fragment>","#include <color_fragment>\ndiffuseColor.rgb*=.84+.22*smoothstep(-1.,6.,clamp(vG.y,-1.,6.));")};let g=new Map,cell=(x,y,z)=>{let k=x+"|"+y+"|"+z;return g.has(k)||g.set(k,[]),g.get(k)};for(let b of n){let x0=Math.floor((b.x-b.sx/2)/2),x1=Math.floor((b.x+b.sx/2)/2),y0=Math.floor((b.y-b.sy/2)/2),y1=Math.floor((b.y+b.sy/2)/2),z0=Math.floor((b.z-b.sz/2)/2),z1=Math.floor((b.z+b.sz/2)/2);for(let X=x0;X<=x1;X++)for(let Y=y0;Y<=y1;Y++)for(let Z=z0;Z<=z1;Z++)cell(X,Y,Z).push(b)}let pos=[],nor=[],quad=(p,q,r2,s2,nx,ny,nz)=>{pos.push(p[0],p[1],p[2],q[0],q[1],q[2],r2[0],r2[1],r2[2],p[0],p[1],p[2],r2[0],r2[1],r2[2],s2[0],s2[1],s2[2]);for(let K=0;K<6;K++)nor.push(nx,ny,nz)};for(let b of n){let x0=b.x-b.sx/2,x1=b.x+b.sx/2,y0=b.y-b.sy/2,y1=b.y+b.sy/2,z0=b.z-b.sz/2,z1=b.z+b.sz/2,near=new Set;for(let X=Math.floor((x0-1)/2);X<=Math.floor((x1+1)/2);X++)for(let Y=Math.floor((y0-1)/2);Y<=Math.floor((y1+1)/2);Y++)for(let Z=Math.floor((z0-1)/2);Z<=Math.floor((z1+1)/2);Z++){let c=g.get(X+"|"+Y+"|"+Z);if(c)for(let B of c)near.add(B)}let cov=(lo,hi,a0,a1)=>a0<=lo+.01&&a1>=hi-.01,fx1=!1,fx0=!1,fy1=!1,fy0=y0<=-.9,fz1=!1,fz0=!1;for(let B of near){if(B===b)continue;let bx0=B.x-B.sx/2,bx1=B.x+B.sx/2,by0=B.y-B.sy/2,by1=B.y+B.sy/2,bz0=B.z-B.sz/2,bz1=B.z+B.sz/2;if(Math.abs(bx0-x1)<.01&&cov(y0,y1,by0,by1)&&cov(z0,z1,bz0,bz1))fx1=!0;if(Math.abs(bx1-x0)<.01&&cov(y0,y1,by0,by1)&&cov(z0,z1,bz0,bz1))fx0=!0;if(Math.abs(by0-y1)<.01&&cov(x0,x1,bx0,bx1)&&cov(z0,z1,bz0,bz1))fy1=!0;if(Math.abs(by1-y0)<.01&&cov(x0,x1,bx0,bx1)&&cov(z0,z1,bz0,bz1))fy0=!0;if(Math.abs(bz0-z1)<.01&&cov(x0,x1,bx0,bx1)&&cov(y0,y1,by0,by1))fz1=!0;if(Math.abs(bz1-z0)<.01&&cov(x0,x1,bx0,bx1)&&cov(y0,y1,by0,by1))fz0=!0}fx1||quad([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],1,0,0);fx0||quad([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0],-1,0,0);fy1||quad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0],0,1,0);fy0||quad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1],0,-1,0);fz1||quad([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1],0,0,1);fz0||quad([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0],0,0,-1)}let geo=new It;geo.setAttribute("position",new Et(new Float32Array(pos),3)),geo.setAttribute("normal",new Et(new Float32Array(nor),3));let mesh=new dt(geo,a);mesh.castShadow=!0,mesh.receiveShadow=!0,i.add(mesh)}as.clear()}var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(e+1.6<s.minY||e-.2>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var Wm={A:["01110","10001","10001","11111","10001","10001","10001"],E:["11111","10000","10000","11110","10000","10000","11111"],G:["01110","10001","10000","10111","10001","10001","01110"],O:["01110","10001","10001","10001","10001","10001","01110"],P:["11110","10001","10001","11110","10000","10000","10000"],S:["01111","10000","10000","01110","00001","00001","11110"],T:["11111","00100","00100","00100","00100","00100","00100"],6:["01110","10000","10000","11110","10001","10001","01110"]};function Tr(i,e,t,n,s,r,o,a){let l=i.length*5*s+(i.length-1)*s,c=e-l/2+2.5*s;for(let h of i){let d=Wm[h];if(d)for(let f=0;f<7;f++)for(let m=0;m<5;m++)d[f][m]==="1"&&ce(c+m*s,t+(3-f)*s,n,s*.92,s*.92,.28,r,o?{emissive:o,emissiveIntensity:a}:{});c+=6*s}}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(2758195,45,230);var Nn=new gt(65,innerWidth/innerHeight,.1,2e3);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.55,.055,-.83).normalize()},uNight:{value:0}},vertexShader:`
+		}`};var Sr=class extends Ut{constructor(){super();let e=_c;this.uniforms=Ln.clone(e.uniforms),this.material=new cr({name:e.name,uniforms:this.uniforms,vertexShader:e.vertexShader,fragmentShader:e.fragmentShader}),this.fsQuad=new In(this.material),this._outputColorSpace=null,this._toneMapping=null}render(e,t,n){this.uniforms.tDiffuse.value=n.texture,this.uniforms.toneMappingExposure.value=e.toneMappingExposure,(this._outputColorSpace!==e.outputColorSpace||this._toneMapping!==e.toneMapping)&&(this._outputColorSpace=e.outputColorSpace,this._toneMapping=e.toneMapping,this.material.defines={},Ge.getTransfer(this._outputColorSpace)===qe&&(this.material.defines.SRGB_TRANSFER=""),this._toneMapping===$a?this.material.defines.LINEAR_TONE_MAPPING="":this._toneMapping===Ka?this.material.defines.REINHARD_TONE_MAPPING="":this._toneMapping===Qa?this.material.defines.CINEON_TONE_MAPPING="":this._toneMapping===ns?this.material.defines.ACES_FILMIC_TONE_MAPPING="":this._toneMapping===ja&&(this.material.defines.AGX_TONE_MAPPING=""),this.material.needsUpdate=!0),this.renderToScreen===!0?(e.setRenderTarget(null),this.fsQuad.render(e)):(e.setRenderTarget(t),this.clear&&e.clear(e.autoClearColor,e.autoClearDepth,e.autoClearStencil),this.fsQuad.render(e))}dispose(){this.material.dispose(),this.fsQuad.dispose()}};function Vm(i){return function(){i|=0,i=i+1831565813|0;let e=Math.imul(i^i>>>15,1|i);return e=e+Math.imul(e^e>>>7,61|e)^e,((e^e>>>14)>>>0)/4294967296}}var pn=Vm(1966),Dn=(i,e)=>i+pn()*(e-i);function Un(i,e){let t=Math.sin(i*127.1+e*311.7)*43758.5453;return t-Math.floor(t)}function xc(i){return i*i*(3-2*i)}function ao(i,e){let t=Math.floor(i),n=Math.floor(e),s=i-t,r=e-n,o=Un(t,n),a=Un(t+1,n),l=Un(t,n+1),c=Un(t+1,n+1),h=xc(s),d=xc(r);return o+(a-o)*h+(l-o)*d+(o-a-l+c)*h*d}function Hm(i,e){return ao(i,e)*.55+ao(i*2.1,e*2.1)*.3+ao(i*4.3,e*4.3)*.15}// Continuous world-space height, shared by the surface and player/prop placement.
+// The road is flat for its entire length; the apron blends into broad, low dunes.
+function os(x, z) {
+  const rectDistance = (x0, z0, x1, z1) => Math.hypot(Math.max(x0 - x, x - x1, 0), Math.max(z0 - z, z - z1, 0));
+  const distance = Math.min(Math.max(Math.abs(z) - 3.5, 0), rectDistance(-12.5, -22, 13.5, -5), rectDistance(-5.5, -6.5, 5.5, -3.2));
+  const blend = xc(Math.min(distance / 20, 1));
+  const dunes = .45 + 2.3 * Hm(x * .008, z * .008) + .28 * ao(x * .023 + 17, z * .023 + 43);
+  return dunes * blend;
+}
+var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(e+1.6<s.minY||e-.2>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.55,.055,-.83).normalize()},uNight:{value:0}},vertexShader:`
       varying vec3 vDir;
       void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,fragmentShader:`
-      varying vec3 vDir; uniform vec3 sunDir; uniform float uNight;
-      void main(){
-        float h = clamp(vDir.y, -0.05, 1.0);
-        vec3 zenith  = vec3(0.020, 0.028, 0.095);
-        vec3 mid     = vec3(0.300, 0.120, 0.360);
-        vec3 horizon = vec3(0.980, 0.420, 0.160);
-        vec3 col = mix(horizon, mid, smoothstep(0.00, 0.28, h));
-        col = mix(col, zenith, smoothstep(0.22, 0.75, h));
-        float s = max(dot(normalize(vDir), sunDir), 0.0);
-        col += vec3(1.0, 0.60, 0.28) * pow(s, 500.0) * 1.6 * (1.0 - uNight);
-        col += vec3(1.0, 0.45, 0.18) * pow(s, 10.0)  * 0.38 * (1.0 - uNight);
-        col += vec3(0.55, 0.20, 0.45) * pow(max(dot(normalize(vDir), normalize(vec3(0.7,0.05,0.7))),0.0), 6.0) * 0.12 * (1.0 - uNight);
-        vec3 nzenith  = vec3(0.002, 0.003, 0.012);
-        vec3 nmid     = vec3(0.008, 0.010, 0.030);
-        vec3 nhorizon = vec3(0.030, 0.025, 0.055);
-        vec3 ncol = mix(nhorizon, nmid, smoothstep(0.00, 0.28, h));
-        ncol = mix(ncol, nzenith, smoothstep(0.22, 0.75, h));
-        gl_FragColor = vec4(mix(col, ncol, uNight), 1.0);
+      varying vec3 vDir;
+      uniform vec3 sunDir;
+      uniform float uNight;
 
-      }`}));Nt.add(Xm);{let e=new Float32Array(7800);for(let s=0;s<2600;s++){let r=pn()*Math.PI*2,o=Math.acos(Dn(.06,1)),a=850;e[s*3]=a*Math.sin(o)*Math.cos(r),e[s*3+1]=a*Math.cos(o),e[s*3+2]=a*Math.sin(o)*Math.sin(r)}let t=new It;t.setAttribute("position",new Et(e,3));let n=new or(t,new Qi({color:13621503,size:2,sizeAttenuation:!1,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.userData.stars=n,Nt.add(n)}var hhem=new hr(4864875,3811866,.45);Nt.userData.hemi=hhem,Nt.add(hhem);var Qt=new dr(9413631,.55);Qt.position.set(40,55,30);Qt.castShadow=!0;Qt.shadow.mapSize.set(2048,2048);Qt.shadow.camera.left=-55;Qt.shadow.camera.right=55;Qt.shadow.camera.top=55;Qt.shadow.camera.bottom=-55;Qt.shadow.camera.far=160;Qt.shadow.bias=-6e-4;Nt.add(Qt);var $n=new Pn(16723285,10,35,2);$n.position.set(11,5.6,-8.4);$n.castShadow=!1;$n.shadow.camera.near=.5;$n.shadow.camera.far=60;$n.shadow.bias=-.002;Nt.add($n);var Sc=new Pn(16767392,6,18,2);Sc.position.set(-4.5,4.2,-9);Nt.add(Sc);var bc=new Pn(16767392,6,18,2);bc.position.set(4.5,4.2,-9);Nt.add(bc);var Ec=new Pn(16763274,4,10,2);Ec.position.set(0,3,-17);Nt.add(Ec);var Tc=new Pn(6747903,2.5,8,2);Tc.position.set(0,1.4,-9);Nt.add(Tc);var qm=[14267264,13674616,14860948,13082474],Ym=[12884578,12159582];for(let i=-62;i<=62;i++)for(let e=-62;e<=62;e++){let t=os(i,e);if(Math.abs(e)<=3||Math.abs(i)<=5&&e>=-6&&e<=-4)ce(i,t-.5,e,1,1,1,Un(i,e)<.12?2302761:2763313,{solid:1}),Math.abs(e)>=2.55&&Math.abs(e)<=2.85&&ce(i,t+.025,e,1,.05,.3,14211288),e===0&&(i%4+4)%4<2&&ce(i,t+.025,e,2,.05,.35,16119278);else{let n=t>=2?Ym[Math.floor(Un(i*3+7,e*3+13)*2)]:qm[Math.floor(Un(i*3+7,e*3+13)*4)];ce(i,t-.5,e,1,1,1,n,{solid:1})}}var co=new dt(new Cn(1600,1,1600),new Lm({color:2365976}));co.position.y=-1.6;co.receiveShadow=!0;Nt.add(co);// ============ G1 hero-model integration (inserted, replaces blockout) ==========
+      // Periodic angular ridges close seamlessly around the entire sky.
+      // Their shallow angles place them on the far horizon, never beside the station.
+      float ridge(float a, float phase, float scale) {
+        float broad = .5 + .5 * sin(a * 3.0 + phase);
+        float peaks = pow(.5 + .5 * sin(a * 5.0 + phase * 1.7), 2.0);
+        float detail = .5 + .5 * sin(a * 11.0 + phase * 2.3);
+        float corridor = mix(.18, 1.0, smoothstep(.025, .30, abs(sin(a))));
+        return scale * (.17 + .34 * broad + .32 * peaks + .17 * detail) * corridor;
+      }
+
+      void main() {
+        vec3 direction = normalize(vDir);
+        float h = clamp(direction.y, -.05, 1.0);
+        vec3 zenith = mix(vec3(.020, .028, .095), vec3(.002, .003, .012), uNight);
+        vec3 mid = mix(vec3(.300, .120, .360), vec3(.008, .010, .030), uNight);
+        vec3 horizon = mix(vec3(.980, .420, .160), vec3(.030, .025, .055), uNight);
+        vec3 haze = mix(vec3(.400, .270, .290), vec3(.026, .031, .050), uNight);
+        vec3 col = mix(horizon, mid, smoothstep(.00, .28, h));
+        col = mix(col, zenith, smoothstep(.22, .75, h));
+        float s = max(dot(direction, sunDir), 0.0);
+        col += vec3(1.0, .60, .28) * pow(s, 500.0) * 1.6 * (1.0 - uNight);
+        col += vec3(1.0, .45, .18) * pow(s, 10.0) * .38 * (1.0 - uNight);
+        col = mix(haze, col, smoothstep(-.025, .16, h));
+
+        float a = atan(direction.z, direction.x);
+        float farRidge = ridge(a, .7, .095);
+        float midRidge = ridge(a, 2.9, .058);
+        float nearRidge = ridge(a, 5.1, .030);
+        vec3 farColor = mix(vec3(.305, .220, .285), vec3(.021, .025, .043), uNight);
+        vec3 midColor = mix(vec3(.235, .185, .250), vec3(.016, .020, .034), uNight);
+        vec3 nearColor = mix(vec3(.185, .155, .215), vec3(.012, .016, .028), uNight);
+        col = mix(col, farColor, 1.0 - smoothstep(farRidge - .0014, farRidge + .0014, direction.y));
+        col = mix(col, midColor, 1.0 - smoothstep(midRidge - .0010, midRidge + .0010, direction.y));
+        col = mix(col, nearColor, 1.0 - smoothstep(nearRidge - .0008, nearRidge + .0008, direction.y));
+        // A shallow haze band joins the distant silhouettes to the ground fog.
+        col = mix(col, haze, 1.0 - smoothstep(-.018, .009, direction.y));
+        gl_FragColor = vec4(col, 1.0);
+      }`}));Xm.renderOrder=-1000;Xm.material.depthTest=false;Nt.add(Xm);{let e=new Float32Array(7800);for(let s=0;s<2600;s++){let r=pn()*Math.PI*2,o=Math.acos(Dn(.105,1)),a=850;e[s*3]=a*Math.sin(o)*Math.cos(r),e[s*3+1]=a*Math.cos(o),e[s*3+2]=a*Math.sin(o)*Math.sin(r)}let t=new It;t.setAttribute("position",new Et(e,3));let n=new or(t,new Qi({color:13621503,size:2,sizeAttenuation:!1,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.userData.stars=n,Nt.add(n)}var hhem=new hr(4864875,3811866,.45);Nt.userData.hemi=hhem,Nt.add(hhem);var Qt=new dr(9413631,.55);Qt.position.set(40,55,30);Qt.castShadow=!0;Qt.shadow.mapSize.set(2048,2048);Qt.shadow.camera.left=-55;Qt.shadow.camera.right=55;Qt.shadow.camera.top=55;Qt.shadow.camera.bottom=-55;Qt.shadow.camera.far=160;Qt.shadow.bias=-6e-4;Nt.add(Qt);var $n=new Pn(16723285,10,35,2);$n.position.set(11,5.6,-8.4);$n.castShadow=!1;$n.shadow.camera.near=.5;$n.shadow.camera.far=60;$n.shadow.bias=-.002;Nt.add($n);var Sc=new Pn(16767392,6,18,2);Sc.position.set(-4.5,4.2,-9);Nt.add(Sc);var bc=new Pn(16767392,6,18,2);bc.position.set(4.5,4.2,-9);Nt.add(bc);var Ec=new Pn(16763274,4,10,2);Ec.position.set(0,3,-17);Nt.add(Ec);var Tc=new Pn(6747903,2.5,8,2);Tc.position.set(0,1.4,-9);Nt.add(Tc);
+// ---- Continuous desert: one smooth surface, world-space paint, no voxel cells. ----
+// The patch follows the player in 64m steps. Its far edge is always >8km away,
+// beyond the camera and fog, while the road/color field continues indefinitely.
+var desertOriginX = Infinity, desertOriginZ = Infinity;
+var desertCoords = [];
+for (let x = -96; x <= 96; x += 2) desertCoords.push(x);
+for (let x = 96 * 1.45; x < 12000; x *= 1.45) {
+  desertCoords.push(-x, x);
+}
+desertCoords.push(-12000, 12000);
+desertCoords.sort((a, b) => a - b);
+var desertSize = desertCoords.length;
+var desertPositions = new Float32Array(desertSize * desertSize * 3);
+var desertNormals = new Float32Array(desertPositions.length);
+var desertIndices = [];
+for (let z = 0; z < desertSize - 1; z++) for (let x = 0; x < desertSize - 1; x++) {
+  const a = z * desertSize + x, b = a + 1, c = a + desertSize, d = c + 1;
+  desertIndices.push(a, c, b, b, c, d);
+}
+var desertGeometry = new It;
+desertGeometry.setAttribute('position', new Et(desertPositions, 3));
+desertGeometry.setAttribute('normal', new Et(desertNormals, 3));
+desertGeometry.setIndex(desertIndices);
+var desertMaterial = new Lm({ color: 0xffffff });
+desertMaterial.flatShading = false;
+desertMaterial.onBeforeCompile = shader => {
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', '#include <common>\nvarying vec3 vDesertWorld;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDesertWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', `#include <common>
+      varying vec3 vDesertWorld;
+      float sandHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float sandNoise(vec2 p) {
+        vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(sandHash(i), sandHash(i + vec2(1.,0.)), f.x), mix(sandHash(i + vec2(0.,1.)), sandHash(i + vec2(1.,1.)), f.x), f.y);
+      }
+      float desertRect(vec2 p, vec2 lo, vec2 hi, float feather) {
+        vec2 q = max(max(lo - p, p - hi), vec2(0.0));
+        return 1.0 - smoothstep(0.0, feather, length(q));
+      }`)
+    .replace('#include <color_fragment>', `#include <color_fragment>
+      vec2 p = vDesertWorld.xz;
+      float n = .72 * sandNoise(p * .035) + .28 * sandNoise(p * .14);
+      vec3 sand = mix(vec3(.29,.23,.17), vec3(.42,.34,.25), n);
+      float road = 1.0 - smoothstep(3.20, 3.48, abs(p.y));
+      float shoulder = 1.0 - smoothstep(3.45, 5.7, abs(p.y));
+      float drive = desertRect(p, vec2(-5.2,-6.5), vec2(5.2,-3.2), .40);
+      float apron = desertRect(p, vec2(-12.0,-21.6), vec2(13.0,-5.3), .55);
+      vec3 asphalt = vec3(.025,.026,.032) * (.93 + .14 * n);
+      vec3 ground = mix(sand, sand * .83, shoulder * .45);
+      ground = mix(ground, vec3(.185,.174,.157), apron);
+      ground = mix(ground, asphalt, max(road, drive));
+      float dash = 1.0 - smoothstep(2.7, 2.85, mod(p.x + 1.4, 7.5));
+      float centerLine = (1.0 - smoothstep(.075, .105, abs(p.y))) * dash;
+      float edgeLine = 1.0 - smoothstep(.025, .045, abs(abs(p.y) - 2.85));
+      ground = mix(ground, vec3(.46,.34,.16), centerLine);
+      ground = mix(ground, vec3(.45,.42,.34), edgeLine * .78);
+      diffuseColor.rgb *= ground;`);
+};
+var desertSurface = new dt(desertGeometry, desertMaterial);
+desertSurface.name = 'Continuous desert surface';
+desertSurface.receiveShadow = true;
+desertSurface.castShadow = false;
+Nt.add(desertSurface);
+function recenterDesert(x, z) {
+  const ox = Math.round(x / 64) * 64, oz = Math.round(z / 64) * 64;
+  if (ox === desertOriginX && oz === desertOriginZ) return;
+  desertOriginX = ox; desertOriginZ = oz;
+  for (let row = 0; row < desertSize; row++) for (let col = 0; col < desertSize; col++) {
+    const localX = desertCoords[col], localZ = desertCoords[row];
+    const wx = ox + localX, wz = oz + localZ, i = (row * desertSize + col) * 3;
+    desertPositions[i] = localX;
+    desertPositions[i + 1] = os(wx, wz);
+    desertPositions[i + 2] = localZ;
+  }
+  desertGeometry.computeVertexNormals();
+  desertSurface.position.set(ox, 0, oz);
+  desertGeometry.attributes.position.needsUpdate = true;
+  desertGeometry.attributes.normal.needsUpdate = true;
+  desertGeometry.computeBoundingBox();
+  desertGeometry.computeBoundingSphere();
+}
+recenterDesert(Nn.position.x, Nn.position.z);
+// ============ G1 hero-model integration (inserted, replaces blockout) ==========
 // Geometry helpers (lathe/tube/extrude) built on bundled BufferGeometry (It);
 // material roles per ASSET_GUIDE; all data embedded, no runtime requests.
 
@@ -4065,7 +4181,7 @@ function extrudeGeom(points, depth) {
   return { pos, nor, idx };
 }
 
-// box part (same shape language as ce, but returns part data for hero assemblies)
+// Hard-surface architectural part; does not subdivide into voxels.
 function boxPart(cx, cy, cz, sx, sy, sz) {
   const x0 = cx - sx / 2, x1 = cx + sx / 2, y0 = cy - sy / 2, y1 = cy + sy / 2, z0 = cz - sz / 2, z1 = cz + sz / 2;
   const pos = [], nor = [], idx = [];
@@ -4470,46 +4586,11 @@ Dt(2.5, -9.95, 3.5, -9.05);
   }
   for (const role in rocksByRole) addRoleMesh(Nt, role, rocksByRole[role]);
 
-  // distant mesas: broad low layers, far ring segments (no enclosing wall)
-  const mesaParts = [];
-  function mesa(cx, cz, w, d, h, role) {
-    mesaParts.push({ role, part: boxPart(cx, h / 2 - 1.2, cz, w, h, d) });
-  }
-  const M = 300;
-  mesa(-M * .55, -M * .8, M * .8, M * .3, 26, 'mesaFar');
-  mesa(M * .5, -M * .85, M * .7, M * .35, 20, 'mesaFar');
-  mesa(-M * .6, M * .75, M * .7, M * .3, 18, 'mesaFar');
-  mesa(M * .55, M * .8, M * .8, M * .35, 24, 'mesaFar');
-  mesa(-M * .35, -M * .6, M * .5, M * .25, 12, 'mesaMid');
-  mesa(M * .3, M * .6, M * .45, M * .2, 10, 'mesaMid');
-  const mesaByRole = {};
-  for (const { role, part } of mesaParts) (mesaByRole[role] = mesaByRole[role] || []).push(part);
-  for (const role in mesaByRole) addRoleMesh(Nt, role, mesaByRole[role]);
+  // Mountains are distant angular sky layers, not nearby box geometry.
 })();
 
-// ---- Road + far ground continuity ----------------------------------------------
-(function extendRoad() {
-  const parts = {};
-  const add = (role, part) => { (parts[role] = parts[role] || []).push(part); };
-  const parts2 = {};
-  const add2 = (role, part) => { (parts2[role] = parts2[role] || []).push(part); };
-  // Road already spans x=-62..62 as 1m cells; extend a continuous dark band to the horizon both ways
-  for (const dir of [-1, 1]) {
-    const x0 = dir < 0 ? -230 : 63, x1 = dir < 0 ? -63 : 230;
-    add('asphalt', boxPart((x0 + x1) / 2, -.45, 0, Math.abs(x1 - x0), 1, 7));
-    // center dashes
-    for (let x = dir < 0 ? -66 : 66; (dir < 0 ? x > -230 : x < 230); x += dir * 8) {
-      add2('linePaint', boxPart(x + dir * 4, .03, 0, 2, .05, .3));
-    }
-    // shoulder blend
-    add('shoulder', boxPart((x0 + x1) / 2, -.48, 4.6, Math.abs(x1 - x0), 1, 3.4));
-    add('shoulder', boxPart((x0 + x1) / 2, -.48, -4.6, Math.abs(x1 - x0), 1, 3.4));
-  }
-  addRoleMesh(Nt, 'asphalt', parts.asphalt);
-  addRoleMesh(Nt, 'linePaint', parts2.linePaint, {});
-  addRoleMesh(Nt, 'shoulder', parts.shoulder);
-})();
-Gm(Nt);var ls=new yr(mn);ls.addPass(new Mr(Nt,Nn));ls.addPass(new Sr);var wr=new gr(Nn,document.body),ho=document.getElementById("overlay"),Ac=document.getElementById("crosshair"),Rc=document.getElementById("hud");ho.addEventListener("click",()=>wr.lock());wr.addEventListener("lock",()=>{ho.style.display="none",Ac.style.display="block",Rc.style.display="block"});wr.addEventListener("unlock",()=>{ho.style.display="flex",Ac.style.display="none",Rc.style.display="none"});var fn={};addEventListener("keydown",i=>{fn[i.code]=!0,i.code==="Space"&&i.preventDefault()});addEventListener("keyup",i=>{fn[i.code]=!1});addEventListener("contextmenu",i=>i.preventDefault());var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0),fn.KeyW&&dn.add(Ni),fn.KeyS&&dn.sub(Ni),fn.KeyD&&dn.add(lo),fn.KeyA&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);let i=Math.min(eg.getDelta(),.05);wr.isLocked&&tg(i);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(42/255*(1-k)+10/255*k,22/255*(1-k)+12/255*k,51/255*(1-k)+30/255*k);hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);$n.intensity=Math.random()<.0018?Dn(1,4):10*(.93+.07*Math.sin(t*40));if(Nt.userData.gasFaceMat){let fl=$n.intensity/10;Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*fl;}if(ROLE_MATS.neonGasRed){let fl=$n.intensity/10;ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*fl;}Ec.intensity=4*(1+.04*Math.sin(t*57));if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57);}ls.render()}Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
+// Road paint and shoulders are continuous world-space terrain shading.
+var ls=new yr(mn);ls.addPass(new Mr(Nt,Nn));ls.addPass(new Sr);var wr=new gr(Nn,document.body),ho=document.getElementById("overlay"),Ac=document.getElementById("crosshair"),Rc=document.getElementById("hud");ho.addEventListener("click",()=>wr.lock());wr.addEventListener("lock",()=>{ho.style.display="none",Ac.style.display="block",Rc.style.display="block"});wr.addEventListener("unlock",()=>{ho.style.display="flex",Ac.style.display="none",Rc.style.display="none"});var fn={};addEventListener("keydown",i=>{fn[i.code]=!0,i.code==="Space"&&i.preventDefault()});addEventListener("keyup",i=>{fn[i.code]=!1});addEventListener("contextmenu",i=>i.preventDefault());var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0),fn.KeyW&&dn.add(Ni),fn.KeyS&&dn.sub(Ni),fn.KeyD&&dn.add(lo),fn.KeyA&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);let i=Math.min(eg.getDelta(),.05);wr.isLocked&&tg(i);Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);$n.intensity=Math.random()<.0018?Dn(1,4):10*(.93+.07*Math.sin(t*40));if(Nt.userData.gasFaceMat){let fl=$n.intensity/10;Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*fl;}if(ROLE_MATS.neonGasRed){let fl=$n.intensity/10;ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*fl;}Ec.intensity=4*(1+.04*Math.sin(t*57));if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57);}ls.render()}Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
 /*! Bundled license information:
 
 three/build/three.module.js:

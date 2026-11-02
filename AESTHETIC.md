@@ -11,7 +11,7 @@ The player is present; the world gives no evidence of anyone else being here now
 ## Compose the scene before decorating it
 
 - At the starting eye height, read the station, its canopy, the two pumps, and GAS/OIL sign as distinct silhouettes. The sign supports the station rather than dwarfing it; the canopy does not hide the pumps or front windows.
-- Reserve broad areas for empty road, desert, and sky. Both highway directions must appear straight, continuous, and unoccupied through the fog. Terrain seams, abrupt road ends, and a ring of nearby block mesas must not reveal a small square play area.
+- Reserve broad areas for empty road, desert, and sky. Both highway directions must appear straight, continuous, and unoccupied through the fog. The desert must feel enormous: a continuous softly rolling surface, long sightlines, and shallow layered mountain silhouettes on the absolute horizon. No cube-grid ground, integer-height steps, rectangular mesa boxes, visible terrain edges, or enclosing mountain wall.
 - Make three useful review views: the initial approach, a view beneath the canopy toward the windows, and a view along the highway toward the horizon. Review the reverse direction too.
 - Keep detail concentrated around the station and pump island. Simplify distant forms into low, layered mesa silhouettes. Let fog and color separation create depth.
 - At thumbnail size, the focal point should still be the small illuminated station within a much larger dark landscape. If the first impression is a brightly colored toy set, revise scale, palette, and lighting.
@@ -57,19 +57,21 @@ Use broad, quiet color fields with sparse wear at seams, edges, lower walls, and
 
 ## Two approved rendering directions
 
-Choose one coherent direction per change set and state the choice. Keep the scene, mood, cycle, controls, and offline contract the same in a comparison.
+The user has selected the painterly, non-voxel direction. Continue it consistently across the scene. The voxel direction below documents the historical baseline only; do not switch back or reintroduce voxel ground without a new user instruction.
 
 Both directions require finished, recognizable close-up assets: deliberate silhouettes, surface depth, joints, and material separation. The single-file requirement does not require crude cube models. Custom meshes and embedded licensed models are allowed under the integration rules in `ASSET_GUIDE.md`.
 
 ### A. Crisp voxel — superseded baseline (still in git history for the G0 comparison)
 
-Sharp cube edges, deliberate stepped silhouettes, and restrained per-face shading. Batch cubes into instanced groups by color and emissive properties. The current implementation subdivides detail at roughly 0.35 units and keeps terrain cells at 1 unit; this is a baseline to audit, not a requirement to fill solid volumes with invisible internal cubes.
+The historical baseline used sharp cube edges, stepped silhouettes, instanced cube groups, roughly 0.35-unit detail cells, and 1-unit terrain cells. This records the old implementation; it is not a current requirement or a reason to fill models with internal cubes.
 
-Keep MeshStandardMaterial with high roughness and ACES tone mapping if it earns its cost. Reduce hidden geometry and unnecessary shadow work before raising density. The current moon and GAS point light both cast shadows; the sign's six shadow-map faces deserve particular scrutiny. Finer voxels alone do not solve the art direction.
+The old renderer used MeshStandardMaterial and both moon and GAS point-light shadows. The selected painterly renderer has superseded this pipeline. Finer voxels do not solve the art direction.
 
-### B. Painterly flat-shade — implemented revision, pending visual acceptance (see roadmap G0)
+### B. Painterly surfaces and modeled props — selected direction
 
-Softer forms, simpler surfaces, broad tonal planes, and layered dusk color. Use coarse 0.5–1 unit construction or surface panels, plus finer geometry only where silhouettes and lettering need it. Thin neon must not disappear into the coarse grid. Keep wear selective and procedural.
+Softer forms, broad tonal planes, layered dusk color, and deliberately modeled props. Use actual surface meshes; give the continuous desert smoothly interpolated normals and continuous heights. Retain crisp architectural edges where appropriate, but no voxel subdivision, tile outlines, or terrain side walls. Thin neon, curved pump crowns, and lettering need intentional geometry rather than a coarse cube grid. Keep wear selective and procedural.
+
+The current landscape uses a player-centered continuous surface, world-space road/paint shading, and three angular mountain layers in the sky. The mountains stay remote at shallow elevation angles; never replace them with nearby rectangular solids. Sky and stars follow the camera, keeping the backdrop beyond the traversable desert.
 
 Merge static boxes by material **and spatial region**, allowing useful frustum culling; one world-spanning mesh per color does not by itself improve culling. Use flat-shaded MeshLambertMaterial where appropriate, hemisphere fill, and a few cheap local point lights. Retain ACES, the coordinated sky/fog palette, and emissive neon.
 

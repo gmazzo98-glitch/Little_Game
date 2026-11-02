@@ -11,9 +11,9 @@ Read [AESTHETIC.md](AESTHETIC.md), [ROADMAP.md](ROADMAP.md), and [ASSET_GUIDE.md
 
 ## Choose work from the roadmap
 
-1. Start with the earliest unfinished dependency. **Graphics foundation G0 is next.** Sky effects, sound, and micro-life wait until the visual foundation passes.
+1. Start with the earliest unfinished dependency. G0 selected the painterly direction; finish G1/G2 visual quality and G3 verification. Sky effects, sound, and micro-life wait until the visual foundation passes.
 2. Name the milestone and the visual problem being solved before editing. Prefer a focused change with a visible acceptance criterion.
-3. Use one approved rendering style per change set. Crisp voxel is the current implementation; painterly flat-shade is the preferred alternative to evaluate. Do not silently switch styles or claim its projected performance gain as measured.
+3. Continue the selected painterly, non-voxel direction. The voxel version is a historical baseline, not a current alternative. Preserve the continuous desert surface and distant mountain backdrop; do not restore cube-grid ground, integer terrain heights, or box-shaped mesas. Do not claim projected performance gains as measured.
 4. Keep `AESTHETIC.md` authoritative for mood, `ROADMAP.md` for priority/status, and `ASSET_GUIDE.md` for models and integration. `AGENT_PROMPT.md` points agents to those rules; it is not a competing design document. Update affected guidance when an agreed direction changes.
 5. Every `index.html` change must update the relevant roadmap status and validation record in the same commit, even when a phase remains in progress. Implementation and verified acceptance are separate facts.
 

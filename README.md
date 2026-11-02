@@ -21,12 +21,14 @@ The game is entirely inside `index.html`, including Three.js. No installation, s
 **The graphics are a prototype. The next work is the graphics foundation, before additional atmosphere features.** More stars, particles, and audio cannot substitute for convincing station silhouettes, an expansive empty horizon, deliberate materials, and believable neon lighting.
 
 - [AESTHETIC.md](AESTHETIC.md): canonical mood, composition, palette, and the two approved rendering styles.
-- [ROADMAP.md](ROADMAP.md): implementation audit, ordered milestones, acceptance criteria, and verification procedure. Start at G0.
+- [ROADMAP.md](ROADMAP.md): implementation audit, ordered milestones, acceptance criteria, and verification procedure. Follow the current unfinished milestone.
 - [AGENTS.md](AGENTS.md): instructions for contributors and coding agents; requires roadmap updates alongside scene changes.
 - [ASSET_GUIDE.md](ASSET_GUIDE.md): concrete model specifications, dimensions, construction recipes, free source candidates, provenance, and offline embedding instructions.
 - [AGENT_PROMPT.md](AGENT_PROMPT.md): ready-to-copy prompt that asks agents to implement the graphical overhaul.
 
-The current renderer uses crisp voxel geometry. Painterly flat-shade is the preferred alternative to evaluate for softer shapes and a lighter rendering budget. A style comparison and measured visual/performance review must precede choosing it; neither style overrides the mood or offline requirement.
+The selected renderer uses painterly surface meshes and modeled props. The desert is now a continuous, softly rolling surface with a world-space highway and distant layered mountain silhouettes. The player-centered terrain and camera-centered sky keep the background expansive; the old ground cube grid and rectangular mesa boxes have been removed. The historical voxel version remains in Git history only.
+
+[View the actual before/after highway comparison](captures/landscape-comparison.jpg). These are browser-rendered review captures at a fixed dusk state, not concept illustrations. Close-up asset/light polish and performance verification remain tracked in the roadmap.
 
 The asset plan favors custom station/pump/sign models and selective free desert props. Downloaded art must be adapted to the same scale and material language, then embedded in the HTML. The asset guide includes a fully procedural fallback so unavailable downloads do not stall the game.
 

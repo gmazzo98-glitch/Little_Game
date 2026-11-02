@@ -4,7 +4,7 @@
 
 ## Production decision
 
-Default to **custom low-poly, painterly models for the station, pumps, and signs**, with broad shaded surfaces, deliberate bevels, readable recesses, and selective wear. Build these directly with Three.js geometry/embedded mesh data, or author them in Blender and embed the result. This gives the scene a consistent identity and preserves the one-file deliverable. Keep the current voxel renderer as the G0 comparison; choose and record one scene-wide style before final integration.
+Continue with **custom low-poly, painterly models for the station, pumps, and signs**, with broad shaded surfaces, deliberate bevels, readable recesses, and selective wear. Build these directly with Three.js geometry/embedded mesh data, or author them in Blender and embed the result. The painterly direction is selected; the voxel renderer is a historical comparison only. Preserve the continuous non-voxel ground and remote mountain backdrop.
 
 Use free third-party models selectively for secondary rocks, scrub, or cacti if they improve the scene after recoloring and rescaling. Do not download a city pack and place it wholesale. Custom hero assets are the fallback whenever a suitable free model is missing, modern-looking, too dense, or awkward to embed. Asset hunting must not become a dependency that prevents implementation.
 
@@ -49,7 +49,7 @@ Keep the overall main-view visible geometry near or below roughly **150k triangl
 
 Build one convincing pump before populating the whole station. Inspect it from about 1m, 3m, and the initial approach. It must read as a vintage fuel pump in a neutral light test **without bloom or an emissive panel**.
 
-1. Model a low plinth with a chamfered top and a slightly narrower enamel body. Extrude a rounded rectangular profile, use a small bevel, or form a deliberate stepped silhouette if the voxel direction is chosen. Do not substitute a sphere on a cube.
+1. Model a low plinth with a chamfered top and a slightly narrower enamel body. Extrude a rounded rectangular profile, use a small bevel, and preserve a curved shoulder silhouette in the selected non-voxel direction. Do not substitute a sphere on a cube.
 2. Give the crown soft shoulders and a curved top profile. A few well-placed segments are enough; put geometry where it changes the outline. The front meter is inset into a darker recess, with an ivory face, thin bezel, and simple drawn digits/ticks.
 3. Add a restrained metal trim band, side nozzle cradle, a modeled nozzle silhouette, and a dark hose hanging from the side to a lazy curve near the base. Use a low-segment tube or connected tapered segments. A painted line on the front is not a hose.
 4. Separate enamel, metal, rubber, meter face, and any tiny existing light into material roles. Meter paper is not a giant cyan lamp. Use subtle edge chips and grime near the base, not random colored speckles.
@@ -78,7 +78,7 @@ Create the STOP panel from an eight-vertex outline and the Route 66 panel from a
 
 Create tapered cactus segments with a few radial sides, rounded caps, and arms that join intentionally; vary height, branching, and yaw with a seed. Build a handful of low-poly rock shapes by perturbing a coarse hull, with stable normals and broad face colors. Place all vegetation/rocks on sampled terrain and update tall-prop collision extents. Do not make every rock a collider or every sand grain a mesh.
 
-Use broad triangulated terrain/mesa surfaces or coarse exposed faces. Make the highway continuous beyond the nearby play patch into fog, in both directions. Scatter less at distance, not more. Space poles into the distance with wire endpoints derived from their actual terrain-relative tops; use a sagging sampled curve. Avoid a conspicuous ring of mesas enclosing the station.
+Use a continuous terrain surface with shared edges, interpolated normals, and unquantized heights. The road, shoulders, and paint must continue in world coordinates beyond the nearby play patch, in both directions. Do not generate cubes, per-cell vertical walls, rectangular mesa solids, or a visible finite square. Retain the current player-centered patch and shallow, layered sky mountains unless an equally continuous replacement is demonstrated. Scatter less at distance, not more. Space poles into the distance with wire endpoints derived from their actual terrain-relative tops; use a sagging sampled curve.
 
 **Accept:** the landscape reads as a large dry place rather than a square tabletop. Vegetation is sparse, desaturated, grounded, and varied without noise.
 

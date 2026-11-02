@@ -7,7 +7,7 @@ Work on gmazzo98-glitch/Little_Game. Turn Neon Gas from a graphical blockout int
 
 Read AGENTS.md, AESTHETIC.md, ROADMAP.md, and ASSET_GUIDE.md before editing. Follow their mood, model specifications, asset sources, offline integration rules, milestone order, and acceptance criteria. Inspect the latest branch and existing changes first.
 
-Implement the work; do not stop at another plan or asset list. Complete G0's baseline/style decision, then G1's models/composition, G2's materials/lighting, and G3's verification. Painterly low-poly is the preferred direction to evaluate. Choose one coherent scene-wide style and record why.
+Implement the work; do not stop at another plan or asset list. Continue the selected painterly, non-voxel direction, finish G1's models/composition and G2's materials/lighting, then G3's verification. Preserve the continuous desert surface, world-space highway, and remote layered mountain horizon. Do not restore cube-grid ground, stepped terrain heights, or box mesas; G0's historical comparison is already recorded.
 
 Custom-build the hero station, canopy, two vintage pumps, and GAS/OIL/STOP/Route 66 signs using ASSET_GUIDE.md. Pumps need rounded or deliberately stepped crowns, inset meters, trim, modeled nozzles, and hanging hoses. Buildings need layered roof edges, recessed windows/doorways, and grounded columns. Improve terrain, cacti, poles/wires, and the road's continuity to the horizon. More cubes or bloom alone is not a completed asset pass.
 
