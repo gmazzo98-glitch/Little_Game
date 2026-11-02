@@ -1,13 +1,13 @@
 # Roadmap — Neon Gas: Route 66 Dusk
 
-The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Last audited: 2026-11-01, against `4eb3782` on `vibe/neon-gas-voxel-f660eb` (PR #1).
+The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02 after checking `a941316` on `vibe/neon-gas-voxel-f660eb` (PR #1). The runtime is unchanged between those commits.
 
 **Next: G0, capture the graphics baseline and compare the approved styles.** Graphics quality is the priority. Complete G0–G3 before adding Phase 2–6 features. Preserve the implemented Phase 1 cycle throughout. This document records a plan and source audit; it does not claim the visual overhaul has already shipped.
 
 ## Delivery contract
 
-- One playable `index.html`, with Three.js and all CSS, shaders, geometry, and future audio inline. No external assets, CDN, runtime requests, required server, build system, or repo tooling.
-- Keep the small documentation set and existing concept illustration. Do not add a second source tree or duplicate prompt document.
+- One playable `index.html`, with Three.js and all CSS, shaders, geometry, selected model/texture data, and future audio inline. No external runtime assets, CDN, runtime requests, required server, package install, or build to play.
+- Keep the documentation focused and preserve the existing concept illustration. `ASSET_GUIDE.md` specifies models and `AGENT_PROMPT.md` launches agents; they do not replace aesthetic or status authority. Allow only source files/license records/preparation scripts genuinely needed for implemented art, following the asset guide; no unused asset packs or parallel application source tree.
 - One 1960s station, exactly two pumps, empty straight highway, desert, cacti, poles, and sagging wires. No people, vehicles, train lights, other buildings, music, or recent life. Sparse insects are permitted only in their planned phases.
 - About five minutes from dusk through blue hour to night, one way, then hold. No visible switch, loop, or day/night toggle.
 - Target steady 60 fps on a named mid-range laptop. Measure whole-frame cost; prefer fewer surfaces, sensible batching, and cheaper lighting over greater voxel density.
@@ -18,6 +18,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Work | Status | Dependency / next result |
 | --- | --- | --- |
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
+| Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
 | G0 — Baseline and rendering-style decision | **Next / not started** | Actual game captures and comparable frame measurements |
 | G1 — Composition and period silhouettes | Planned | G0 style decision recorded |
 | G2 — Palette, surfaces, and light hierarchy | Planned | G1 accepted |
@@ -58,13 +59,17 @@ These are source observations, not a substitute for viewing the scene. Validate 
 - [ ] Record hardware/GPU, browser, viewport, pixel ratio, frame-time median and p95, draw calls, rendered triangles, and shadow configuration. Sample at least 30 seconds per representative view after warm-up. Include the bloom/shadow passes in measurements.
 - [ ] Compare the current crisp-voxel approach with a focused painterly flat-shade revision of the **same whole scene**. Use separate revisions/captures, rather than a mixed-style scene or a new player-facing style selector.
 - [ ] Evaluate silhouette quality, material readability, horizon depth, and neon source/spill at all three light stages. Choose the style that best fits the brief within the measured budget; record the decision below.
+- [ ] Record an asset plan using `ASSET_GUIDE.md`: custom station/pumps/signs by default; select licensed free secondary props only where suitable. Prove the embedding route with one representative hero pump before adding an importer or growing the asset set.
 
 Painterly is the preferred experiment: coarse surface panels or 0.5–1 unit construction, spatially partitioned material merges, flat Lambert shading, and a maximum of one moon shadow-caster. Keep fine lettering/neon, ACES, fog, and local non-shadow light. If voxel wins, remove hidden internal cubes and establish useful batch bounds before raising density. See the full renderer rules in `AESTHETIC.md`.
 
 **Pass:** matching actual captures and measurements exist; one style is selected with a short reason. A claimed 3–5 times cheaper painterly frame is only a target until measured. No performance or visual approval has been recorded yet.
 
+Do this baseline/decision once, then build. If rendering evidence is unavailable, record what is pending and continue independent modeling/source improvements; do not mark visual acceptance complete or spend the whole assignment producing another plan.
+
 ### G1 — Make the place convincing in silhouette
 
+- [ ] Follow the inventory, scale, construction recipes, handoff contract, and bloom-off close-up checks in `ASSET_GUIDE.md`. Use actual surface geometry and embedded asset data rather than denser solid cube volumes. Record provenance for any imported model.
 - [ ] Set the approach framing and station/canopy/sign proportions. Keep negative space dominant and the station small within the desert.
 - [ ] Replace pump blockout shapes with vintage rounded or stepped crowns, meter recesses, nozzle and hose silhouettes; introduce slight rotation/age differences. Keep exactly two pumps and align collisions with the final shapes.
 - [ ] Shape a STOP octagon and Route 66 shield; keep text contained and readable. Keep GAS/OIL cabinet scale credible beside the roofline.
@@ -73,6 +78,8 @@ Painterly is the preferred experiment: coarse surface panels or 0.5–1 unit con
 
 **Pass:** station, canopy, pumps, and sign are distinct at the starting viewpoint and at thumbnail scale; each close prop reads as its period object; both highway views feel expansive and empty. Walking under the canopy and through the doorway produces no new collision issues.
 
+Required asset deliverables: one finished station/canopy assembly; two detailed vintage pumps with meters/nozzles/hoses; one GAS/OIL cabinet; correctly shaped STOP and Route 66 signs; a grounded, varied desert prop kit and receding poles/wires. Every component follows the asset guide's material-role and collision conventions.
+
 ### G2 — Establish palette, material, and light hierarchy
 
 - [ ] Apply a restrained cream / faded teal or red station palette. Desaturate sand, scrub, cacti, and distant mesas; separate depth with value and fog rather than random color noise.
@@ -80,6 +87,7 @@ Painterly is the preferred experiment: coarse surface panels or 0.5–1 unit con
 - [ ] Make neon a thin readable source with soft nearby bloom and colored spill on nearby geometry. Keep letterforms legible and cream walls unclipped. Let neon become dominant as dusk drains away.
 - [ ] Ground pumps and columns with soft contact shadows. Tune exposure, fill, fog, and moonlight together so night is dark but navigable. Check the reverse view as well as the hero view.
 - [ ] Review emissive road markings and STOP panel: ordinary paint should read through illumination rather than behaving like another neon source.
+- [ ] Normalize imported/custom assets to one palette, surface treatment, and texel/detail scale. Retain authoring/provenance records where needed and verify every used model/texture is embedded in the delivered file.
 
 **Pass:** actual captures read as melancholy Americana in all three light stages. The desert is quiet and desaturated; the station is the local color focus. No plastic-looking uniform surfaces, blooming white blobs, blacked-out pumps, or visible light-stage switches.
 
@@ -200,3 +208,11 @@ For each `index.html` change:
 - Pending: rendered dusk/blue-hour/night inspection, actual offline runtime/network check, controls, shader checks, and hardware frame measurements. The available browser rejected opening `file://` under its URL policy, so no visual/performance acceptance is recorded.
 - Rendering-style decision: **pending G0**. Compare crisp voxel with the painterly alternative before choosing. The concept illustration is not rendered evidence.
 - Next action: capture and measure the actual game for G0; then complete the coherent style comparison.
+
+### 2026-11-02 — Asset production and implementation-agent directions
+
+- Scope: documentation only. Added `ASSET_GUIDE.md` with asset inventory, dimensions, geometry budgets, detailed model recipes, free-source candidates, licensing/provenance records, and offline embedding routes; added the ready-to-use `AGENT_PROMPT.md`.
+- Updated contributor, aesthetic, README, and G0–G2 directions to require finished models and a playable exploration experience. Optional authoring sources/preparation are allowed when needed for real assets; the one-file, offline, no-build-to-play contract remains.
+- Source research: official Kenney Nature Kit / Retro Urban Kit pages identify free CC0 packs; Poly Haven Rocky Terrain and the asset license page identify a CC0 terrain resource. Exact downloadable archives were not audited and no third-party art was imported. Custom hero modeling is the default/fallback.
+- Validation: checked internal documentation links, prompt references, script-extraction instructions, and the unchanged runtime blob. No graphics, asset-production, offline-runtime, or performance gate is newly marked complete.
+- Next implementation: G0's representative pump/style test and asset decision, then the G1 inventory. If captures are blocked, continue independent modeling and keep the evidence explicitly pending.

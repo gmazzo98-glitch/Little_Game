@@ -1,12 +1,12 @@
 # Working on Neon Gas
 
-Read [AESTHETIC.md](AESTHETIC.md), then [ROADMAP.md](ROADMAP.md), before changing the scene. The user's current instructions take precedence. These files are the project's art direction and execution plan, not optional background.
+Read [AESTHETIC.md](AESTHETIC.md), [ROADMAP.md](ROADMAP.md), and [ASSET_GUIDE.md](ASSET_GUIDE.md) before changing the scene. The user's current instructions take precedence. These files are the project's art direction, execution plan, and modeling specifications, not optional background. [AGENT_PROMPT.md](AGENT_PROMPT.md) is the implementation launch prompt.
 
 ## Scope
 
 - Build one first-person, walkable 1960s gas station on an empty desert highway. Preserve melancholy, isolation, and stillness.
-- Ship one self-contained `index.html`: inline Three.js, CSS, shaders, and game code; zero runtime network requests; double-click `file://` support. No build system or asset pipeline.
-- Keep the repository small: the playable file, project documentation, this contributor guide, and the existing concept illustration. Verification can use temporary files outside the repository.
+- Ship one self-contained `index.html`: inline Three.js, CSS, shaders, game code, and any selected model/texture data; zero runtime network requests; double-click `file://` support. Playing the committed game must require no build, package install, or asset preparation.
+- Keep the repository small: the playable file, project documentation, this contributor guide, and the existing concept illustration. Selected authoring sources, license records, or a reproducible preparation script are allowed only when genuinely needed for an implemented asset; see `ASSET_GUIDE.md`. Verification can use temporary files outside the repository.
 - Preserve the bundled Three.js code and license. The game begins at `function Vm(i)` with `var pn=Vm(1966)` inside the existing IIFE. The license notice is at the **end** of the script, not before the game. Locate these by structure if names change.
 
 ## Choose work from the roadmap
@@ -14,8 +14,16 @@ Read [AESTHETIC.md](AESTHETIC.md), then [ROADMAP.md](ROADMAP.md), before changin
 1. Start with the earliest unfinished dependency. **Graphics foundation G0 is next.** Sky effects, sound, and micro-life wait until the visual foundation passes.
 2. Name the milestone and the visual problem being solved before editing. Prefer a focused change with a visible acceptance criterion.
 3. Use one approved rendering style per change set. Crisp voxel is the current implementation; painterly flat-shade is the preferred alternative to evaluate. Do not silently switch styles or claim its projected performance gain as measured.
-4. Keep `AESTHETIC.md` authoritative for mood and `ROADMAP.md` authoritative for priority/status. Update both when an agreed direction changes; do not create competing prompt or design documents.
+4. Keep `AESTHETIC.md` authoritative for mood, `ROADMAP.md` for priority/status, and `ASSET_GUIDE.md` for models and integration. `AGENT_PROMPT.md` points agents to those rules; it is not a competing design document. Update affected guidance when an agreed direction changes.
 5. Every `index.html` change must update the relevant roadmap status and validation record in the same commit, even when a phase remains in progress. Implementation and verified acceptance are separate facts.
+
+## Asset production expectations
+
+- Implement finished hero models, not denser blockouts: station/window/roof layers, vintage pump crowns/meters/nozzles/hoses, a cabinet sign, and shaped STOP/Route 66 panels. Follow the dimensions, recipes, budgets, and close-view checks in `ASSET_GUIDE.md`.
+- Prefer custom hero assets and selective free secondary props. External authoring assets are allowed; external runtime dependencies are not. Inspect the exact license and keep provenance for imported art.
+- Map the bundled classes before using geometry helpers: there is no guaranteed global `THREE` namespace or GLTFLoader. Preserve one library instance, compatible APIs, and its license.
+- If a team works on the game, one integrator owns `index.html` and shared materials. Specialists provide bounded builders/mesh data, dimensions, material roles, and collision bounds; avoid concurrent bundle overwrites.
+- If baseline rendering/capture is blocked, record the missing check and continue safe independent modeling/source work. Do not claim G0/G3 accepted, and do not replace implementation with another roadmap or shopping list.
 
 ## Non-negotiables
 

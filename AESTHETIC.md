@@ -1,6 +1,6 @@
 # Aesthetic direction — Neon Gas: Route 66 Dusk
 
-This is the canonical visual and emotional reference for `index.html`. Use [ROADMAP.md](ROADMAP.md) for implementation order and acceptance status.
+This is the canonical visual and emotional reference for `index.html`. Use [ROADMAP.md](ROADMAP.md) for implementation order and acceptance status, and [ASSET_GUIDE.md](ASSET_GUIDE.md) for model dimensions, construction recipes, and asset integration.
 
 ## The feeling
 
@@ -45,7 +45,7 @@ Use these as color relationships, not mandatory final shader values:
 | Neon | Small, saturated warm red/pink accents and cooler cyan trim |
 | Night | Blue-black sky and restrained cold moonlight |
 
-Use broad, quiet color fields with sparse wear at seams, edges, lower walls, and sun-exposed trim. Avoid random color noise on every cube, uniform glossy plastic, saturated green cacti, or equal contrast on every surface. Weathering must read from viewing distance; micro-detail comes last. Generate all variation inside the HTML without external texture files.
+Use broad, quiet color fields with sparse wear at seams, edges, lower walls, and sun-exposed trim. Avoid random color noise on every cube, uniform glossy plastic, saturated green cacti, or equal contrast on every surface. Weathering must read from viewing distance; micro-detail comes last. Generate variation procedurally or adapt and embed selected licensed art inside the HTML; never load external texture files at runtime.
 
 ## Period shapes and content
 
@@ -58,6 +58,8 @@ Use broad, quiet color fields with sparse wear at seams, edges, lower walls, and
 ## Two approved rendering directions
 
 Choose one coherent direction per change set and state the choice. Keep the scene, mood, cycle, controls, and offline contract the same in a comparison.
+
+Both directions require finished, recognizable close-up assets: deliberate silhouettes, surface depth, joints, and material separation. The single-file requirement does not require crude cube models. Custom meshes and embedded licensed models are allowed under the integration rules in `ASSET_GUIDE.md`.
 
 ### A. Crisp voxel — current implementation
 
