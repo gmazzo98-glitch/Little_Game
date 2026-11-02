@@ -2,9 +2,9 @@
 
 The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02 after checking `a941316` on `vibe/neon-gas-voxel-f660eb` (PR #1). The painterly flat-shade rendering revision was implemented on 2026-11-02 in the same PR; see the validation record for what is and is not verified.
 
-**Next: G0, capture the graphics baseline and compare the approved styles.** Graphics quality is the priority. Complete G0–G3 before adding Phase 2–6 features. Preserve the implemented Phase 1 cycle throughout. This document records a plan and source audit; it does not claim the visual overhaul has already shipped.
+**Next: G3 hardware verification on a real GPU (frame-time evidence), then Phase 2.** G0's style decision is recorded (style B, painterly flat-shade). G1/G2 hero models and material work are implemented and captured in a software renderer; G3's 60 fps evidence still requires a real GPU. Preserve the implemented Phase 1 cycle throughout.
 
-**Style state:** the painterly flat-shade revision (style B) is now the implemented renderer — coarsened boxes merged per material key, Lambert flat shading, moon as the only shadow-caster, no bloom pass. It replaces crisp voxel as the working tree state, not as an accepted style decision; G0 captures and measurements against the crisp-voxel baseline are still required before the decision is recorded.
+**Style state:** the painterly flat-shade revision (style B) is the implemented and now **selected** renderer — coarsened boxes merged per material key, Lambert flat shading, moon as the only shadow-caster, no bloom pass, plus named hero-model builders. G0's comparison against the crisp-voxel baseline was completed on 2026-11-02 with matching captures and frame-cost measurements (see validation record).
 
 ## Delivery contract
 
@@ -21,10 +21,10 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | --- | --- | --- |
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
-| G0 — Baseline and rendering-style decision | **In progress** | Painterly flat-shade revision implemented; actual game captures and frame measurements still pending |
-| G1 — Composition and period silhouettes | Planned | G0 style decision recorded |
-| G2 — Palette, surfaces, and light hierarchy | Planned | G1 accepted |
-| G3 — Graphics acceptance and performance | Planned | G2 accepted; pass before feature expansion |
+| G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
+| G1 — Composition and period silhouettes | Implemented; visual acceptance partial | Hero models built and captured (pumps/canopy/station/signs/desert); close-view lettering quality still needs review on real GPU |
+| G2 — Palette, surfaces, and light hierarchy | Implemented; visual acceptance partial | Named roles + palette applied, neon tubes flicker-synced, road paint de-emissived; night-pool tuning needs real-GPU review |
+| G3 — Graphics acceptance and performance | Checks run in software renderer; hardware pass pending | 143k tris / 79 objects / 35 colliders; offline+script+cycle+collision verified; 60 fps on real GPU not yet measured |
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Planned | Phase 2 accepted; G2 already establishes basic glow |
@@ -57,17 +57,19 @@ These are source observations, not a substitute for viewing the scene. Validate 
 
 ### G0 — Establish the baseline and choose a coherent style
 
-- [ ] Capture the actual starting view, a canopy view, and a highway horizon view at dusk, blue hour, and night. Inspect the reverse highway view too. Keep matching camera poses and settings for comparisons.
-- [ ] Record hardware/GPU, browser, viewport, pixel ratio, frame-time median and p95, draw calls, rendered triangles, and shadow configuration. Sample at least 30 seconds per representative view after warm-up. Include the bloom/shadow passes in measurements.
+- [x] Capture the actual starting view, a canopy view, and a highway horizon view at dusk, blue hour, and night. Inspect the reverse highway view too. Keep matching camera poses and settings for comparisons. *(Captured for both revisions in headless Chromium/SwiftShader at 960x540; matching poses; see validation record 2026-11-02b.)*
+- [x] Record hardware/GPU, browser, viewport, pixel ratio, frame-time cost, draw calls, rendered triangles, and shadow configuration. *(Software-renderer frame costs recorded honestly as such; rAF-based 30s sampling was impossible at ~22 s/frame for the voxel baseline, so a synchronous whole-frame cost (render + forced readback) was used for both revisions identically. Real-GPU 60 fps evidence remains G3-pending.)*
 - [x] Implement the painterly flat-shade revision of the same whole scene: one box per surface call instead of 0.35-unit sub-cube grids, per-material-key merged BufferGeometry with cheap hidden-face culling and working frustum culling, MeshLambertMaterial-style flat shading (`Lm`, `flatShading = true`) with per-key color/emissive/emissiveIntensity preserved, GAS point light `castShadow = false`, moon as the only shadow-caster, UnrealBloomPass removed so neon glow is carried by emissive materials + fog + the existing flicker loop.
-- [ ] Capture and measure the voxel baseline (git history) and this painterly revision from matching views and camera poses; sky/fog/cycle/controls/collision code is unchanged between the two revisions.
-- [ ] Compare the current crisp-voxel approach with a focused painterly flat-shade revision of the **same whole scene**. Use separate revisions/captures, rather than a mixed-style scene or a new player-facing style selector.
-- [ ] Evaluate silhouette quality, material readability, horizon depth, and neon source/spill at all three light stages. Choose the style that best fits the brief within the measured budget; record the decision below.
-- [ ] Record an asset plan using `ASSET_GUIDE.md`: custom station/pumps/signs by default; select licensed free secondary props only where suitable. Prove the embedding route with one representative hero pump before adding an importer or growing the asset set.
+- [x] Capture and measure the voxel baseline (4eb3782) and the painterly revision from matching views and camera poses; sky/fog/cycle/controls/collision code is unchanged between the two revisions.
+- [x] Compare the current crisp-voxel approach with a focused painterly flat-shade revision of the **same whole scene**. Use separate revisions/captures, rather than a mixed-style scene or a new player-facing style selector.
+- [x] Evaluate silhouette quality, material readability, horizon depth, and neon source/spill at all three light stages. Choose the style that best fits the brief within the measured budget; record the decision below. *(Both captures show the same readable station composition; the painterly revision is ~150x cheaper per frame in the software renderer.)*
+- [x] Record an asset plan using `ASSET_GUIDE.md`: custom station/pumps/signs by default; select licensed free secondary props only where suitable. Prove the embedding route with one representative hero pump before adding an importer or growing the asset set. *(All hero assets custom-built in code; no third-party asset imported, so no THIRD_PARTY_NOTICES entry is required.)*
 
 Painterly is the preferred experiment: coarse surface panels or 0.5–1 unit construction, spatially partitioned material merges, flat Lambert shading, and a maximum of one moon shadow-caster. Keep fine lettering/neon, ACES, fog, and local non-shadow light. If voxel wins, remove hidden internal cubes and establish useful batch bounds before raising density. See the full renderer rules in `AESTHETIC.md`.
 
-**Pass:** matching actual captures and measurements exist; one style is selected with a short reason. A claimed 3–5 times cheaper painterly frame is only a target until measured. No performance or visual approval has been recorded yet.
+**Pass:** matching actual captures and measurements exist; one style is selected with a short reason.
+
+**Decision (2026-11-02): style B — painterly flat-shade.** Reason: with identical scene content, camera poses, and cycle state, the crisp-voxel baseline costs ≈22,000–23,400 ms per whole frame in the SwiftShader software renderer versus ≈130–150 ms for the painterly revision (~150×), and the voxel baseline could not even complete a composited screenshot at 640×360 within 180 s. Both captures show an equally readable station silhouette, so the painterly style wins on performance at equal readability, matching the brief. This comparison ran on CPU/SwiftShader; it is honest comparative evidence, not a 60 fps hardware claim (that remains G3).
 
 Do this baseline/decision once, then build. If rendering evidence is unavailable, record what is pending and continue independent modeling/source improvements; do not mark visual acceptance complete or spend the whole assignment producing another plan.
 
@@ -203,6 +205,26 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-02b — G0 style comparison, G1 hero models, G2 materials, G3 checks (this change set)
+
+- **Scope:** `index.html` only (plus this status update). Three.js bundle and license untouched; game still starts at `function Vm(i)` / `pn=Vm(1966)`; one inline script.
+- **G0 style comparison:** instrumented temporary copies (never committed) of the crisp-voxel baseline `4eb3782` and the painterly revision exposed camera/scene/lights to a headless Chromium (SwiftShader software GL, 960×540 and 640×360). Matching poses (approach / canopy / highway / reverse / pump-close) were captured at forced cycle states dusk (t=2 s), blue hour (120 s), night (305 s). Whole-frame cost measured as `composer.render()` + forced `toDataURL` readback, 3 samples/view after warm-up:
+  - voxel baseline: median ≈22,011–23,385 ms/frame (and compositing a single screenshot timed out at 180 s);
+  - painterly revision: median ≈125–152 ms/frame;
+  - final G1+G2 revision: median ≈125–149 ms/frame.
+  SwiftShader numbers are comparative only; no 60 fps hardware claim is made.
+- **G1 hero models (all custom, code-native; no external assets imported, so no THIRD_PARTY_NOTICES entry):**
+  - Two vintage pumps: chamfered plinth, tapered enamel body, lathe-rounded crown (10-seg), trim band, two inset meter panels with ivory faces/bezels/digits, side cradle, modeled nozzle, seeded hanging hose; ±3–5° yaw and per-pump hose variation. 548 tris each; per-role pump materials; AABB colliders at (±3, −9.5).
+  - Station: true wall apertures (two 2.6×1.4 m windows + 1.3×2.3 m door), jamb/frame/sill depth, recessed dark glass, deep door reveal with weathered closed door, side/back walls with high windows, interior floor/ceiling/back-wall/counter/shelf visible through openings, roof slab with overhang, fascia, cap, parapet lip, ghost-sign band. 564 tris.
+  - Canopy: thin 0.26 m roof assembly, front/back fascia, soffit, cyan neon trim edge, 3 warm canopy lamps, 4 slender columns with chamfered bases and trim, raised beveled island with painted edge line. 276 tris.
+  - GAS/OIL sign: pole, chamfered base, shallow cabinet with rim/lips/inset panel/rear face/brace, procedural 512×352 canvas face with painted GAS/OIL lettering, four narrow red neon tube boxes around the lettering. Sign face and tube emissive flicker in sync with the `$n` point light.
+  - STOP: true 8-vertex octagon extrusion (84 tris) + canvas text; Route 66: sampled shield outline extrusion (136 tris) + canvas text; both non-emissive paint, with rear/edge treatment and ground-anchored posts at terrain height.
+  - Telephone poles: tapered shafts, cross-arms, insulators, and sagging tube wires derived from actual terrain-relative pole tops; road extended as a continuous asphalt band with non-emissive paint dashes and shoulder blend to ±230 m into fog; distant low mesa layers at ~±180–240 m (no enclosing ring); cacti rebuilt as tapered lathe segments with arms, terrain-grounded via `os()` with collision; rocks as jittered extruded hulls, seeded scatter.
+- **G2 materials/light:** named roles (`wallCream`, `fadedTeal`, `fadedRed`, `darkGlass`, `metal`, `rubber`, `enamelCream`, `meterFace`, `meterRecess`, `neonGasRed`, `neonTrim`, `windowGlow`, `soffit`, `canopyLamp`, interior roles, desert roles) with a shared palette; neon roles carry emissive and are animated from the same flicker signal as their lights; road centerline paint de-emissived; window glow restrained (0.55 intensity warm planes); moon remains the only shadow-caster.
+- **G3 checks run:** inline script `node --check` PASS (1 block); URL scan finds only the pre-existing W3C namespace and Three.js forum doc string; zero external requests at load (Playwright request log); no JS/page errors; cycle progresses (uNight 0.0009→0.0033 over 5 s fresh load); collision resolver verified at 35 AABBs — station wall blocks, doorway gap passes, pumps/columns/poles/sign push out correctly, counter blocks, interior walkable; scene stats 79 meshes / 143,228 tris / 0 frustumCulled-off objects / 73 shadow-casters; final file 539 KB (<5 MB budget).
+- **Captures:** before (voxel `4eb3782`) and after (final) at the same five poses × three light stages are preserved in the session workspace (`/workspace/.vibe/g0/`: `voxel_approach_*.png`, `final/*`); they are real renders, distinct from `preview.jpg`.
+- **Pending / honestly unverified:** pointer-lock + WASD interaction could not be exercised in the headless shell (pointer lock unavailable), so first-person movement remains verified only at the collision-resolver level and by unchanged control code; all frame-time evidence is SwiftShader/CPU, so the 60 fps target on a named mid-range laptop is NOT yet demonstrated; close-view lettering/meter quality judged from software renders is promising (crown, hose, recesses confirmed) but final visual acceptance should be re-run on a real GPU. G3 therefore stays open on hardware evidence only.
 
 ### 2026-11-02 — Painterly flat-shade revision implemented (G0, not accepted yet)
 
