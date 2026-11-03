@@ -212,6 +212,12 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-03 — Recorded V8 cabin sound
+
+- Idle source is [Ford Mustang Engine (1985) by lmbubec](https://freesound.org/people/lmbubec/sounds/119449/) (CC0). The 8–12 s window peaks at 48 Hz, 95 Hz (−5.7 dB), and 143 Hz (−13.3 dB), with a weaker peak at 66 Hz (−13.1 dB). The embedded loop is mono, filtered below 22 Hz, resampled to 6 kHz and crossfaded at the seam.
+- [DerMeehdrescher's V8 load and overrun references](https://opengameart.org/content/generic-v8-engine-sound) were analyzed separately. The load example had dominant peaks at 186 Hz and 46.9 Hz, with the lower peak about 4–6 dB down. The overrun example was strongest at 139 Hz. The game retains a cabin-biased mix with slower pitch travel, a low-pass cutoff that falls from 255 Hz to 170 Hz with speed, and quieter sustained throttle.
+- Inline syntax passed. Spectral verification of the embedded loop and modeled filter put the dominant idle peak at 47.6 Hz, with output RMS about 0.115 at idle and 0.070 at full speed under throttle. Physical speaker listening remains open.
+
 ### 2026-11-03 — Audible touring coupe engine
 
 - Sitting in the coupe starts a V8-style idle. Speed and throttle raise the pitch and level, and exiting fades the sound out. The exhaust includes harmonics and a mid-bass boost for small speakers. Seating retries browser audio resume, and the HUD shows when sound is muted.
