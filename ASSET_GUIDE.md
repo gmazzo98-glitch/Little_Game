@@ -82,6 +82,8 @@ Use a continuous terrain surface with shared edges, interpolated normals, and un
 
 **Accept:** the landscape reads as a large dry place rather than a square tabletop. Vegetation is sparse, desaturated, grounded, and varied without noise.
 
+The telephone line now uses three reusable instanced batches: wood poles, porcelain insulators, and connected wire spans. Keep 40m world spacing, an 81-pole / 80-span window extending beyond the fog, and the same world-index positions as the player moves. Recenter the pool only when crossing a spacing cell; slope each span to the actual adjacent pole tops, update instance bounds, and reuse the nine near-player collision boxes. Do not allocate new geometry/colliders on every frame or restart the line at the station. Verify both road directions and a view several kilometers away.
+
 ## Materials and geometry implementation
 
 Name material roles explicitly: `wallCream`, `fadedTeal`, `fadedRed`, `darkGlass`, `metal`, `rubber`, `sand`, `neonGas`, `neonTrim`, and `windowGlow`. Share static material instances where suitable, but keep independently animated emissive roles distinct even when colors match. Painterly Lambert materials use broad colors and normals; roughness/metalness values apply only if the selected material supports them. Do not add PBR maps that have no effect in the chosen renderer.

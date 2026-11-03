@@ -50,9 +50,11 @@ Use broad, quiet color fields with sparse wear at seams, edges, lower walls, and
 ## Period shapes and content
 
 - **Station:** single story, flat roof, large dark window panes, modest canopy over a pump island, cream walls and faded trim. Create a clear hierarchy of wall, roof edge, canopy thickness, columns, and window recesses.
+- **Period detailing:** preserve the faded Sunset porcelain wordmark, worn MOTOR SERVICE lettering, dusty OFFICE / OIL & PARTS glazing, cream/teal base course, narrow red belt line, and restrained patina. Use quiet warm canopy pools and visible thin cyan tubes. Detail should imply long abandonment, with no fresh clutter, occupied-shop brightness, or music. The fixed-open door must remain genuinely walkable.
 - **Pumps:** exactly two vintage pumps with a base, softly stepped or rounded upper silhouette, inset meter face, nozzle, and hanging hose. Slightly different angles and restrained wear suggest abandonment. Straight identical cuboids are only blockout placeholders.
 - **Signage:** a proportionate hand-painted GAS/OIL cabinet with thin neon; a recognizable Route 66 shield and STOP silhouette. Keep letters within their panels and readable from the approach. No new novelty signs to fill empty space.
 - **Desert:** a level road and station apron, blended terrain around them, sparse grounded cacti and scrub, distant low mesas, and telephone poles with sagging wires receding toward the horizon. Avoid a visible trench or raised berm across the driveway.
+- **Telephone line:** continue poles and connected sagging wires along the entire visible highway in both directions and as the player travels. Keep fixed world spacing and terrain-relative bases; never restore a short row that stops near the station. Recycle distant geometry beyond the fog rather than filling the world with unlimited objects.
 - **Absence:** no people, cars, traffic, trains or train lights, other buildings, campfires, animals, music, or signs of recent life. Sparse moths and insect sounds are only permitted at their planned phases. Tumbleweed is optional wind-driven debris, never constant activity.
 
 ## Two approved rendering directions

@@ -3923,7 +3923,7 @@ function os(x, z) {
   const dunes = .45 + 2.3 * Hm(x * .008, z * .008) + .28 * ao(x * .023 + 17, z * .023 + 43);
   return dunes * blend;
 }
-var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(e+1.6<s.minY||e-.2>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.55,.055,-.83).normalize()},uNight:{value:0}},vertexShader:`
+var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.55,.055,-.83).normalize()},uNight:{value:0}},vertexShader:`
       varying vec3 vDir;
       void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,fragmentShader:`
       varying vec3 vDir;
@@ -4071,7 +4071,8 @@ var PAL = {
   interiorFloor: 0x8f8470, interiorCeil: 0xa79b85, interiorWall: 0xc9bda4,
   interiorCounter: 0x7c6a52, interiorShelf: 0x9a8a6e, shoulder: 0x6f6350,
   signRed: 0x9c3a32, signWhite: 0xe8e0cc, signBlack: 0x3a3a40,
-  wire: 0x1b1b1d, insulator: 0x9aa3a8,
+  wire: 0x242127, insulator: 0xabb7ae, rust: 0x765244, dust: 0x958b72,
+  tileCream: 0xc4bea8, tileTeal: 0x497a76, darkWood: 0x463a30,
 };
 
 // vector/matrix helpers
@@ -4225,6 +4226,21 @@ function roleMat(role, opts) {
     if (base === 'neonTrim') { m.emissive = new Me(PAL.neonCyan); m.emissiveIntensity = 1.2; }
     if (base === 'canopyLamp') { m.emissive = new Me(PAL.warmGlow); m.emissiveIntensity = 1.0; }
     if (base === 'windowGlow') { m.emissive = new Me(PAL.windowGlow); m.emissiveIntensity = .55; }
+    if (base === 'wallCream') { m.emissive = new Me(0x30291e); m.emissiveIntensity = .13; }
+    if (base === 'wallCream' || base === 'enamelCream') {
+      m.onBeforeCompile = shader => {
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vPatinaWorld;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPatinaWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying vec3 vPatinaWorld;')
+          .replace('#include <color_fragment>', `#include <color_fragment>
+            float dustBelt=1.0-smoothstep(.10,1.25,vPatinaWorld.y);
+            float streak=abs(sin(vPatinaWorld.x*2.7+vPatinaWorld.z*.41)*sin(vPatinaWorld.x*.73-vPatinaWorld.z*1.19));
+            float worn=smoothstep(.76,.98,streak)*(.035+.055*smoothstep(2.5,3.7,vPatinaWorld.y));
+            diffuseColor.rgb*=mix(vec3(1.0),vec3(.79,.75,.68),dustBelt*.48)*(1.0-worn);`);
+      };
+    }
     if (opts.emissive) { m.emissive = new Me(opts.emissive); m.emissiveIntensity = opts.emissiveIntensity || 1; }
     ROLE_MATS[role] = m;
   }
@@ -4244,6 +4260,48 @@ function addRoleMesh(scene, role, parts, opts) {
   scene.add(mesh);
   return mesh;
 }
+
+// Original period graphics generated in memory; no fonts/images are fetched.
+function paintedSurface(width, height, painter, matrix, options = {}) {
+  const canvas = document.createElement('canvas');
+  canvas.width = options.width || 768; canvas.height = options.height || 256;
+  const ctx = canvas.getContext('2d');
+  painter(ctx, canvas.width, canvas.height);
+  const texture = new qt(canvas); texture.colorSpace = 'srgb'; texture.needsUpdate = true;
+  const material = new ji({map: texture, color: 0xffffff, roughness: .97, metalness: 0,
+    transparent: !!options.transparent, alphaTest: options.transparent ? .04 : 0,
+    emissive: new Me(options.emissive || 0), emissiveMap: options.emissive ? texture : null, emissiveIntensity: options.intensity || 0});
+  const mesh = new dt(new ba(width, height), material);
+  mesh.matrixAutoUpdate = false; mesh.matrix.fromArray(matrix || matIdentity());
+  mesh.receiveShadow = true; mesh.name = options.name || 'Weathered painted detail';
+  Nt.add(mesh);
+  return mesh;
+}
+function agePaint(ctx, width, height, seed, strength = 1) {
+  const random = Vm(seed);
+  ctx.save();
+  const dirt = ctx.createLinearGradient(0, 0, 0, height);
+  dirt.addColorStop(0, 'rgba(54,43,33,.13)'); dirt.addColorStop(.65, 'rgba(54,43,33,0)');
+  dirt.addColorStop(1, 'rgba(54,43,33,.26)');
+  ctx.fillStyle = dirt; ctx.fillRect(0, 0, width, height);
+  for (let i = 0; i < 95; i++) {
+    ctx.globalAlpha = (.035 + random() * .11) * strength;
+    ctx.fillStyle = i % 3 ? '#c4b79a' : '#4b4338';
+    const x = random() * width, y = random() * height;
+    ctx.fillRect(x, y, 1 + random() * 14, 1 + random() * 3);
+  }
+  ctx.restore();
+}
+function pumpMeterPaint(ctx, w, h) {
+  ctx.fillStyle = '#c9c2a8'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#292c28'; ctx.fillRect(20, 19, w - 40, h * .46);
+  ctx.fillStyle = '#c7c6ad'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 63px Courier New, monospace'; ctx.fillText('000.0', w / 2, h * .30);
+  ctx.fillStyle = '#4d5044'; ctx.font = '19px Arial, sans-serif'; ctx.fillText('GALLONS', w / 2, h * .68);
+  ctx.font = 'bold 24px Georgia, serif'; ctx.fillText('SUNSET', w / 2, h * .86);
+  agePaint(ctx, w, h, 1959, .7);
+}
+
 // ---- hero assets: pumps, station, canopy, signs, poles, desert -----------------
 // (G1: named builders with material roles, collision registration, light anchors)
 
@@ -4266,14 +4324,14 @@ function buildVintagePumpParts(variant) {
   // meter recess + face + bezel (upper)
   add('meterRecess', boxPart(0, .99, .245, .52, .36, .12));
   add('meterFace', boxPart(0, .99, .305, .44, .28, .02));
-  add('metal', boxPart(0, .99, .318, .48, .32, .012));
-  add('meterInk', boxPart(-.13, .99, .332, .05, .14, .004));
-  add('meterInk', boxPart(0, .99, .332, .05, .14, .004));
-  add('meterInk', boxPart(.13, .99, .332, .05, .14, .004));
+  for (const bx of [-.235,.235]) add('metal', boxPart(bx,.99,.326,.025,.33,.025));
+  for (const by of [.835,1.145]) add('metal', boxPart(0,by,.326,.48,.025,.025));
   // lower dial
   add('meterRecess', boxPart(0, .60, .235, .38, .30, .10));
   add('meterFace', boxPart(0, .60, .29, .31, .23, .02));
-  add('metal', boxPart(0, .60, .305, .35, .27, .012));
+  for (const bx of [-.167,.167]) add('metal', boxPart(bx,.60,.314,.022,.27,.022));
+  for (const by of [.475,.725]) add('metal', boxPart(0,by,.314,.35,.022,.022));
+  add('fadedRed', boxPart(0,.36,.313,.56,.14,.025));
   // nozzle cradle + nozzle + hanging hose on +X side
   add('metal', boxPart(.40, .70, .05, .07, .07, .22));
   const hose = [];
@@ -4301,107 +4359,142 @@ for (const role in pumpParts0) {
   addRoleMesh(Nt, 'pump_' + role, pumpParts0[role].map(p => ({ ...p, matrix: matMul(pumpMats0, p.matrix || matIdentity()) })));
   addRoleMesh(Nt, 'pump_' + role, pumpParts1[role].map(p => ({ ...p, matrix: matMul(pumpMats1, p.matrix || matIdentity()) })));
 }
+
+for (const matrix of [pumpMats0, pumpMats1]) {
+  paintedSurface(.425,.265,pumpMeterPaint,matMul(matrix,matTranslate(0,.99,.341)),
+    {width:384,height:224,emissive:0x403a29,intensity:.16,name:'Vintage gallon meter'});
+  paintedSurface(.295,.205,(ctx,w,h)=>{
+    ctx.fillStyle='#c5bea6';ctx.fillRect(0,0,w,h);ctx.fillStyle='#42443a';ctx.textAlign='center';
+    ctx.font='bold 58px Courier New,monospace';ctx.fillText('0.00',w/2,h*.56);
+    ctx.font='24px Georgia,serif';ctx.fillText('SALE',w/2,h*.88);agePaint(ctx,w,h,1961,.8);
+  },matMul(matrix,matTranslate(0,.60,.332)),{width:320,height:192,emissive:0x352d20,intensity:.12,name:'Frozen sale meter'});
+}
 // pump colliders (rotated footprints approximated as AABBs slightly enlarged)
 Dt(-3.5, -9.95, -2.5, -9.05);
 Dt(2.5, -9.95, 3.5, -9.05);
 
-// ---- Station shell -------------------------------------------------------------
-(function buildStationShell() {
-  const parts = {};
-  const add = (role, part) => { (parts[role] = parts[role] || []).push(part); };
-  const H = 3.6, front = -12.7, back = -20.7, left = -6, right = 6, W = 12, D = 8;
-  const winY0 = 0.95, winY1 = 2.35, winW = 2.6;
-  const winXs = [-3.6, 3.9];
-  const doorX = 0, doorW = 1.3, doorH = 2.3;
 
-  // front wall: sill band, lintel band, piers between openings
-  add('wallCream', boxPart(0, .475, front, W, .95, .3));
-  add('wallCream', boxPart(0, (winY1 + H) / 2, front, W, H - winY1, .3));
-  // openings: left window [-4.9,-2.3], door [-0.65,0.65], right window [2.6,5.2]
-  for (const [x0, x1] of [[-6, -4.9], [-2.3, -0.65], [0.65, 2.6], [5.2, 6]])
-    add('wallCream', boxPart((x0 + x1) / 2, (winY0 + winY1) / 2, front, x1 - x0, winY1 - winY0, .3));
-  // window jambs/frames/glass/interior cues
-  for (const wx of winXs) {
-    add('darkGlass', boxPart(wx, (winY0 + winY1) / 2, front - .17, winW - .12, winY1 - winY0 - .12, .05));
-    add('trimBand', boxPart(wx, winY1 + .04, front - .03, winW + .18, .09, .2));
-    add('trimBand', boxPart(wx, winY0 - .04, front - .03, winW + .18, .09, .2));
-    add('trimBand', boxPart(wx - winW / 2 - .045, (winY0 + winY1) / 2, front - .03, .09, winY1 - winY0, .2));
-    add('trimBand', boxPart(wx + winW / 2 + .045, (winY0 + winY1) / 2, front - .03, .09, winY1 - winY0, .2));
-    add('trimBand', boxPart(wx, winY0 - .125, front + .07, winW + .3, .07, .34)); // sill
-    add('windowGlow', boxPart(wx, (winY0 + winY1) / 2, front - .26, winW - .3, winY1 - winY0 - .3, .02)); // warm interior cue
-    add('trimBand', boxPart(wx, (winY0 + winY1) / 2, front - .17, .05, winY1 - winY0 - .12, .05)); // mullion
+// ---- SUNSET SERVICE: a quiet, weathered mid-century roadside station. ----------
+(function buildStationShell() {
+  const parts = {}, add = (role,p) => (parts[role] || (parts[role]=[])).push(p);
+  const H=3.6, f=-12.7, back=-20.7;
+  // Actual apertures: no wall or door panel across the walkable entrance.
+  for (const [x0,x1] of [[-6,-.72],[.72,6]]) add('wallCream',boxPart((x0+x1)/2,.475,f,x1-x0,.95,.3));
+  add('wallCream',boxPart(0,2.975,f,12,1.25,.3));
+  for (const [x0,x1] of [[-6,-4.9],[-2.3,-.72],[.72,2.6],[5.2,6]])
+    add('wallCream',boxPart((x0+x1)/2,1.65,f,x1-x0,1.4,.3));
+  // Porcelain base course and faded painted belt lines.
+  for (const [x0,x1] of [[-6,-.72],[.72,6]]) {
+    add('tileTeal',boxPart((x0+x1)/2,.25,f+.175,x1-x0,.40,.065));
+    add('fadedRed',boxPart((x0+x1)/2,.50,f+.18,x1-x0,.055,.06));
+    for(let x=x0+.55;x<x1;x+=.72) add('grime',boxPart(x,.25,f+.212,.013,.38,.009));
   }
-  // door: deep jamb, header, closed weathered door, step
-  add('wallCream', boxPart(doorX, (doorH + H) / 2, front, doorW, H - doorH, .3)); // header piece above door
-  add('trimBand', boxPart(doorX - doorW / 2 - .05, 1.15, front - .07, .1, doorH, .3));
-  add('trimBand', boxPart(doorX + doorW / 2 + .05, 1.15, front - .07, .1, doorH, .3));
-  add('trimBand', boxPart(doorX, doorH + .05, front - .07, doorW + .2, .1, .3));
-  add('fadedRed', boxPart(doorX, 1.1, front - .13, doorW - .08, doorH - .1, .06));
-  add('wornMetal', boxPart(doorX, .05, front + .32, doorW + .5, .1, .65));
-  // side walls
-  for (const sx of [-1, 1]) {
-    add('wallCream', boxPart(sx * 6, H / 2, -16.7, .3, H, D));
-    add('darkGlass', boxPart(sx * 6, 2.7, -16.4, .05, .6, 1.4));
-    add('trimBand', boxPart(sx * 6, 2.7, -16.4, .12, .7, 1.5));
+  for(const wx of [-3.6,3.9]) {
+    for(const y of [.91,2.39]) add('fadedTeal',boxPart(wx,y,-12.50,2.80,.09,.22));
+    for(const x of [wx-1.345,wx+1.345]) add('fadedTeal',boxPart(x,1.65,-12.50,.09,1.48,.22));
+    add('wornMetal',boxPart(wx,.80,-12.38,2.95,.07,.42));
+    add('trimBand',boxPart(wx,1.65,-12.51,.048,1.40,.08));
+    // A dusty opaque pane with reflected dusk, blinds, and a restrained warm lower edge.
+    paintedSurface(2.58,1.36,(ctx,w,h)=>{
+      const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,'#263739');g.addColorStop(.60,'#171e20');g.addColorStop(1,'#3c382a');
+      ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='rgba(136,147,128,.09)';ctx.fillRect(w*.08,0,w*.17,h);
+      ctx.fillStyle='rgba(181,169,127,.11)';for(let y=15;y<h*.43;y+=17)ctx.fillRect(0,y,w,3);
+      ctx.textAlign='center';ctx.fillStyle='rgba(205,193,152,.43)';ctx.font='bold 45px Georgia,serif';
+      ctx.fillText(wx<0?'OFFICE':'OIL & PARTS',w/2,h*.66);
+      agePaint(ctx,w,h,wx<0?1960:1963,.8);
+    },matTranslate(wx,1.65,-12.61),{width:640,height:384,emissive:0x302f20,intensity:.28,name:'Dusty recessed station window'});
   }
-  // back wall + high windows
-  add('wallCream', boxPart(0, H / 2, back, W, H, .3));
-  add('darkGlass', boxPart(-3, 1.9, back + .18, 1.8, 1.1, .05));
-  add('darkGlass', boxPart(3, 1.9, back + .18, 1.8, 1.1, .05));
-  add('trimBand', boxPart(-3, 1.9, back + .16, 1.9, 1.2, .08));
-  add('trimBand', boxPart(3, 1.9, back + .16, 1.9, 1.2, .08));
-  // interior
-  add('interiorFloor', boxPart(0, .07, -16.7, W - .2, .14, D - .2));
-  add('interiorCeil', boxPart(0, H - .07, -16.7, W - .2, .1, D - .2));
-  add('interiorWall', boxPart(0, 1.5, back + .22, W - .6, 2.8, .12));
-  add('interiorCounter', boxPart(3.0, .55, -15.3, 3.2, 1.1, .7));
-  add('trimBand', boxPart(3.0, 1.13, -15.3, 3.3, .06, .8));
-  add('interiorShelf', boxPart(-3.2, 1.9, -20.2, 4.0, .06, .5));
-  Dt(1.4, -15.65, 4.6, -14.95, 0, 1.6); // interior counter (tall enough to block player)
-  // roof: slab + overhang + fascia + parapet + ghost sign band
-  add('fadedTeal', boxPart(0, H + .09, -16.95, W + .9, .26, D + .9));
-  add('wallCream', boxPart(0, H - .04, -12.42, W + .9, .2, .2));   // front fascia
-  add('fadedTeal', boxPart(0, H + .2, -16.95, W + 1.0, .09, D + 1.0)); // cap
-  add('fadedTeal', boxPart(0, H + .3, -12.42, W + .9, .12, .18));  // front parapet lip
-  add('ghostSign', boxPart(-2.2, H + .28, -12.36, 4.4, .46, .05)); // ghost lettering band (non-emissive)
-  // collisions: perimeter walls with door gap (interior walkable)
-  Dt(-6.3, -12.7, -0.72, -12.4);     // front-left of door
-  Dt(0.72, -12.7, 6.3, -12.4);       // front-right of door
-  Dt(-6.3, -20.9, -5.7, -12.4);      // left side wall
-  Dt(5.7, -20.9, 6.3, -12.4);        // right side wall
-  Dt(-6.3, -21.0, 6.3, -20.4);       // back wall
-  // flush role meshes
-  for (const role in parts) addRoleMesh(Nt, role, parts[role]);
+  // Deep doorway; the old door is fixed open against its jamb, not a phantom barrier.
+  add('wallCream',boxPart(0,2.975,f,1.44,1.25,.3));
+  for(const x of [-.70,.70]) add('trimBand',boxPart(x,1.17,-12.51,.10,2.34,.35));
+  add('trimBand',boxPart(0,2.36,-12.51,1.5,.10,.35));
+  add('wornMetal',boxPart(0,.045,-12.35,1.5,.09,.65));
+  const door=matMul(matTranslate(-.64,0,-12.78),matRotY(Math.PI/2));
+  add('fadedTeal',{...boxPart(.57,1.12,0,1.14,2.24,.055),matrix:door});
+  add('darkGlass',{...boxPart(.57,1.40,.035,.88,1.24,.018),matrix:door});
+  add('metal',{...boxPart(1.03,.92,.075,.055,.22,.045),matrix:door});
+  Dt(-.70,-13.95,-.58,-12.78,0,2.3);
+  for(const side of [-1,1]) {
+    add('wallCream',boxPart(side*6,1.8,-16.7,.3,3.6,8));
+    add('tileTeal',boxPart(side*6,.25,-16.7,.36,.40,8));
+    add('fadedTeal',boxPart(side*6,3.44,-16.7,.36,.14,8));
+    // Old ventilation grille, louvres and a downpipe, all one shared detail batch.
+    add('trimBand',boxPart(side*6.18,2.75,-18.7,.06,.74,1.2));
+    for(let y=2.45;y<3.1;y+=.10)add('wornMetal',boxPart(side*6.23,y,-18.7,.08,.035,1.1));
+    add('rust',{...tubeGeom([[side*6.27,3.62,-20.35],[side*6.27,.22,-20.35],[side*6.47,.13,-20.35]],.045,6),matrix:matIdentity()});
+  }
+  add('wallCream',boxPart(0,1.8,back,12,3.6,.3));
+  add('interiorFloor',boxPart(0,.025,-16.7,11.7,.05,7.7));
+  add('interiorCeil',boxPart(0,3.5,-16.7,11.7,.10,7.7));
+  add('interiorWall',boxPart(0,1.55,-20.45,11.4,3.05,.12));
+  add('interiorCounter',boxPart(3,.52,-15.3,3.2,1.04,.7));
+  add('trimBand',boxPart(3,1.08,-15.3,3.3,.06,.8));
+  add('interiorShelf',boxPart(-3.2,1.9,-20.1,4,.06,.5));
+  Dt(1.4,-15.65,4.6,-14.95,0,1.6);
+  // Roof hierarchy, sun-bleached parapet, and a quiet dark rear cap.
+  add('fadedTeal',boxPart(0,3.72,-16.85,12.7,.24,8.7));
+  add('wallCream',boxPart(0,3.63,-12.36,12.7,.22,.20));
+  add('wornMetal',boxPart(0,3.88,-16.85,12.9,.08,8.9));
+  add('fadedRed',boxPart(0,3.73,-12.24,12.65,.045,.05));
+  add('ghostSign',boxPart(0,2.87,-12.49,4.7,.54,.07));
+  paintedSurface(4.55,.46,(ctx,w,h)=>{
+    ctx.fillStyle='#b8ad91';ctx.fillRect(0,0,w,h);ctx.fillStyle='#6d7867';ctx.textAlign='center';
+    ctx.font='bold 90px Georgia,serif';ctx.fillText('MOTOR SERVICE',w/2,h*.71);agePaint(ctx,w,h,1949,1.4);
+  },matTranslate(0,2.87,-12.44),{width:768,height:128,name:'Faded motor-service wall lettering'});
+  // One abandoned fixture, not a clutter pile or a sign of recent occupation.
+  add('fadedRed',boxPart(-5.05,.67,-11.93,.72,1.30,.48));
+  add('wornMetal',boxPart(-5.05,1.34,-11.93,.77,.06,.53));
+  for(const z of [-11.68,-12.18])add('rust',boxPart(-5.05,.12,z,.76,.08,.06));
+  paintedSurface(.59,.64,(ctx,w,h)=>{
+    ctx.fillStyle='#9b6556';ctx.fillRect(0,0,w,h);ctx.fillStyle='#c6b998';ctx.textAlign='center';ctx.font='bold 100px Georgia,serif';
+    ctx.fillText('OIL',w/2,h*.62);agePaint(ctx,w,h,1954,1.6);
+  },matTranslate(-5.05,.84,-11.679),{width:256,height:256,name:'Faded oil cabinet'});
+  Dt(-5.45,-12.20,-4.65,-11.65,0,1.4);
+  for(const [x0,x1] of [[-6.3,-.72],[.72,6.3]])Dt(x0,-12.87,x1,-12.37);
+  Dt(-6.3,-20.9,-5.7,-12.4);Dt(5.7,-20.9,6.3,-12.4);Dt(-6.3,-21.0,6.3,-20.4);
+  for(const role in parts)addRoleMesh(Nt,role,parts[role]);
 })();
 
-// ---- Canopy --------------------------------------------------------------------
+// ---- Thin canopy, porcelain columns, visible neon and quiet warm pools. --------
 (function buildCanopy2() {
-  const parts = {};
-  const add = (role, part) => { (parts[role] = parts[role] || []).push(part); };
-  const y = 4.35, z = -9, W = 17, D = 8;
-  // island (raised, beveled) + edge line
-  add('asphalt', boxPart(0, .13, z, 7.6, .26, 2.3));
-  add('asphalt', boxPart(0, .27, z, 7.2, .04, 1.9));
-  add('linePaint', boxPart(0, .295, z, 6.6, .03, .16));
-  // 4 slender columns with chamfered bases
-  for (const cx of [-7.5, 7.5]) for (const cz of [-12.4, -5.6]) {
-    add('metal', boxPart(cx, y / 2, cz, .3, y, .3));
-    add('wornMetal', boxPart(cx, .22, cz, .46, .44, .46));
-    add('trimBand', boxPart(cx, y - .22, cz, .36, .18, .36));
+  const parts={},add=(role,p)=>(parts[role]||(parts[role]=[])).push(p);
+  const y=4.35,z=-9,W=17,D=8;
+  add('asphalt',boxPart(0,.12,z,7.6,.24,2.3));
+  add('linePaint',boxPart(0,.245,z,7.35,.018,2.04));
+  add('asphalt',boxPart(0,.258,z,7.15,.024,1.83));
+  for(const x of [-7.5,7.5])for(const zz of [-12.4,-5.6]) {
+    add('wallCream',boxPart(x,2.08,zz,.29,4.16,.29));
+    add('fadedTeal',boxPart(x,.64,zz,.315,1.10,.315));
+    add('wornMetal',boxPart(x,.09,zz,.43,.18,.43));
+    add('fadedRed',boxPart(x,1.23,zz,.32,.055,.32));
+    for(const dx of [-.15,.15])for(const dz of [-.15,.15])add('rust',boxPart(x+dx,.19,zz+dz,.035,.025,.035));
+    add('trimBand',boxPart(x,4.13,zz,.37,.16,.37));
   }
-  // roof assembly: thin slab, fascias, cap, soffit, neon trim edge
-  add('fadedTeal', boxPart(0, y, z, W, .26, D));
-  add('wallCream', boxPart(0, y - .13, z + D / 2 - .09, W, .26, .16));
-  add('wallCream', boxPart(0, y - .13, z - D / 2 + .09, W, .26, .16));
-  add('fadedTeal', boxPart(0, y + .17, z, W + .4, .09, D + .4));
-  add('soffit', boxPart(0, y - .155, z, W - .5, .05, D - .5));
-  add('neonTrim', boxPart(0, y - .21, z + D / 2 - .35, W - 1.0, .045, .045));
-  // canopy lamps (emissive discs at column line)
-  for (const cx of [-5, 0, 5]) add('canopyLamp', boxPart(cx, y - .21, z, .55, .05, .55));
-  for (const role in parts) addRoleMesh(Nt, role, parts[role]);
-  // collisions
-  Dt(-7.7, -12.6, -7.3, -12.2); Dt(7.3, -12.6, 7.7, -12.2);
-  Dt(-7.7, -5.8, -7.3, -5.4);  Dt(7.3, -5.8, 7.7, -5.4);
+  add('fadedTeal',boxPart(0,y,z,W,.26,D));
+  for(const zz of [-5.06,-12.94])add('wallCream',boxPart(0,4.23,zz,W,.25,.16));
+  add('fadedTeal',boxPart(0,4.52,z,W+.4,.09,D+.4));
+  add('soffit',boxPart(0,4.18,z,W-.5,.045,D-.5));
+  for(const x of [-5.5,0,5.5])add('trimBand',boxPart(x,4.145,z,.035,.035,7.4));
+  // Move the tube outside the fascia: the previous trim was buried behind it.
+  add('neonTrim',{...tubeGeom([[-8.25,4.10,-4.945],[8.25,4.10,-4.945]],.022,6),matrix:matIdentity()});
+  for(const x of [-8.53,8.53])add('neonTrim',{...tubeGeom([[x,4.10,-5.05],[x,4.10,-12.9]],.020,6),matrix:matIdentity()});
+  add('fadedRed',boxPart(0,4.43,-4.96,16.7,.035,.035));
+  for(const x of [-4.6,0,4.6]) {
+    add('wornMetal',boxPart(x,4.14,z,.73,.06,.44));
+    add('canopyLamp',boxPart(x,4.095,z,.57,.035,.29));
+  }
+  add('fadedTeal',boxPart(0,4.34,-4.88,4.65,.60,.10));
+  paintedSurface(4.51,.49,(ctx,w,h)=>{
+    ctx.fillStyle='#c7b99a';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#6d8270';ctx.lineWidth=9;ctx.strokeRect(9,9,w-18,h-18);
+    ctx.fillStyle='#93584a';ctx.textAlign='center';ctx.font='italic bold 120px Georgia,serif';ctx.fillText('Sunset',w/2,h*.65);
+    ctx.fillStyle='#667062';ctx.font='bold 28px Arial,sans-serif';ctx.fillText('G A S O L I N E   &   O I L',w/2,h*.91);agePaint(ctx,w,h,1958,.75);
+  },matTranslate(0,4.34,-4.818),{width:1024,height:256,emissive:0xb39b75,intensity:.38,name:'Sunset porcelain canopy wordmark'});
+  for(const role in parts)addRoleMesh(Nt,role,parts[role]);
+  for(const x of [-7.5,7.5])for(const zz of [-12.4,-5.6])Dt(x-.22,zz-.22,x+.22,zz+.22);
+  Sc.position.set(-3.8,3.60,-8.6);Sc.intensity=15;
+  bc.position.set(3.8,3.60,-8.6);bc.intensity=13;
+  Ec.position.set(0,2.7,-15.8);
 })();
 
 // ---- GAS/OIL pole sign -----------------------------------------------------------
@@ -4485,39 +4578,57 @@ Dt(2.5, -9.95, 3.5, -9.05);
   Dt(sx2 - .2, sz2 - .2, sx2 + .2, sz2 + .2);
 })();
 
-// ---- Telephone poles + sagging wires (receding both directions) ------------------
-(function buildPoles() {
-  const parts = {};
-  const add = (role, part) => { (parts[role] = parts[role] || []).push(part); };
-  const poleXs = [];
-  for (let x = -50; x <= 50; x += 20) poleXs.push(x);
-  const z = 5.8;
-  const tops = [];
-  for (const x of poleXs) {
-    const gy = os(x, z);
-    add('woodPole', boxPart(x, gy + 3.3, z, .28, 6.6, .28));           // tapered shaft approx
-    add('woodPole', boxPart(x, gy + 6.3, z, .22, .6, .22));             // top taper
-    add('woodPole', boxPart(x, gy + 6.1, z, 2.4, .16, .16));            // cross-arm
-    add('insulator', boxPart(x - 1.0, gy + 6.25, z, .09, .12, .09));
-    add('insulator', boxPart(x + 1.0, gy + 6.25, z, .09, .12, .09));
-    tops.push({ x, y: gy + 6.25 });
+
+// ---- An unbroken telephone line: fixed world spacing, bounded recycled pools. ---
+var telephoneLine = (function buildTelephoneLine() {
+  const spacing=40, count=81, half=(count-1)/2, offset=12, z=5.8, wireHeight=6.58;
+  const wood=[{...latheGeom([[.18,0],[.17,.5],[.145,3.5],[.115,6.8]],8),matrix:matIdentity()},
+    boxPart(0,6.25,0,.19,.18,2.10)];
+  for(const side of [-1,1])wood.push({...tubeGeom([[0,5.78,0],[0,6.23,side*.76]],.036,5),matrix:matIdentity()});
+  const porcelain=[];
+  for(const side of [-1,1])porcelain.push({...latheGeom([[.075,6.32],[.095,6.37],[.055,6.43],[.085,6.48],[.050,6.58]],6),matrix:matTranslate(0,0,side*.82)});
+  const cables=[];
+  for(const side of [-1,1]) {
+    const points=[];
+    for(let step=0;step<=10;step++){const t=step/10;points.push([spacing*t,wireHeight-Math.sin(t*Math.PI)*1.18,side*.82]);}
+    cables.push({...tubeGeom(points,.019,3,false),matrix:matIdentity()});
   }
-  // wires: low-segment tubes with sag between actual pole tops
-  for (let i = 0; i < poleXs.length - 1; i++) {
-    const a = tops[i], b = tops[i + 1];
-    for (const off of [-1.0, 1.0]) {
-      const pts = [];
-      const NSEG = 8;
-      for (let s = 0; s <= NSEG; s++) {
-        const t = s / NSEG;
-        pts.push([a.x + (b.x - a.x) * t + off, a.y + (b.y - a.y) * t - Math.sin(t * Math.PI) * 1.4, z]);
-      }
-      add('wire', { ...tubeGeom(pts, .022, 4, false), matrix: matIdentity() });
+  function pool(role,parts,n,shadow) {
+    const data=mergeParts(parts),geometry=new It;
+    geometry.setAttribute('position',new Et(new Float32Array(data.pos),3));
+    geometry.setAttribute('normal',new Et(new Float32Array(data.nor),3));geometry.setIndex(data.idx);
+    const mesh=new ar(geometry,roleMat(role),n);mesh.castShadow=shadow;mesh.receiveShadow=false;
+    mesh.name='Continuous telephone line: '+role;Nt.add(mesh);return mesh;
+  }
+  const poles=pool('woodPole',wood,count,true),insulators=pool('insulator',porcelain,count,false),wires=pool('wire',cables,count-1,false);
+  const colliders=[];
+  for(let i=0;i<9;i++){Dt(0,0,0,0,0,0);colliders.push(Mc[Mc.length-1]);}
+  return {spacing,count,half,offset,z,wireHeight,poles,insulators,wires,colliders,center:Infinity,firstIndex:0};
+})();
+function updateTelephoneLine(cameraX) {
+  const line=telephoneLine,center=Math.round((cameraX-line.offset)/line.spacing);
+  if(center===line.center)return;
+  line.center=center;line.firstIndex=center-line.half;
+  const matrix=new $e;
+  for(let slot=0;slot<line.count;slot++) {
+    const index=line.firstIndex+slot,x=line.offset+index*line.spacing,ground=os(x,line.z);
+    matrix.makeTranslation(x,ground,line.z);line.poles.setMatrixAt(slot,matrix);line.insulators.setMatrixAt(slot,matrix);
+    if(slot<line.count-1) {
+      const nextGround=os(x+line.spacing,line.z);
+      matrix.elements[1]=(nextGround-ground)/line.spacing;
+      line.wires.setMatrixAt(slot,matrix);
     }
   }
-  for (const role in parts) addRoleMesh(Nt, role, parts[role]);
-  for (const x of poleXs) Dt(x - .25, z - .25, x + .25, z + .25, 0, os(x, z) + 6.6);
-})();
+  for(const mesh of [line.poles,line.insulators,line.wires]) {
+    mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingBox();mesh.computeBoundingSphere();
+  }
+  for(let slot=0;slot<line.colliders.length;slot++) {
+    const index=center+slot-4,x=line.offset+index*line.spacing,ground=os(x,line.z),box=line.colliders[slot];
+    Object.assign(box,{minX:x-.22,maxX:x+.22,minZ:line.z-.22,maxZ:line.z+.22,minY:ground,maxY:ground+6.8});
+  }
+}
+updateTelephoneLine(Nn.position.x);
+Nt.userData.telephoneLine=telephoneLine;
 
 // ---- Desert kit: grounded cacti, rocks, scrub, mesas ------------------------------
 (function buildDesert() {
@@ -4590,7 +4701,7 @@ Dt(2.5, -9.95, 3.5, -9.05);
 })();
 
 // Road paint and shoulders are continuous world-space terrain shading.
-var ls=new yr(mn);ls.addPass(new Mr(Nt,Nn));ls.addPass(new Sr);var wr=new gr(Nn,document.body),ho=document.getElementById("overlay"),Ac=document.getElementById("crosshair"),Rc=document.getElementById("hud");ho.addEventListener("click",()=>wr.lock());wr.addEventListener("lock",()=>{ho.style.display="none",Ac.style.display="block",Rc.style.display="block"});wr.addEventListener("unlock",()=>{ho.style.display="flex",Ac.style.display="none",Rc.style.display="none"});var fn={};addEventListener("keydown",i=>{fn[i.code]=!0,i.code==="Space"&&i.preventDefault()});addEventListener("keyup",i=>{fn[i.code]=!1});addEventListener("contextmenu",i=>i.preventDefault());var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0),fn.KeyW&&dn.add(Ni),fn.KeyS&&dn.sub(Ni),fn.KeyD&&dn.add(lo),fn.KeyA&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);let i=Math.min(eg.getDelta(),.05);wr.isLocked&&tg(i);Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);$n.intensity=Math.random()<.0018?Dn(1,4):10*(.93+.07*Math.sin(t*40));if(Nt.userData.gasFaceMat){let fl=$n.intensity/10;Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*fl;}if(ROLE_MATS.neonGasRed){let fl=$n.intensity/10;ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*fl;}Ec.intensity=4*(1+.04*Math.sin(t*57));if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57);}ls.render()}Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
+var ls=new yr(mn);ls.addPass(new Mr(Nt,Nn));ls.addPass(new Sr);var wr=new gr(Nn,document.body),ho=document.getElementById("overlay"),Ac=document.getElementById("crosshair"),Rc=document.getElementById("hud");ho.addEventListener("click",()=>wr.lock());wr.addEventListener("lock",()=>{ho.style.display="none",Ac.style.display="block",Rc.style.display="block"});wr.addEventListener("unlock",()=>{ho.style.display="flex",Ac.style.display="none",Rc.style.display="none"});var fn={};addEventListener("keydown",i=>{fn[i.code]=!0,i.code==="Space"&&i.preventDefault()});addEventListener("keyup",i=>{fn[i.code]=!1});addEventListener("contextmenu",i=>i.preventDefault());var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0),fn.KeyW&&dn.add(Ni),fn.KeyS&&dn.sub(Ni),fn.KeyD&&dn.add(lo),fn.KeyA&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);let i=Math.min(eg.getDelta(),.05);wr.isLocked&&tg(i);Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);$n.intensity=Math.random()<.0018?Dn(1,4):10*(.93+.07*Math.sin(t*40));if(Nt.userData.gasFaceMat){let fl=$n.intensity/10;Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*fl;}if(ROLE_MATS.neonGasRed){let fl=$n.intensity/10;ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*fl;}Ec.intensity=5.8*(1+.025*Math.sin(t*57));if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57);}ls.render()}Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
 /*! Bundled license information:
 
 three/build/three.module.js:

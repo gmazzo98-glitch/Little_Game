@@ -2,7 +2,7 @@
 
 The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02. The G0 style decision and the G1/G2 graphical overhaul were implemented on 2026-11-02 on `vibe/neon-gas-voxel-f660eb` (PR #1); see the validation record for what is and is not verified.
 
-**Next: finish G1/G2 close-up asset/light review and the remaining G3 interaction/offline checks.** The user confirmed the painterly, non-voxel direction. The residual cube ground and box mesas have now been replaced with continuous terrain, a world-space highway, and remote layered mountains. Do not restore them. Preserve the implemented Phase 1 cycle and finish the visual foundation before Phase 2.
+**Next: finish the remaining G3 interaction/offline checks and review the latest station pass.** The user confirmed the painterly, non-voxel direction. The residual cube ground and box mesas have now been replaced with continuous terrain, a world-space highway, and remote layered mountains. Do not restore them. Preserve the implemented Phase 1 cycle and finish the visual foundation before Phase 2.
 
 **Style state:** painterly surfaces and modeled props (style B) are selected. Architecture uses hard-surface meshes; the desert has continuous heights and interpolated normals. The old voxel emitter, cube terrain grid, road-extension boxes, and rectangular mesa solids are removed. The moon remains the only shadow-caster. See the newest validation record and [actual landscape comparison](captures/landscape-comparison.jpg).
 
@@ -22,9 +22,9 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
-| G1 — Composition and period silhouettes | Implemented; landscape correction rendered and checked | Smooth ground, world-space road, and distant mountains verified in both highway directions; close-up hero-model acceptance remains partial |
-| G2 — Palette, surfaces, and light hierarchy | Implemented; visual acceptance partial | Named roles + palette applied, neon tubes flicker-synced, road paint de-emissived; night-pool tuning needs real-GPU review |
-| G3 — Graphics acceptance and performance | Geometry/render checks passed; full acceptance still open | 35,862 built mesh triangles; 60-second Intel Iris Xe highway sample: median 16.7ms / p95 17.2ms at 1280×720, DPR 1.25; full controls/file:// and remaining views pending |
+| G1 — Composition and period silhouettes | Station and road-line detailing implemented and rendered | Faded Sunset identity, recessed shop glazing, readable pump meters, open doorway, and continuous telephone line checked in close/far views; final interaction acceptance remains open |
+| G2 — Palette, surfaces, and light hierarchy | Latest dusk/blue-hour/night station pass rendered and checked | Visible cyan roof tubes, quiet warm canopy pools, cream/teal/red detailing, and restrained paint/glass patina; no new shadow-casting lights or imported assets |
+| G3 — Graphics acceptance and performance | Station geometry/render checks passed; full input/offline acceptance still open | 61,364 built triangles including pole instances; 60-second Intel Iris Xe night-station sample: median 16.7ms / p95 16.9ms at 1280×720, DPR 1.25 |
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Planned | Phase 2 accepted; G2 already establishes basic glow |
@@ -46,7 +46,8 @@ The selected painterly scene uses code-native hero builders and surface meshes. 
 | Sky and stars follow the camera; sky renders as an explicit background pass | Four-kilometer camera view checked with no exposed terrain edge; star band starts above the highest mountain layer |
 | Named custom hero builders use `PAL`, `ROLE_MATS`, `roleMat`, `addRoleMesh`, and mesh helpers | Station, pumps, signs, poles, and grounded desert props retained; close-up model/lighting acceptance remains partial |
 | Custom Lambert materials enable fog; ground uses smooth normals while hard-surface props keep deliberate edges | No shader or application errors in the review captures; fog and mountain colors follow the same night progress |
-| The scene contains 64 meshes / 35,862 built mesh triangles, including the sky, versus the prior recorded 79 meshes / 143,228 triangles | Intel Iris Xe browser highway sample: 75 whole-frame draw calls / 38,707 submitted triangles including shadows/output, median 16.7ms and p95 17.2ms over 60 seconds at 1280×720 / DPR 1.25 |
+| The detailed station scene contains 77 meshes / 61,364 built triangles including instances and sky | Intel Iris Xe night-station sample: 134 whole-frame draw calls / 74,253 submitted triangles including shadows/output, median 16.7ms and p95 16.9ms over 60 seconds at 1280×720 / DPR 1.25 |
+| Telephone line: 81 pooled wood/insulator instances and 80 wire spans, 40m fixed spacing; nine reused nearby colliders | Both directions extend beyond fog; recentering/grounding/wire endpoints checked through ±100km and a 4km browser view |
 | The existing five-minute clock still advances with the entry overlay visible | Pause-on-unlock remains Phase 6; no change is claimed here |
 | `preview.jpg` is concept art; `captures/landscape-comparison.jpg` is an actual browser-render comparison | Never use the concept image as proof of achieved quality |
 
@@ -102,7 +103,7 @@ Required asset deliverables: one finished station/canopy assembly; two detailed 
 
 - [ ] Repeat the G0 captures and frame measurements with the selected style and G1/G2 work, on the same machine/settings. Explain differences rather than comparing unmatched resolutions.
 - [x] Remove internal/hidden geometry, bound batches appropriately, and use spatial chunks for meaningful culling. In the painterly path, disable GAS shadows and evaluate a 1024-square moon map or contact quads. (Walls are built from aperture panels with no hidden fills; terrain emits tops and exposed sides only; every batch mesh has real bounds with culling on; GAS shadows already disabled; the 2048 moon map is kept — its 1024 variant can only be judged in captures)
-- [ ] Check shadow artifacts, distant popping, shader errors, resize, and long-view costs. **Blocked in this environment (no browser/GPU); must be run before G3 passes.**
+- [ ] Finish shadow/resize/interactive view acceptance. Station and road renders, shader checks, distant line continuity, and a real-GPU sample are now available; resize and full first-person input/file checks remain open.
 - [ ] Complete the offline and interaction checks below and revalidate Phase 1. Keep real screenshots clearly separate from the existing concept image in review evidence.
 
 **Pass:** G1/G2 visual criteria pass, the delivered file works offline, and sustained 60 fps is demonstrated on the recorded mid-range laptop in representative views. Report median and p95 frame times and any remaining spikes. If the target is missed, keep G3 open and reduce cost before adding atmosphere features.
@@ -168,7 +169,8 @@ The game begins at `function Vm(i)` / `var pn=Vm(1966)` inside the IIFE; the lic
 | World-space road/sand/apron shader | `desertMaterial.onBeforeCompile` |
 | Material palette / named roles | `PAL` / `ROLE_MATS`, `roleMat`; Lambert helper `Lm` |
 | Surface helpers / material assembly | `boxPart`, `latheGeom`, `tubeGeom`, `extrudeGeom`, `mergeParts` / `addRoleMesh` |
-| Hero builders | `buildVintagePumpParts`, `buildStationShell`, `buildCanopy`, `buildGasSign`, `buildRoadSigns`, `buildPoles`, `buildDesert` |
+| Hero builders / painted details | `buildVintagePumpParts`, `buildStationShell`, `buildCanopy2`, `buildGasSign2`, `buildRoadSigns`, `buildDesert` / `paintedSurface`, `agePaint`, `pumpMeterPaint` |
+| Continuous telephone line | `telephoneLine`, `updateTelephoneLine`; wood / insulator / wire instanced batches with nine reused nearby AABBs |
 | AABB registry / collision | `Mc`, `Dt` / `vc` |
 | Renderer / scene / camera | `mn` / `Nt` / `Nn` |
 | Sky, angular mountains, night uniform | `Xm.material.fragmentShader` / `Xm.material.uniforms.uNight` |
@@ -207,6 +209,19 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-02d — Sunset station detailing and telephone line along the entire highway
+
+- **Scope:** G1/G2 station character and road-line continuity. Preserved the continuous non-voxel desert/mountain backdrop, the empty highway, the single-file/no-network contract, and the five-minute cycle. All details are custom geometry, inline shaders, and procedural canvas graphics; no external art or fonts are downloaded.
+- **Station:** added a faded Sunset porcelain canopy wordmark, worn MOTOR SERVICE lettering, recessed dusty OFFICE / OIL & PARTS glazing with faint reflections/blinds, cream/teal base courses and red belt lines, roof/fascia layers, louvred vents, downpipes, column bases/bolts, and one aged oil cabinet. Paint/enamel carry restrained world-space dust and rain patina. The fixed-open door and aperture are visibly and physically walkable; the oil cabinet has a collider, and vertical AABB filtering now uses player feet/eye height rather than incorrectly skipping low fixtures.
+- **Pumps:** replaced the solid metal face plates that covered the meters with narrow bezels; added weathered frozen gallon/sale dials, period typography, and red enamel trim. Existing rounded crowns, nozzles, hanging hoses, and per-pump angles remain.
+- **Light:** moved cyan tubes outside the fascia that previously hid them, added side returns, and tuned the two existing canopy point lights into small warm pools beneath the soffit. Painted-text emissive fill follows its texture so dark letters stay legible. No extra point lights, shadow-casting lights, bloom pass, camera motion, music, or signs of recent activity were introduced.
+- **Telephone line:** replaced the finite six-pole row with three reusable instanced batches: 81 tapered wood poles/cross-arms, porcelain insulators, and 80 connected sagging spans at fixed 40m world spacing. The 3.2km window extends beyond the fog in both directions and follows player progress. Instance matrices/bounds update only when crossing a spacing cell; wire shear joins the true adjacent pole-top heights. Nine near-player collision boxes are reused; geometry and collider counts do not grow with travel.
+- **Checks:** extracted script `node --check` passes; executing the actual builder code confirms 77 meshes / 61,364 triangles counting pole instances, unchanged 15,129-vertex continuous ground, finite geometry/normals, and the preserved library prefix. Pole spacing, terrain contact, wire endpoints, bounded collider counts, clear doorway, and low-fixture collision are checked at the origin, cell transitions, several km, and ±100km. No new external resource markup/URL literals.
+- **Actual renders:** approach, close pump/facade, three-quarter station, dusk/blue-hour/night, and a road view at x=4096m inspected in the browser without shader/application errors. [Station before/after](captures/station-comparison.jpg) uses matching camera/time; [telephone line](captures/telephone-line.jpg) is an actual 4km road view. Review cameras, hidden overlay, and diagnostics exist only in the temporary review server.
+- **GPU sample:** Intel Iris Xe / Direct3D11, 1280×720, DPR 1.25, static night-station view; 3,600 post-warmup frame intervals over 60.0032 seconds, median 16.7ms / p95 16.9ms. Complete-frame statistics: 134 draw calls / 74,253 submitted triangles including shadows/output. Approximately 60fps is evidenced for that configuration; full interactive G3 acceptance is not claimed.
+- **Remaining:** final offline `file://` / first-person pointer-lock-WASD-run-jump / resize checks in a supporting browser. The in-app browser still rejects pointer lock. This pass does not merge the alternative implementation PR or add later-phase ambience features.
+
 
 ### 2026-11-02c — Continuous non-voxel desert and remote mountain horizon
 

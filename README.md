@@ -30,6 +30,8 @@ The selected renderer uses painterly surface meshes and modeled props. The deser
 
 [View the actual before/after highway comparison](captures/landscape-comparison.jpg). These are browser-rendered review captures at a fixed dusk state, not concept illustrations. Close-up asset/light polish and performance verification remain tracked in the roadmap.
 
+The station now carries faded Sunset branding, dusty recessed shop windows, porcelain-style cream/teal trim, readable vintage meters, visible cyan roof tubes, and quiet warm canopy lighting. [Compare the station detailing](captures/station-comparison.jpg). The [telephone poles and sagging wires](captures/telephone-line.jpg) continue along the highway in both directions and follow the player's progress through a bounded reusable pool.
+
 The asset plan favors custom station/pump/sign models and selective free desert props. Downloaded art must be adapted to the same scale and material language, then embedded in the HTML. The asset guide includes a fully procedural fallback so unavailable downloads do not stall the game.
 
 ## Repository contents
