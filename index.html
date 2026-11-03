@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Little Game — Desert Dusk</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #2b1b3d; }
+  canvas { display: block; }
+  #overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; color: #ffd9a0;
+    font-family: "Courier New", monospace; text-align: center;
+    background: rgba(20, 10, 30, 0.55); cursor: pointer; user-select: none;
+  }
+  #overlay h1 { font-size: 42px; margin: 0 0 8px; letter-spacing: 6px; color: #ff7bd5; text-shadow: 0 0 18px #ff7bd5; }
+  #overlay p { margin: 4px 0; font-size: 15px; }
+  #overlay.hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="overlay">
+  <h1>LITTLE GAME</h1>
+  <p>Route 66 &middot; Gas &amp; Go &middot; Dusk</p>
+  <p>Click to play &mdash; WASD to walk, mouse to look, Shift to run</p>
+</div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  // ---------------------------------------------------------------- RNG
+  function makeRng(seed) {
+    let s = seed >>> 0;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+  const rng = makeRng(1966);
+  const rand = (a, b) => a + rng() * (b - a);
+  const pick = arr => arr[Math.floor(rng() * arr.length)];
+
+  // ---------------------------------------------------------------- scene
+  const overlay = document.getElementById("overlay");
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  document.body.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x5b2a63);
+  scene.fog = new THREE.Fog(0x5b2a63, 60, 220);
+
+  const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 500);
+
+  const sun = new THREE.DirectionalLight(0xffb36b, 1.4);
+  sun.position.set(-40, 18, -25);
+  scene.add(sun);
+  scene.add(new THREE.HemisphereLight(0x8a5bb5, 0xc78d4f, 0.55));
+
+  // ---------------------------------------------------------------- ground
+  const sandMats = [0xc78d4f, 0xbe8547, 0xcf9558].map(c => new THREE.MeshLambertMaterial({ color: c }));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400, 40, 40), sandMats[0]);
+  ground.rotation.x = -Math.PI / 2;
+  const gpos = ground.geometry.attributes.position;
+  for (let i = 0; i < gpos.count; i++) {
+    gpos.setZ(i, (rng() - 0.5) * 0.35); // gentle dune ripple
+  }
+  ground.geometry.computeVertexNormals();
+  scene.add(ground);
+
+  // low dunes for horizon interest
+  for (let i = 0; i < 26; i++) {
+    const d = new THREE.Mesh(new THREE.BoxGeometry(rand(14, 40), rand(1, 4), rand(10, 26)), pick(sandMats));
+    d.position.set(rand(-180, 180), -0.4, rand(-180, 180));
+    if (Math.hypot(d.position.x, d.position.z) < 55) continue;
+    d.rotation.y = rand(0, Math.PI);
+    scene.add(d);
+  }
+
+  // ---------------------------------------------------------------- road strip (props avoid this)
+  const ROAD = { halfWidth: 5.5, z: 0 };
+  const road = new THREE.Mesh(new THREE.BoxGeometry(400, 0.12, 11), new THREE.MeshLambertMaterial({ color: 0x3a3230 }));
+  road.position.y = 0.06;
+  scene.add(road);
+  for (let x = -190; x <= 190; x += 12) {
+    const dash = new THREE.Mesh(new THREE.BoxGeometry(4, 0.13, 0.4), new THREE.MeshLambertMaterial({ color: 0xd8c26a }));
+    dash.position.set(x, 0.07, 0);
+    scene.add(dash);
+  }
+
+  // ---------------------------------------------------------------- gas station
+  const station = new THREE.Group();
+  station.position.set(0, 0, -16);
+  scene.add(station);
+
+  const mat = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const box = (w, h, d, c, x, y, z, parent = station) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c));
+    m.position.set(x, y, z);
+    parent.add(m);
+    return m;
+  };
+
+  // kiosk building
+  box(10, 5, 7, 0xe8dcc8, 0, 2.5, 0);
+  box(11, 0.6, 8, 0xb0405e, 0, 5.3, 0); // flat roof trim
+  box(0.4, 2.2, 0.4, 0x8899aa, 3.2, 1.1, 3.6); // door frame hint
+  box(3, 1.8, 0.1, 0x35244a, 0, 3.2, 3.55); // window
+  // canopy
+  box(18, 0.5, 10, 0xf2ede0, 0, 5.6, 10);
+  box(0.5, 5.6, 0.5, 0x777777, -7, 2.8, 10);
+  box(0.5, 5.6, 0.5, 0x777777, 7, 2.8, 10);
+  // pumps
+  for (const px of [-3.5, 3.5]) {
+    box(1.2, 2.2, 0.9, 0xd94f4f, px, 1.1, 10);
+    box(0.9, 0.5, 0.6, 0xf5f0e0, px, 2.45, 10);
+  }
+  // tall neon sign
+  box(0.6, 9, 0.6, 0x555555, 11, 4.5, 4);
+  const signPanel = box(6, 2.4, 0.4, 0x1d1030, 11, 9.5, 4);
+  const neon = new THREE.PointLight(0xff7bd5, 2.2, 40);
+  neon.position.set(11, 9.5, 5);
+  scene.add(neon);
+  // neon letters "GAS" built from voxel bars
+  const neonMat = new THREE.MeshBasicMaterial({ color: 0xff7bd5 });
+  const letter = (segs, ox) => segs.forEach(([x, y, w, h]) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.15), neonMat);
+    m.position.set(ox + x, 9.5 + y, 4.25);
+    station.add(m);
+  });
+  letter([[0, 0, 0.35, 1.8], [0, 0.9, 1, 0.3], [0, 0, 0.9, 0.3], [-0.2, -0.4, 0.9, 0.25]], 9.2); // G-ish
+  letter([[0, 0, 0.3, 1.8], [0, 0.9, 0.9, 0.3], [0, 0, 0.9, 0.3], [0.2, -0.5, 0.7, 0.25]], 10.3); // A
+  letter([[0, 0.9, 0.9, 0.3], [0, 0, 0.3, 1.8], [0, -0.9, 0.9, 0.3]], 11.6); // S
+  signPanel.position.set(11, 9.5, 4);
+
+  // warm light under canopy
+  const canopyLight = new THREE.PointLight(0xffc27a, 1.4, 22);
+  canopyLight.position.set(0, 5, 10 - 16);
+  scene.add(canopyLight);
+
+  // ---------------------------------------------------------------- natural prop generators
+  const props = new THREE.Group();
+  scene.add(props);
+
+  function makeCactus() {
+    const g = new THREE.Group();
+    const green = mat(pick([0x3f7d3a, 0x4a8a42, 0x356b33]));
+    const seg = 1;
+    const H = Math.floor(rand(5, 9)); // trunk segments
+    for (let i = 0; i < H; i++) {
+      const s = seg * (1 - i / (H * 2.5));
+      const m = new THREE.Mesh(new THREE.BoxGeometry(s, seg, s), green);
+      m.position.y = i * seg + seg / 2;
+      g.add(m);
+    }
+    const top = H * seg;
+    // arms: vertical branch + elbow-up
+    const nArms = Math.floor(rand(0, 3.4));
+    for (let a = 0; a < nArms; a++) {
+      const side = rng() < 0.5 ? -1 : 1;
+      const hy = rand(1.5, top - 2);
+      const len = rand(1.5, 2.8);
+      for (let i = 1; i <= len; i++) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), green);
+        m.position.set(side * i * 0.8, hy, 0);
+        g.add(m);
+      }
+      const up = rand(1.5, 3);
+      for (let i = 0; i < up; i++) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.8), green);
+        m.position.set(side * (len * 0.8 + 0.4), hy + 0.5 + i, 0);
+        g.add(m);
+      }
+    }
+    return g;
+  }
+
+  function makeRock() {
+    const g = new THREE.Group();
+    const base = pick([0x9a8570, 0x8d7a66, 0xa59280, 0x7d6c5c]);
+    const n = Math.floor(rand(1, 4));
+    for (let i = 0; i < n; i++) {
+      const s = rand(0.8, 2.6);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(s, s * rand(0.5, 0.8), s * rand(0.7, 1.1)), mat(base));
+      m.position.set(rand(-1, 1) * (n > 1 ? 1 : 0), s * 0.25, rand(-1, 1) * (n > 1 ? 1 : 0));
+      m.rotation.y = rand(0, Math.PI);
+      g.add(m);
+    }
+    return g;
+  }
+
+  function makeBush() {
+    const g = new THREE.Group();
+    const dry = pick([0x8a6f3d, 0x9c7a44, 0x7c6338]);
+    const n = Math.floor(rand(5, 12));
+    for (let i = 0; i < n; i++) {
+      const h = rand(0.5, 1.4);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(rand(0.15, 0.35), h, rand(0.15, 0.35)), mat(dry));
+      const r = rand(0.2, 0.9), a = rand(0, Math.PI * 2);
+      m.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r);
+      m.rotation.set(rand(-0.3, 0.3), 0, rand(-0.3, 0.3));
+      g.add(m);
+    }
+    return g;
+  }
+
+  function makeSkull() { // rare bleached find
+    const g = new THREE.Group();
+    const b = mat(0xe8e0cc);
+    const m1 = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 1.3), b);
+    m1.position.y = 0.4;
+    const m2 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.6), b);
+    m2.position.set(0, 0.55, 0.85);
+    g.add(m1, m2);
+    return g;
+  }
+
+  // ---------------------------------------------------------------- scattering
+  // jittered grid + exclusion zones: near station & road. density falls off with distance.
+  const placed = [];
+  function isBlocked(x, z) {
+    if (Math.abs(z - ROAD.z) < ROAD.halfWidth + 2.5) return true;           // road corridor
+    if (Math.hypot(x, z + 16) < 17) return true;                             // station plot
+    if (Math.hypot(x - 11, z - (-16 + 4)) < 3) return true;                  // sign footing
+    return placed.some(p => Math.hypot(p.x - x, p.z - z) < 4);               // spacing
+  }
+
+  const CELL = 9;
+  const types = [
+    { make: makeCactus, weight: 0.16, min: 22 },   // cacti keep some distance
+    { make: makeRock,   weight: 0.30, min: 14 },
+    { make: makeBush,   weight: 0.42, min: 10 },
+    { make: makeSkull,  weight: 0.03, min: 30 },
+  ];
+  function chooseType(dist) {
+    let r = rng();
+    for (const t of types) {
+      if (dist < t.min) continue;
+      const w = t.weight * (t === types[0] ? Math.min(1, (dist - t.min) / 40 + 0.25) : 1);
+      if ((r -= w) <= 0) return t;
+    }
+    return null;
+  }
+
+  for (let gx = -22; gx <= 22; gx++) {
+    for (let gz = -22; gz <= 22; gz++) {
+      const x = gx * CELL + rand(-CELL * 0.45, CELL * 0.45);
+      const z = gz * CELL + rand(-CELL * 0.45, CELL * 0.45);
+      const dist = Math.hypot(x, z + 16);
+      if (dist > 190) continue;
+      if (isBlocked(x, z)) continue;
+      const t = chooseType(dist);
+      if (!t) continue;
+      const obj = t.make();
+      obj.position.set(x, 0, z);
+      obj.rotation.y = rand(0, Math.PI * 2);
+      const s = rand(0.8, 1.5);
+      obj.scale.setScalar(s);
+      obj.userData.baseScale = s;
+      props.add(obj);
+      placed.push({ x, z });
+    }
+  }
+
+  // ---------------------------------------------------------------- tumbleweeds
+  const tumbleweeds = [];
+  const tumbleMat = new THREE.MeshLambertMaterial({ color: 0xa08a55, wireframe: true });
+  for (let i = 0; i < 7; i++) {
+    const r = rand(0.5, 1.1);
+    const tw = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), tumbleMat);
+    tw.position.set(rand(-120, 120), r, rand(-120, 120));
+    tw.userData = { r, speed: rand(3, 7), wob: rand(2, 5), phase: rand(0, 6.28) };
+    scene.add(tw);
+    tumbleweeds.push(tw);
+  }
+
+  // ---------------------------------------------------------------- controls
+  const keys = {};
+  addEventListener("keydown", e => keys[e.code] = true);
+  addEventListener("keyup", e => keys[e.code] = false);
+  let yaw = 0, pitch = 0;
+  const player = { pos: new THREE.Vector3(14, 1.7, 18), vel: new THREE.Vector3() };
+
+  overlay.addEventListener("click", () => {
+    overlay.classList.add("hidden");
+    renderer.domElement.requestPointerLock();
+  });
+  document.addEventListener("pointerlockchange", () => {
+    if (!document.pointerLockElement) overlay.classList.remove("hidden");
+  });
+  addEventListener("mousemove", e => {
+    if (!document.pointerLockElement) return;
+    yaw -= e.movementX * 0.0022;
+    pitch = Math.max(-1.2, Math.min(1.2, pitch - e.movementY * 0.0022));
+  });
+  addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  // ---------------------------------------------------------------- loop
+  const clock = new THREE.Clock();
+  let flicker = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.05);
+    const t = clock.elapsedTime;
+
+    // walk
+    const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    const right = new THREE.Vector3(fwd.z, 0, -fwd.x);
+    const sp = keys.ShiftLeft || keys.ShiftRight ? 14 : 6;
+    const acc = new THREE.Vector3();
+    if (keys.KeyW) acc.add(fwd);
+    if (keys.KeyS) acc.sub(fwd);
+    if (keys.KeyD) acc.add(right);
+    if (keys.KeyA) acc.sub(right);
+    if (acc.lengthSq() > 0) acc.normalize().multiplyScalar(sp);
+    player.vel.lerp(acc, 1 - Math.exp(-10 * dt));
+    player.pos.addScaledVector(player.vel, dt);
+    player.pos.x = Math.max(-195, Math.min(195, player.pos.x));
+    player.pos.z = Math.max(-195, Math.min(195, player.pos.z));
+    camera.position.copy(player.pos);
+    camera.rotation.set(0, 0, 0);
+    camera.rotateY(yaw);
+    camera.rotateX(pitch);
+
+    // neon flicker
+    flicker += dt;
+    if (flicker > rand(0.05, 0.4)) { neon.intensity = rng() < 0.12 ? 0.4 : 2.2; flicker = 0; }
+    neon.intensity = 2.2 + Math.sin(t * 30) * 0.05;
+
+    // tumbleweeds roll east-ish
+    for (const tw of tumbleweeds) {
+      const u = tw.userData;
+      tw.position.x += u.speed * dt;
+      tw.position.y = u.r + Math.abs(Math.sin(t * u.wob + u.phase)) * 0.3;
+      tw.rotation.z -= (u.speed / u.r) * dt;
+      if (tw.position.x > 130) { tw.position.x = -130; tw.position.z = rand(-120, 120); }
+      if (Math.abs(tw.position.z) < ROAD.halfWidth + 1) tw.position.z += 3 * dt; // drift off road
+    }
+
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>
