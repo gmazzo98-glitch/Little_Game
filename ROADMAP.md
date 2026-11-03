@@ -211,6 +211,13 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-02g — Directional, close-range sign audio
+
+- **Request:** the electrical crackling must not be always audible — only when close to the sign — and the ambience needs directional sound.
+- **Implementation:** the GAS sign's hum and tick chains now route through a positional `PannerNode` (`equalpower`, inverse distance model, refDistance 6 m, rolloff 1.4, maxDistance 60 m) fixed at the actual `$n` sign-light position. The WebAudio listener is updated every running frame from the camera position and its true look direction (with legacy `setPosition`/`setOrientation` fallback), so the hum and crackle pan left/right and front/back as the player turns. Ticks carry an additional 28 m hard cutoff — no crackle at all beyond that — on top of the panner rolloff (gain 1.0 within 6 m, ~0.23 at 20 m, ~0.07 at 60 m). The hum's manual linear falloff was removed in favor of the panner's rolloff (base gain 0.16, still ducking with the shared `gfl` dip signal). Wind, insects, and footsteps remain ambient/stereo by design.
+- **Checks:** inline script passes `node --check`; panner attenuation curve and the 28 m tick gate verified by standalone simulation; zero external requests.
+- **Pending / honestly unverified:** no audible playback in this sandbox, so headphone-level directionality, rolloff feel, and the crackle's near-range character need real-listen acceptance in a browser.
+
 ### 2026-11-02f — Footsteps while walking
 
 - **Request:** the game needs footsteps when walking. Implemented on top of the Phase 4 audio engine; no new dependencies.
