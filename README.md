@@ -16,6 +16,23 @@ Download `index.html` and double-click it in a desktop browser with WebGL and po
 
 The game is entirely inside `index.html`, including Three.js. No installation, server, build step, CDN, separate asset downloads, or internet connection is required to play. Reload starts a new dusk; the current cycle reaches night in about five minutes and holds. Currently that clock also advances while the entry overlay is visible; pausing it is tracked in Phase 6.
 
+## Take the coupe out
+
+The sea-green coupe is parked on the shoulder to the left of Sunset Service. Approach the driver-side handle, click it, then click the exposed driver’s seat. Close the door with the inside handle or **C** before driving.
+
+| Driving control | Action |
+| --- | --- |
+| W / S | Accelerate / slow down and reverse |
+| A / D | Steer |
+| Space | Brake |
+| Click DOME / PANEL / LIGHTS | Toggle the cabin lamp, instrument lighting, or headlights |
+| F | Get out once stopped |
+| E | Activate the part you are aiming at |
+
+The normal mouse-look mode uses the center reticle for clicks. **Play with cursor and right-drag to look** lets you aim clicks with the visible mouse cursor.
+
+[See the coupe's cabin at night](captures/coupe-cabin.jpg).
+
 ## Development direction
 
 **The graphics are a prototype. The next work is the graphics foundation, before additional atmosphere features.** More stars, particles, and audio cannot substitute for convincing station silhouettes, an expansive empty horizon, deliberate materials, and believable neon lighting.

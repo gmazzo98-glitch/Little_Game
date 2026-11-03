@@ -29,7 +29,7 @@ Read [AESTHETIC.md](AESTHETIC.md), [ROADMAP.md](ROADMAP.md), and [ASSET_GUIDE.md
 
 - Approximately five minutes from late dusk through blue hour to full night, one way, then hold. No toggle, loop, or reset on pointer unlock.
 - Warm horizon, restrained cyan/red neon, desaturated desert, cold moonlight, and stars gated out of orange dusk.
-- Empty highway. No people, vehicles, distant train lights, other buildings, campfires, music, or recent human activity. Sparse insects are reserved for Phase 5.
+- Keep the highway quiet with one player-operated period coupe parked at Sunset Service. No traffic, people, distant train lights, other buildings, campfires, music, or recent human activity. Sparse insects are reserved for Phase 5.
 - No mandatory camera sway or theatrical effects. Idle framing stays still.
 - Improve silhouettes, composition, palette, and light before increasing voxel density, bloom, or particle counts.
 - Target steady 60 fps on a named mid-range laptop; record the actual viewport, pixel ratio, hardware, and measurements. Do not substitute instance or draw-call counts for frame-time evidence.

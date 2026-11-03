@@ -10,7 +10,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 
 - One playable `index.html`, with Three.js and all CSS, shaders, geometry, selected model/texture data, and future audio inline. No external runtime assets, CDN, runtime requests, required server, package install, or build to play.
 - Keep the documentation focused and preserve the existing concept illustration. `ASSET_GUIDE.md` specifies models and `AGENT_PROMPT.md` launches agents; they do not replace aesthetic or status authority. Allow only source files/license records/preparation scripts genuinely needed for implemented art, following the asset guide; no unused asset packs or parallel application source tree.
-- One 1960s station, exactly two pumps, empty straight highway, desert, cacti, poles, and sagging wires. No people, vehicles, train lights, other buildings, music, or recent life. Sparse insects are permitted only in their planned phases.
+- One 1960s station, exactly two pumps, one player-operated period coupe, and a straight desert highway with cacti, poles, and sagging wires. Keep the highway free of traffic, people, train lights, other buildings, music, and recent life. Sparse insects are permitted only in their planned phases.
 - About five minutes from dusk through blue hour to night, one way, then hold. No visible switch, loop, or day/night toggle.
 - Target steady 60 fps on a named mid-range laptop. Measure whole-frame cost; prefer fewer surfaces, sensible batching, and cheaper lighting over greater voxel density.
 - Every scene change must satisfy the aesthetic rules and update this roadmap's status and validation record in the **same commit**. Do not mark a visual gate passed from syntax checks or a concept illustration.
@@ -210,6 +210,14 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-03 — Drivable touring coupe
+
+- One fictional early-sixties coupe parks beside Sunset Service. Its hinged doors, stitched saddle upholstery, rolled seat edges, ivory wheel, wood dash, amber speedometer, and period radio dial use inline geometry and canvas artwork.
+- Walk up to the driver’s handle, open the door, click the seat, close the doors, and drive with WASD. The car uses a seated view, steering and wheel animation, forward and reverse acceleration, a brake, and an oriented footprint against scenery collisions. Exit with F after stopping. Click the individual dome, panel, and headlight switches. The entry screen also offers visible cursor controls with right-drag look.
+- Browser verification exercised real handle and seat clicks, all three switches on and off, forward driving, steering, reverse, braking, and exit. The final script and scene harness passed the door interlock, moving exit guard, parked placement, station collision, input-state transitions, and scenery checks. The existing bundled library prefix and URL literals were verified against the previous build. [Cabin at night](captures/coupe-cabin.jpg).
+- Browser testing used the temporary HTTP review route and the cursor controls. Offline file launch and the pointer-lock input path remain open verification items.
+
 
 ### 2026-11-02h — Directional footsteps
 

@@ -55,7 +55,8 @@ Use broad, quiet color fields with sparse wear at seams, edges, lower walls, and
 - **Signage:** a proportionate hand-painted GAS/OIL cabinet with thin neon; a recognizable Route 66 shield and STOP silhouette. Keep letters within their panels and readable from the approach. No new novelty signs to fill empty space.
 - **Desert:** a level road and station apron, blended terrain around them, sparse grounded cacti and scrub, distant low mesas, and telephone poles with sagging wires receding toward the horizon. Avoid a visible trench or raised berm across the driveway.
 - **Telephone line:** continue poles and connected sagging wires along the entire visible highway in both directions and as the player travels. Keep fixed world spacing and terrain-relative bases; never restore a short row that stops near the station. Recycle distant geometry beyond the fog rather than filling the world with unlimited objects.
-- **Absence:** no people, cars, traffic, trains or train lights, other buildings, campfires, animals, music, or signs of recent life. Sparse moths and insect sounds are only permitted at their planned phases. Tumbleweed is optional wind-driven debris, never constant activity.
+- **Player coupe:** one early-sixties touring coupe with sea-green paint, an ivory roof, saddle vinyl, amber gauges, and separate cabin and instrument lights. Keep its cabin warm against the dark road and its controls tactile and period-appropriate.
+- **Absence:** no people, other cars, traffic, trains or train lights, other buildings, campfires, animals, music, or signs of recent life. Sparse moths and insect sounds are only permitted at their planned phases. Tumbleweed is optional wind-driven debris, never constant activity.
 
 ## Two approved rendering directions
 
