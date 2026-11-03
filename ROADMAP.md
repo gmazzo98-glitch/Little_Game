@@ -218,6 +218,11 @@ For each `index.html` change:
 - Browser verification exercised real handle and seat clicks, all three switches on and off, forward driving, steering, reverse, braking, and exit. The final script and scene harness passed the door interlock, moving exit guard, parked placement, station collision, input-state transitions, and scenery checks. The existing bundled library prefix and URL literals were verified against the previous build. [Cabin at night](captures/coupe-cabin.jpg).
 - Browser testing used the temporary HTTP review route and the cursor controls. Offline file launch and the pointer-lock input path remain open verification items.
 
+### 2026-11-02i — Footsteps inaudible: remixed step sound
+
+- **Report:** the user could not hear the footsteps and asked for the exact panning code. Inspection confirmed the panning was correct but the mix was buried: peak gain only 0.03–0.044 (≈ −30 dBFS) decaying over 90 ms, sitting under the ~0.026–0.040 wind bed, with sand lowpassed at ~150 Hz and asphalt bandpassed at ~300 Hz — frequencies laptop speakers barely reproduce.
+- **Fix:** scuff layer raised to 0.09/0.06 peak (asphalt/sand) with a 110 ms decay and brighter filter centers (bandpass ~420–560 Hz, lowpass ~230–300 Hz); added a pitch-dropping sine body thump (95→52 Hz on asphalt, 75→45 Hz on sand, gains 0.09/0.05, 90 ms) so each step has audible low-end on small speakers. Both layers sum into one gain node, then through the same alternating ±0.38 stereo panner and master mute path as before.
+- **Checks:** inline script passes `node --check`. Real-listen loudness acceptance remains pending in this sandbox as before.
 
 ### 2026-11-02h — Directional footsteps
 
