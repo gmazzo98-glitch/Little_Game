@@ -140,6 +140,7 @@ Required asset deliverables: one finished station/canopy assembly; two detailed 
 - [x] Start/resume the AudioContext only after the entry gesture; provide mute. No audio files or requests. *(Created on first pointer lock; suspended on unlock and on hidden tab, resumed on re-lock without touching the cycle; `M` toggles a master-gain mute. All sound is synthesized from one 2 s noise buffer and oscillators; zero files or network.)*
 - [x] Build a very quiet filtered wind bed with slow variation, a localized 60/120 Hz neon hum, and rare electrical ticks tied to the same flicker signal. Derive sound position from the actual sign transform, not an obsolete hard-coded coordinate. *(Wind: looped noise → 260–540 Hz drifting lowpass, gain 0.026–0.040. Hum: 60 Hz + 120 Hz sines, gain falls with distance from `$n.position` (42 m cutoff) and ducks during GAS dips. Ticks: highpassed noise bursts scheduled at each dip start.)*
 - [x] Permit sparse insect chirps only at deep night. Suspend/mute appropriately when leaving play or hiding the tab; do not let resume jump the ambient cycle. *(Three-pulse ~4 kHz triangle chirps, only past 85% night, every 6–18 s. The cycle uses the existing rAF-clamped clock, so suspended frames do not advance dusk.)*
+- [x] Footsteps while walking (user-requested): steps fire from actual traveled distance while grounded — ~2.9 steps/s walking, ~4.1 running, silent in the air. Surface-aware: bandpass ~300–420 Hz thud on the road/apron, softer 150–210 Hz lowpass scuff on sand; slight random pitch/level variation per step. No new files or requests.
 
 **Pass:** headphones convey open desert and distance; silence remains dominant. Mute, unlock/re-entry, and background/foreground transitions work. No music, voices, engines, or trains.
 
@@ -209,6 +210,13 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-02f — Footsteps while walking
+
+- **Request:** the game needs footsteps when walking. Implemented on top of the Phase 4 audio engine; no new dependencies.
+- **Implementation:** a step accumulates from real horizontal player displacement while grounded (`br === 0`, pointer-locked); stride is 1.9 m walking and 2.45 m running (~2.9 / ~4.1 steps per second), with no steps while airborne. Each step synthesizes a short filtered noise burst from the existing shared noise buffer through the master gain (so mute applies): a bandpass ~300–420 Hz thud on asphalt (road `|z| ≤ 3.5` plus the station apron rect) and a softer 150–210 Hz lowpass scuff on open sand, with ±random playback rate and level so no two steps sound identical.
+- **Checks:** inline script passes `node --check`; cadence and surface classification verified by standalone simulation (road/apron → hard, open desert and behind the station → soft); zero external requests.
+- **Pending / honestly unverified:** no audible playback exists in this sandbox, so headphone-level step character, asphalt/sand contrast, and cadence feel need real-listen acceptance; frame-time impact is negligible by construction (one short-lived buffer source per step).
 
 ### 2026-11-02e — Procedural ambience (Phase 4) plus cheap atmosphere additions
 
