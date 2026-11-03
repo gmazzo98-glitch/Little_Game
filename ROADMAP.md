@@ -212,6 +212,11 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-04 — Coupe rear cabin proportions
+
+- Use the [1963 Chevrolet Impala Sport Coupe factory reference](https://news.chevrolet.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1963-Chevrolet.pdf) for the roof, rear seat, and deck relationship. The game coupe now has a rearward roof and backlight, fixed rear quarter glass, and a separate parcel shelf behind a reclined saddle-vinyl bench.
+- Inline JavaScript parses. The transformed rear backrest vertices above the glass sill clear the rear glass plane by at least 0.128 m. In-game visual review remains open.
+
 ### 2026-11-03 — Recorded V8 cabin sound
 
 - Idle source is [Ford Mustang Engine (1985) by lmbubec](https://freesound.org/people/lmbubec/sounds/119449/) (CC0). The 8–12 s window peaks at 48 Hz, 95 Hz (−5.7 dB), and 143 Hz (−13.3 dB), with a weaker peak at 66 Hz (−13.1 dB). The embedded loop is mono, filtered below 22 Hz, resampled to 6 kHz and crossfaded at the seam.
