@@ -212,6 +212,12 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-03a — Footsteps rebalanced: too loud and unnatural
+
+- **Report:** after the audibility remix, the steps were too loud and unnatural.
+- **Fix:** levels dropped roughly 5 dB from the loud mix (scuff peak 0.052/0.038 asphalt/sand, body tap 0.045/0.028 — between the inaudible 0.03 baseline and the loud 0.09 remix). Naturalness: the body layer is now a dull triangle-wave tap (72→46 Hz asphalt, 60→42 Hz sand) instead of the boingy steep sine drop, and both layers use a 4–6 ms linear attack from zero instead of an instant click onset; scuff bandpass widened and lowered (Q .8, ~380–500 Hz) so it reads as grit, not a tone. Pan alternation and mute routing unchanged.
+- **Checks:** inline script passes `node --check`. Real-listen balance acceptance remains pending in this sandbox.
+
 ### 2026-11-03 — Drivable touring coupe
 
 - One fictional early-sixties coupe parks beside Sunset Service. Its hinged doors, stitched saddle upholstery, rolled seat edges, ivory wheel, wood dash, amber speedometer, and period radio dial use inline geometry and canvas artwork.
