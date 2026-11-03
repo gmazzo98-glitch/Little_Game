@@ -86,7 +86,7 @@ The suggested 3–5 times lower frame cost versus the voxel baseline is an **exp
 
 The default idle camera is fixed. No compulsory breathing, head bob, drifting horizon, or cinematic camera motion. The light may change without making the world busy.
 
-If added, sound is sparse, procedural, and diegetic: wind, a distant electrical hum, occasional ticks, and later faint insect chirps. No music or human/vehicle cues. Respect browser user-gesture requirements and provide mute. Footsteps are not currently a promised feature.
+Keep sound sparse, procedural, and diegetic. Wind, footsteps, a localized electrical hum, occasional ticks, and faint night insects frame the station. The player's coupe has a soft, bass-heavy V8 idle and a fuller exhaust note under throttle. The engine fades when the player steps out. Respect browser user-gesture requirements and provide mute.
 
 ## Review rule
 

@@ -28,7 +28,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
-| Phase 4 — Procedural ambience | Implemented (source-level): wind bed, localized neon hum, dip-synced ticks, deep-night insect chirps, mute; browser/audio acceptance pending | Requested early by the user; Phase 2/3 visual acceptance still open |
+| Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and player coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Planned | Earlier phases accepted or explicitly deferred |
 
@@ -211,12 +211,18 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-03 — Touring coupe engine
+
+- Sitting in the coupe starts a subdued V8-style idle. The inline exhaust loop has eight weighted firing pulses per two revolutions. Speed raises the pitch, throttle adds body and brightness, and leaving the seat fades the engine out.
+- The engine uses the existing master mute and playback lifecycle. It adds no external sound files. Inline script syntax and engine signal and control checks passed. In-game listening remains open.
+
 ### 2026-11-03 — Drivable touring coupe
 
 - One fictional early-sixties coupe parks beside Sunset Service. Its hinged doors, stitched saddle upholstery, rolled seat edges, ivory wheel, wood dash, amber speedometer, and period radio dial use inline geometry and canvas artwork.
 - Walk up to the driver’s handle, open the door, click the seat, close the doors, and drive with WASD. The car uses a seated view, steering and wheel animation, forward and reverse acceleration, a brake, and an oriented footprint against scenery collisions. Exit with F after stopping. Click the individual dome, panel, and headlight switches. The entry screen also offers visible cursor controls with right-drag look.
 - Browser verification exercised real handle and seat clicks, all three switches on and off, forward driving, steering, reverse, braking, and exit. The final script and scene harness passed the door interlock, moving exit guard, parked placement, station collision, input-state transitions, and scenery checks. The existing bundled library prefix and URL literals were verified against the previous build. [Cabin at night](captures/coupe-cabin.jpg).
 - Browser testing used the temporary HTTP review route and the cursor controls. Offline file launch and the pointer-lock input path remain open verification items.
+
 
 ### 2026-11-02i — Footsteps inaudible: remixed step sound
 
