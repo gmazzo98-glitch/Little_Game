@@ -22,8 +22,8 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
-| G1 — Composition and period silhouettes | Station and road-line detailing implemented and rendered | Faded Sunset identity, recessed shop glazing, readable pump meters, open doorway, and continuous telephone line checked in close/far views; final interaction acceptance remains open |
-| G2 — Palette, surfaces, and light hierarchy | Latest dusk/blue-hour/night station pass rendered and checked | Visible cyan roof tubes, quiet warm canopy pools, cream/teal/red detailing, and restrained paint/glass patina; no new shadow-casting lights or imported assets |
+| G1 — Composition and period silhouettes | Office and exterior GAS lettering built | Counter and till, parts bench, shelves, interior window reveals, and lore surfaces. Aisle and furniture collision checked in source execution. Browser acceptance remains open. |
+| G2 — Palette, surfaces, and light hierarchy | Office and neon pass implemented | Warm counter shade and sill spill, cyan canopy edge and spill, and red glass GAS lettering. Matching visual review remains open. |
 | G3 — Graphics acceptance and performance | Station geometry/render checks passed; full input/offline acceptance still open | 61,364 built triangles including pole instances; 60-second Intel Iris Xe night-station sample: median 16.7ms / p95 16.9ms at 1280×720, DPR 1.25 |
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
@@ -211,6 +211,19 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Sunset Service office and exterior neon
+
+- **G1/G2 implementation.** Built the right-hand service counter with a mechanical till and empty change tray, the rear parts bench with drawer fronts and belt marks, shelves with traces of old dividers, and the room side of both window reveals. A muted tile floor has a worn path from the doorway toward the counter. The central aisle and space behind the counter form a short walking loop.
+- **Lore.** The Hart & Vale service board records air and water in 1961, belts and hoses in 1964, and parts by order in 1966. Nearby are two old calendar pinholes. A capped water pipe and faded **WATER • NO CHARGE** plate mark a former service on the forecourt.
+- **Light.** Narrow red tubes spell GAS on the original pole cabinet above its painted OIL line. The red spill source now sits in front of the cabinet and follows the existing dip signal along with the tubes and sign sound. The existing cyan light now sits by the canopy fascia. The counter has an enamel shade with the existing warm source below it, and the existing sill light sits near the doorway. The office glow varies slowly and slightly.
+- **Checks.** The inline script passed `node --check`. The new geometry and graphics are generated inline. A Node harness executed the actual scene builders with a stub renderer, checked finite mesh positions and the lore surfaces, and exercised the collision resolver against the doorway, wall, furniture, and counter loop. The scene built 154 meshes and 68,816 triangles including instances. These are scene counts.
+- **Acceptance pending.** The Playwright driver did not reach browser launch in the current environment, and direct headless Chrome exited before producing a capture. The actual offline playthrough, live five-minute dusk-to-night review, pointer lock and movement checks, and hardware frame measurements remain open. Review the doorway, office, sign and canopy at matching times, then finish G3 before the sky pass.
+
+### 2026-11-04 — Coupe rear cabin proportions
+
+- The [1963 Chevrolet Impala Sport Coupe factory reference](https://news.chevrolet.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1963-Chevrolet.pdf) guides the roof, rear seat, and deck relationship. The coupe has a rearward roof and back window, fixed rear quarter glass, and a separate parcel shelf behind a reclined saddle-vinyl bench.
+- Inline JavaScript parses. The transformed backrest vertices above the sill clear the rear glass by at least 0.128 m along the length of the car. In-game visual review remains open.
 
 ### 2026-11-04 — Coupe rear cabin proportions
 

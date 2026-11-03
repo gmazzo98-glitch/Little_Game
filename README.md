@@ -57,6 +57,7 @@ The asset plan favors custom station/pump/sign models and selective free desert 
 | --- | --- |
 | `index.html` | The complete playable deliverable |
 | `AESTHETIC.md` | Art direction and visual acceptance rules |
+| [AMBIENCE.md](AMBIENCE.md) | Atmosphere ideas, design experiments, and review routes |
 | `ROADMAP.md` | Priorities, dependencies, phase status, and validation |
 | `AGENTS.md` | Contributor workflow |
 | `ASSET_GUIDE.md` | Asset quality targets, modeling recipes, source candidates, and integration contract |
