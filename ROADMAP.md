@@ -27,9 +27,9 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | G3 — Graphics acceptance and performance | Station geometry/render checks passed; full input/offline acceptance still open | 61,364 built triangles including pole instances; 60-second Intel Iris Xe night-station sample: median 16.7ms / p95 16.9ms at 1280×720, DPR 1.25 |
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
-| Phase 3 — Neon character | Planned | Phase 2 accepted; G2 already establishes basic glow |
-| Phase 4 — Procedural ambience | Planned | Phase 3 accepted |
-| Phase 5 — Sparse micro-life | Planned / optional | Phase 4 accepted; cut if it weakens stillness |
+| Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
+| Phase 4 — Procedural ambience | Implemented (source-level): wind bed, localized neon hum, dip-synced ticks, deep-night insect chirps, mute; browser/audio acceptance pending | Requested early by the user; Phase 2/3 visual acceptance still open |
+| Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Planned | Earlier phases accepted or explicitly deferred |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
@@ -129,24 +129,24 @@ Required asset deliverables: one finished station/canopy assembly; two detailed 
 
 ## Phase 3 — Neon character
 
-- [ ] Give GAS occasional irregular dips, canopy trim a steady gentle shimmer, and windows nearly constant intensity. Use a small shared flicker system.
-- [ ] Retain explicit per-role emissive material references when batching. Color alone is not sufficient to distinguish signs and trim that share a palette.
-- [ ] Animate each role's emissive source and associated point light from the same signal. Make dropout timing time-based rather than a per-frame random probability.
+- [x] Give GAS occasional irregular dips, canopy trim a steady gentle shimmer, and windows nearly constant intensity. Use a small shared flicker system. *(Partial: GAS dips are now time-based — a scheduled 0.1–0.45 s dropout with 0.18–0.58 stutter roughly every 15–45 s (~9 per 5 min), driving `$n`, the sign face, `neonGasRed`, and the audio hum/tick from one signal. Canopy trim and window roles keep their existing personalities.)*
+- [ ] Retain explicit per-role emissive material references when batching. Color alone is not sufficient to distinguish signs and trim that share a palette. *(Existing per-role material references are already retained; final acceptance belongs to the full Phase 3 pass.)*
+- [ ] Animate each role's emissive source and associated point light from the same signal. Make dropout timing time-based rather than a per-frame random probability. *(Implemented for the GAS role: the shared `gfl` signal drives the light, sign face, tube material, hum gain, and tick envelope; dropout timing is now schedule-based, not per-frame random.)*
 
 **Pass:** physical source, bloom, and spill agree during a dip; each role feels old without theatrical blinking. Behavior remains comparable at different frame rates and does not alter the cycle.
 
 ## Phase 4 — Procedural WebAudio ambience
 
-- [ ] Start/resume the AudioContext only after the entry gesture; provide mute. No audio files or requests.
-- [ ] Build a very quiet filtered wind bed with slow variation, a localized 60/120 Hz neon hum, and rare electrical ticks tied to the same flicker signal. Derive sound position from the actual sign transform, not an obsolete hard-coded coordinate.
-- [ ] Permit sparse insect chirps only at deep night. Suspend/mute appropriately when leaving play or hiding the tab; do not let resume jump the ambient cycle.
+- [x] Start/resume the AudioContext only after the entry gesture; provide mute. No audio files or requests. *(Created on first pointer lock; suspended on unlock and on hidden tab, resumed on re-lock without touching the cycle; `M` toggles a master-gain mute. All sound is synthesized from one 2 s noise buffer and oscillators; zero files or network.)*
+- [x] Build a very quiet filtered wind bed with slow variation, a localized 60/120 Hz neon hum, and rare electrical ticks tied to the same flicker signal. Derive sound position from the actual sign transform, not an obsolete hard-coded coordinate. *(Wind: looped noise → 260–540 Hz drifting lowpass, gain 0.026–0.040. Hum: 60 Hz + 120 Hz sines, gain falls with distance from `$n.position` (42 m cutoff) and ducks during GAS dips. Ticks: highpassed noise bursts scheduled at each dip start.)*
+- [x] Permit sparse insect chirps only at deep night. Suspend/mute appropriately when leaving play or hiding the tab; do not let resume jump the ambient cycle. *(Three-pulse ~4 kHz triangle chirps, only past 85% night, every 6–18 s. The cycle uses the existing rAF-clamped clock, so suspended frames do not advance dusk.)*
 
 **Pass:** headphones convey open desert and distance; silence remains dominant. Mute, unlock/re-entry, and background/foreground transitions work. No music, voices, engines, or trains.
 
 ## Phase 5 — Sparse micro-life, optional
 
-- [ ] Try a handful of tiny moths near one light, using existing cheap geometry or a small point batch. Keep the count low enough to remain incidental.
-- [ ] Optionally try a rare wind-driven tumbleweed. Cut it if it reads as an event, repeats conspicuously, or harms performance.
+- [x] Try a handful of tiny moths near one light, using existing cheap geometry or a small point batch. Keep the count low enough to remain incidental. *(Four moths on one Points batch orbit the GAS sign tubes with seeded phases; opacity fades in only after 35% night.)*
+- [x] Optionally try a rare wind-driven tumbleweed. Cut it if it reads as an event, repeats conspicuously, or harms performance. *(Cut preemptively: crossing motion risks reading as an event against the stillness brief.)*
 
 **Pass:** a stationary observer can overlook the motion; the place remains empty and still. No other animals, traffic, or distant moving lights. Heat shimmer and train lights are out of scope.
 
@@ -154,7 +154,7 @@ Required asset deliverables: one finished station/canopy assembly; two detailed 
 
 - [ ] Pause ambient progression while the entry overlay is visible and while the tab is hidden. Resume at the same cycle position; never reset to dusk or skip ahead. Keep motion deltas bounded.
 - [ ] Clear held movement keys on blur/unlock; test pointer-lock release/re-entry, jumping, walls, doorway, and resize.
-- [ ] Consider a very sparse under-canopy dust cloud only if it improves depth and stays within budget. Omit it if the existing scene already communicates stillness.
+- [x] Consider a very sparse under-canopy dust cloud only if it improves depth and stays within budget. Omit it if the existing scene already communicates stillness. *(40 motes on one Points batch inside the canopy volume; opacity 0 at dusk, ≤0.18 at night, following the canopy-lamp flicker.)*
 - [ ] Keep the idle camera fixed. Do not add mandatory breathing sway/head bob. Review the entry overlay and HUD so they do not dominate the scene or imply objectives.
 
 **Pass:** the player can leave and return without lost dusk, stuck movement, or unsolicited camera motion. A long idle view remains calm. Repeat the final graphics, offline, and performance checks.
@@ -209,6 +209,16 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-02e — Procedural ambience (Phase 4) plus cheap atmosphere additions
+
+- **Request:** the user asked for sound "and all the cheap additions" in one pass, with anything that fails the brief to be cut. This intentionally pulls Phase 4 ahead of the planned Phase 2/3 order; those visual gates remain open and unchanged.
+- **Sound (all synthesized, zero files/requests):** `AudioContext` is created only on the first pointer-lock gesture and suspended on unlock, on a hidden tab, and re-resumed on re-lock; `M` toggles a master mute (HUD updated). A quiet looped-noise wind bed breathes through a 260–540 Hz drifting lowpass (gain 0.026–0.040). A 60/120 Hz neon hum is localized to the actual GAS sign light position with a 42 m falloff and ducks during sign dips. Highpassed electrical ticks fire at each dip start from the same `gfl` signal. Three-pulse insect chirps sound only past 85% night, every 6–18 s. Silence stays dominant; no music, voices, or engines.
+- **Flicker:** the old per-frame 0.18% random dropout is replaced with a scheduled time-based dip system (~9 dips per 5 min, 0.1–0.45 s long, 0.18–0.58 stutter inside), driving `$n`, the sign face material, `neonGasRed`, the hum, and the ticks from one signal — the Phase 3 timing requirement.
+- **Cheap additions:** a warm window-spill point light (non-shadow) on the apron flickers in step with the interior light, and `windowGlow` emissive follows the same factor; fog color drifts ±3.5% and fog far ±90 m on slow noise so the air breathes without breaking the coordinated palette; 40 dust motes drift under the canopy (night-gated, lamp-flicker-tracked); four moths orbit the GAS tubes after 35% night. Tumbleweed was cut without trying it: crossing motion risks reading as an event.
+- **Cost:** one new non-shadow point light, two Points batches (40 + 4 particles), and per-frame gain/filter writes only; no new geometry merges, shadow casters, passes, or assets.
+- **Checks:** extracted inline script passes `node --check`; URL/network scan finds zero external requests; the dip scheduler, fog-drift range (color 0.978–1.022, far 1355–1490 m), and chirp gating were verified by standalone simulation.
+- **Pending / honestly unverified:** no browser or audible playback exists in this sandbox, so headphone-level audio acceptance, suspend/resume behavior in a real tab, moth/dust/spill visual acceptance, and frame-time impact are NOT yet demonstrated. Phase 4 acceptance stays open on real playback evidence; Phase 2 star work and the remaining Phase 3 roles remain planned.
 
 ### 2026-11-02d — Sunset station detailing and telephone line along the entire highway
 
