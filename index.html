@@ -4652,44 +4652,42 @@ Nt.userData.telephoneLine=telephoneLine;
 
 // ---- Desert kit: grounded cacti, rocks, scrub, mesas ------------------------------
 (function buildDesert() {
-  // cactus variants (tapered segments, rounded caps via lathe)
-  function cactusParts(cx, cz, seed) {
+  // Per-cell world hashes keep the layout deterministic from world position and
+  // leave the shared seeded stream (pn/Dn) untouched for downstream code.
+  const cellHash = (gx, gz, k) => Un(gx * 127.1 + k * 13.7, gz * 311.7 + k * 7.3);
+
+  // cactus variants: tapered segments, rounded caps via lathe, seeded arms, varied yaw
+  function cactusParts(cx, cz, seed, yaw) {
     const parts = [];
     const gy = os(Math.round(cx), Math.round(cz));
-    const h = 2.2 + ((seed * 37) % 10) / 10 * 1.8;
-    const body = { ...latheGeom([[.16, 0], [.20, h * .3], [.17, h * .7], [.12, h], [.0, h + .02]], 7), matrix: matTranslate(cx, gy, cz) };
+    const h = 1.8 + ((seed * 37) % 10) / 10 * 2.2;
+    const root = matMul(matTranslate(cx, gy, cz), matRotY(yaw));
+    const body = { ...latheGeom([[.16, 0], [.20, h * .3], [.17, h * .7], [.12, h], [.0, h + .02]], 7), matrix: root };
     parts.push({ role: 'cactusA', part: body });
     if (seed % 3 !== 0) {
       const ah = 0.8 + (seed % 5) / 10;
       const arm = { ...latheGeom([[.10, 0], [.13, ah * .6], [.09, ah], [.0, ah + .02]], 6),
-        matrix: matMul(matTranslate(cx + .34, gy + h * .45, cz), matRotZ(0.5)) };
+        matrix: matMul(root, matMul(matTranslate(.34, h * .45, 0), matRotZ(0.5))) };
       parts.push({ role: 'cactusB', part: arm });
     }
     if (seed % 4 === 1) {
       const ah = 0.7 + (seed % 7) / 10;
       const arm2 = { ...latheGeom([[.09, 0], [.12, ah * .6], [.08, ah], [.0, ah + .02]], 6),
-        matrix: matMul(matTranslate(cx - .30, gy + h * .6, cz + .1), matRotZ(-0.6)) };
+        matrix: matMul(root, matMul(matTranslate(-.30, h * .6, .1), matRotZ(-0.6))) };
       parts.push({ role: 'cactusC', part: arm2 });
     }
     return { parts, gy, h };
   }
-  const spots = [];
-  let tries = 0;
-  while (spots.length < 14 && tries++ < 400) {
-    const x = Dn(-55, 55), z = Dn(-55, 55);
-    if (Math.abs(z) < 6.5 || (x > -14 && x < 14 && z > -22 && z < -4.5) || Math.hypot(x, z - 10) < 6) continue;
-    spots.push([Math.round(x), Math.round(z)]);
-  }
-  const cactusByRole = {};
-  spots.forEach(([x, z], idx) => {
-    const { parts, gy, h } = cactusParts(x, z, idx + 1);
-    for (const { role, part } of parts) (cactusByRole[role] = cactusByRole[role] || []).push(part);
-    Dt(x - .35, z - .35, x + .35, z + .35, 0, gy + h);
-  });
-  for (const role in cactusByRole) addRoleMesh(Nt, role, cactusByRole[role]);
 
-  // rocks: perturbed hulls (irregular octahedra), 5 variants, seeded scatter
-  function rockParts(rx, rz, s, role) {
+  // scrub: cheap rounded tussock under half a meter; no collider needed
+  function scrubParts(cx, cz, s, yaw) {
+    const gy = os(Math.round(cx), Math.round(cz));
+    const g = latheGeom([[.03, 0], [.15 * s, .1 * s], [.24 * s, .26 * s], [.15 * s, .33 * s], [.0, .38 * s]], 5);
+    return { ...g, matrix: matMul(matTranslate(cx, gy, cz), matRotY(yaw)) };
+  }
+
+  // rocks: perturbed hulls (irregular extrusions), seeded per world cell
+  function rockParts(rx, rz, s) {
     const pts = [];
     const N = 6;
     for (let i = 0; i < N; i++) {
@@ -4705,17 +4703,39 @@ Nt.userData.telephoneLine=telephoneLine;
     }
     return { ...g, matrix: matMul(matTranslate(rx, os(Math.round(rx), Math.round(rz)) + s * .2, rz), matRotY(Un(rx, rz) * 6)) };
   }
-  const rocksByRole = {};
-  let rtries = 0, rcount = 0;
-  while (rcount < 26 && rtries++ < 400) {
-    const x = Dn(-58, 58), z = Dn(-58, 58);
-    if (Math.abs(z) < 4.5 || (x > -13 && x < 13 && z > -21 && z < -4.5)) continue;
-    const s = Dn(.4, 1.6);
-    const role = ['rockA', 'rockB', 'rockC'][Math.floor(pn() * 3)];
-    (rocksByRole[role] = rocksByRole[role] || []).push(rockParts(x, z, s, role));
-    rcount++;
+
+  // Procedural distribution: jittered grid over the visible desert with density
+  // that recedes into the distance, none on the road, plot, or driveway.
+  const CELL = 7, RADIUS = 150;
+  const spotBlocked = (x, z) =>
+    Math.abs(z) < 6.5 || (x > -14 && x < 14 && z > -22 && z < -4.5) || Math.hypot(x, z - 10) < 6;
+  const cactusByRole = {}, rocksByRole = {}, scrubs = [];
+  for (let gx = -RADIUS; gx <= RADIUS; gx += CELL) {
+    for (let gz = -RADIUS; gz <= RADIUS; gz += CELL) {
+      const x = gx + (cellHash(gx, gz, 1) - .5) * CELL * .9;
+      const z = gz + (cellHash(gx, gz, 2) - .5) * CELL * .9;
+      const dStation = Math.hypot(x, z + 13);
+      if (dStation > RADIUS || spotBlocked(x, z)) continue;
+      const falloff = 1 - .72 * xc(Math.min(Math.max((dStation - 45) / 105, 0), 1));
+      const r = cellHash(gx, gz, 3);
+      if (r < .055 * falloff) {
+        const seed = 1 + Math.floor(cellHash(gx, gz, 4) * 999);
+        const { parts, gy, h } = cactusParts(x, z, seed, cellHash(gx, gz, 5) * Math.PI * 2);
+        for (const { role, part } of parts) (cactusByRole[role] = cactusByRole[role] || []).push(part);
+        // tall-prop collision only in the walkable core; distant cacti stay decorative
+        if (dStation < 48) Dt(x - .35, z - .35, x + .35, z + .35, 0, gy + h);
+      } else if (r < .175 * falloff) {
+        const s = .4 + cellHash(gx, gz, 6) * 1.2;
+        const role = ['rockA', 'rockB', 'rockC'][Math.floor(cellHash(gx, gz, 7) * 3)];
+        (rocksByRole[role] = rocksByRole[role] || []).push(rockParts(x, z, s));
+      } else if (r < .35 * falloff) {
+        scrubs.push(scrubParts(x, z, .6 + cellHash(gx, gz, 8) * .8, cellHash(gx, gz, 9) * Math.PI * 2));
+      }
+    }
   }
+  for (const role in cactusByRole) addRoleMesh(Nt, role, cactusByRole[role]);
   for (const role in rocksByRole) addRoleMesh(Nt, role, rocksByRole[role]);
+  addRoleMesh(Nt, 'scrub', scrubs);
 
   // Mountains are distant angular sky layers, not nearby box geometry.
 })();
