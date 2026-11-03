@@ -28,7 +28,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
-| Phase 4 — Procedural ambience | Implemented (source-level): wind bed, localized neon hum, dip-synced ticks, deep-night insect chirps, mute; browser/audio acceptance pending | Requested early by the user; Phase 2/3 visual acceptance still open |
+| Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Planned | Earlier phases accepted or explicitly deferred |
 
@@ -211,6 +211,11 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-03 — Audible touring coupe engine
+
+- Sitting in the coupe starts a V8-style idle. Speed and throttle raise the pitch and level, and exiting fades the sound out. The exhaust includes harmonics and a mid-bass boost for small speakers. Seating retries browser audio resume, and the HUD shows when sound is muted.
+- Inline syntax and signal checks cover the generated loop, output level, and response to driving controls. Listening on physical speakers remains open.
 
 ### 2026-11-03a — Footsteps rebalanced: too loud and unnatural
 
