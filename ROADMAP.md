@@ -211,6 +211,12 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-02h — Directional footsteps
+
+- **Request:** "and the steps?" — footsteps must be directional too, not flat monaural bursts.
+- **Implementation:** each footfall now alternates left/right through a `StereoPannerNode` (±0.38 with ±0.08 seeded jitter, so the left foot lands left and the right foot lands right); the pan node is created per step only when `createStereoPanner` is available and the chain falls back to the un-panned gain otherwise. Surface-aware filtering, traveled-distance cadence, mute routing, and the shared noise buffer are unchanged.
+- **Checks:** inline script passes `node --check`; zero external requests. Real-listen acceptance (pan balance while turning/walking) recorded as pending in this sandbox, as before.
+
 ### 2026-11-02g — Directional, close-range sign audio
 
 - **Request:** the electrical crackling must not be always audible — only when close to the sign — and the ambience needs directional sound.
