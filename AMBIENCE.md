@@ -228,7 +228,9 @@ Pull off the highway at either end of the forecourt. The open lane runs along th
 
 At the rear of the coupe, use **E** or click on the trunk latch. A small amber lamp lights the luggage well as the lid rises. Pick up the tool case or canvas roll beside the parked coupe, then aim into the open well to stow it. The folded blanket and any stowed item can be taken back out. Press **G** to set a carried item on clear ground. The trunk needs to be latched before driving.
 
-Carry the blanket to the padded bench below the **OFFICE** window. Use **Sit and unfold blanket** to settle with it across your lap. A small amber lamp warms the seat while the low window slit frames the cold road. Sit as long as you like. Press **E**, click, or move to stand and fold the blanket back up. The canvas roll can rest beside you on the bench.
+Carry the blanket to the padded bench below the **OFFICE** window. Use **Sit and unfold blanket** to settle with it across your lap. A small amber lamp warms the seat while the dusty storefront glass frames the pumps and the cold road. Sit as long as you like. Press **E**, click, or move to stand and fold the blanket back up. The canvas roll can rest beside you on the bench.
+
+Aim at either pump nozzle and press **E** or click to lift it. The rubber hose stays attached to the pump and follows the nozzle as you move. Aim at the cradle to hang it back up, or press **G** to let it fall.
 
 You can also get into the coupe while carrying the blanket. While parked, aim at the folded blanket on the passenger seat and press **E** or click to wrap it around yourself. The fabric crosses your chest and covers your knees. Look down and interact to unwrap it before driving. If you get out, you carry it with you.
 

@@ -22,15 +22,15 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
-| G1 — Composition and period silhouettes | Office, exterior GAS lettering, and drive-through forecourt built | The forecourt gives the coupe a clear lane alongside the pumps and a road connection at either end. |
-| G2 — Palette, surfaces, and light hierarchy | Office and neon pass implemented | Warm counter shade and sill spill, cyan canopy edge and spill, and red glass GAS lettering. Matching visual review remains open. |
+| G1 — Composition and period silhouettes | Office furnished, pole sign raised, and drive-through forecourt built | The sign addresses both highway approaches. The office has clear sightlines through the storefront. |
+| G2 — Palette, surfaces, and light hierarchy | Glazing, bench light, and two neon faces implemented | The canopy, glazed office, and higher red sign each have a distinct role. |
 | G3 — Graphics acceptance and performance | Offline run and sustained drive verified | Remaining graphics review includes matched G0 views and shadow checks. The 60-second driving sample measured 16.7 ms median and 16.9 ms p95 on Intel Iris Xe at 960 × 540 and DPR 1. |
 | Phase 1 — Dusk-to-night cycle | Visually revalidated on the delivered offline file | Full night held at the 304- and 321-second captures. |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Window rest, blanket use, and seven station prompts | Browser and performance acceptance in progress |
+| Phase 6 — Stillness and interaction polish | Window rest, blanket use, and physical nozzle handling | Nozzle input verified. Full stillness acceptance remains open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -211,6 +211,14 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Roadside sign, office glazing, and fuel hoses
+
+- The low office, canopy, and pull-through apron work together at car scale. The old GAS cabinet topped out at about 5.5 m, close to the canopy's 4.6 m roofline. Its single face looked across the highway. Raised the same cabinet to about 7 m overall, with the cabinet bottom at about 4.7 m. Moved the pole to the road edge beside the east entrance, where the canopy leaves it visible from the west. Turned the two independently readable faces toward approaching drivers. Added a braced pole mount, inset faces, and tube supports. The letters, local red spill, and hum still share the sign dip. [Period sign and storefront references](ASSET_GUIDE.md#3-gasoil-and-road-signs)
+- Replaced opaque window panels and cutout slots with continuous dusty glazing. The sills, frames, and partial blinds give the panes depth, and the waiting seat now sees the forecourt through the glass. Furnished the office around the counter and walking loop with a lit pegboard and hand tools, stock shelves, capped oil tins, drawers, wall telephone, and ribbed heater. Assets are modeled inline, with painted textures generated in memory.
+- Both fuel nozzles can be lifted, dropped, recovered, and returned to the cradle. Each hose uses a chain of constrained points with gravity and floor contact. The pump end stays fixed. The nozzle follows the player while held and drops if taken beyond the hose's reach.
+- Offline Chrome opened the delivered file and acquired pointer lock. An instrumented copy exercised lift and redock on both pumps, hose movement while walking, fixed attachment at the pump, and drop and recovery on the island. The sign base blocked direct car entry while the adjacent drive-through lane remained clear. Captured matched before and after night views and preset dusk, blue hour, and night views from both highway approaches, the office, and the window seat. The browser reported no errors and only local file requests.
+- Static arrival and office samples on Intel Iris Xe at 960 × 540 and DPR 1 measured 16.7 ms median and 16.8 to 16.9 ms p95 over 120 intervals per view. The previous full cycle and sustained drive apply to the earlier forecourt build. The complete graphics and shadow review remains open.
 
 ### 2026-11-04 — Live cycle and sustained driving verification
 
