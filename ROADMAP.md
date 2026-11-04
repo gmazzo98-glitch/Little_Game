@@ -30,7 +30,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Window rest, blanket use, and physical nozzle handling | Nozzle input verified. Full stillness acceptance remains open. |
+| Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, and physical nozzle handling | One-action map opening verified by keyboard and cursor. Full stillness acceptance remains open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -212,6 +212,17 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-04 — Bring the road map into view
+
+- Phase 6, painterly direction. The prior interaction left the driver looking at the glovebox while the unfolded map sat on their lap. While stopped, **R** or **Read road map** at the glovebox now opens the map, directs the view toward it, and lights the cabin. Stowing it returns the view to the windshield and the lamp to its switch setting.
+- All inline scripts passed `node --check` and the resource scan. Offline Chrome on the delivered file verified immediate visibility with **R**, aimed **E**, and an off-center cursor click. The checks also covered stowing, both manual lamp settings, the driving interlock, exit, doorway movement, wall collision, and pointer-lock release and re-entry. Chrome requested only the game file and reported zero app or shader errors.
+- Reviewed the opened map from its action-selected view at preset dusk, blue hour, and night. The 120-interval night sample at 960 × 540 and DPR 1 on the Samsung Galaxy Book with Intel Iris Xe and ANGLE Direct3D11 measured 16.7 ms median, 17.5 ms p95, and 51.1 ms maximum. This check covers the cabin. The previous records cover the continuous cycle, and the G3 scene review remains open.
+
+### 2026-11-04 — Make the glovebox map reachable
+
+- Phase 6, painterly direction. While the coupe is stopped, the same aim point opens the glovebox, unfolds the map, then stows it and closes the lid. Aiming at the unfolded map folds it directly. The open lid can still be closed while moving.
+- All inline scripts passed `node --check` and the resource scan. On the delivered file, offline Chrome passed the same-aim sequence with **E** in pointer-lock mode and with clicks in cursor mode. Both runs also verified folding from the lap, the driving interlock, and driving after folding. Each requested only the local game file and reported zero app or shader errors. The full scene and cycle review uses the earlier validation records.
+
 ### 2026-11-04 — GAS/OIL faces aligned to the highway
 
 - Turned the 8.1 m cabinet 30 degrees to sit square across the straight highway, with one face pointing west and the other east. Centered the single red spill beneath the cabinet. Both faces carry correctly oriented lettering. This follows the sightline principle documented for a perpendicular sign on historic Route 66. [Historic Route 66 sign reference](https://route66ca.org/bekins-storage-company-roof-sign/)
@@ -232,6 +243,15 @@ For each `index.html` change:
 - Both fuel nozzles can be lifted, dropped, recovered, and returned to the cradle. Each hose uses a chain of constrained points with gravity and floor contact. The pump end stays fixed. The nozzle follows the player while held and drops if taken beyond the hose's reach.
 - Offline Chrome opened the delivered file and acquired pointer lock. An instrumented copy exercised lift and redock on both pumps, hose movement while walking, fixed attachment at the pump, and drop and recovery on the island. The sign base blocked direct car entry while the adjacent drive-through lane remained clear. Captured matched before and after night views and preset dusk, blue hour, and night views from both highway approaches, the office, and the window seat. The browser reported no errors and only local file requests.
 - Static arrival and office samples on Intel Iris Xe at 960 × 540 and DPR 1 measured 16.7 ms median and 16.8 to 16.9 ms p95 over 120 intervals per view. The previous full cycle and sustained drive apply to the earlier forecourt build. The complete graphics and shadow review remains open.
+
+### 2026-11-04 — Road map in the parked coupe
+
+- Phase 6, painterly direction. The glovebox holds an inline 1963 Route 66 map that can be unfolded while parked. Its creased paper sits below the windshield, and the existing dome switch brings the print into view. Cinder Court echoes the faded office mileage strip. The map folds back into the glovebox when stowed or when the player gets out. Driving resumes after folding.
+- The inline script passed `node --check` and the resource scan. Offline Chrome requested only the delivered `file://` document and reported zero app or shader errors. A browser probe aimed at fixtures while standard click and key inputs verified the map, dome light, driving interlock, and stowing on exit in pointer-lock and cursor modes. Closing the glovebox also stowed the map. Walking, running, jumping, doorway traversal, wall and pump collision, resizing, and pointer-lock release and re-entry passed.
+- Compared the same parked view with the dome lamp off and on at night. The print is legible in the warm light, falls into cool shadow with the lamp off, and sits below the windshield sightline.
+- Reviewed the approach, canopy, and both highway directions on the delivered game's normal clock at dusk, around 121 seconds, and around 302 seconds. Stars began invisible, were faint at blue hour, and held at full night after 300 seconds.
+- The 60-second canopy sample collected 3,600 frame intervals at 960 × 540 and DPR 1 on a Samsung Galaxy Book (950XDB/951XDB/950XDY, Core i7-1165G7, Intel Iris Xe with ANGLE Direct3D11). Median was 16.7 ms, p95 was 16.9 ms, and maximum was 18.5 ms. The 120-interval night sample with the map open and dome light on measured 16.7 ms median and 16.8 ms p95.
+- The matched G0 baseline and shadow review remain open under G3. The paper sound still needs a listening pass.
 
 ### 2026-11-04 — Live cycle and sustained driving verification
 

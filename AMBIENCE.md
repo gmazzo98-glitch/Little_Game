@@ -234,6 +234,8 @@ Aim at either pump nozzle and press **E** or click to lift it. The rubber hose s
 
 You can also get into the coupe while carrying the blanket. While parked, aim at the folded blanket on the passenger seat and press **E** or click to wrap it around yourself. The fabric crosses your chest and covers your knees. Look down and interact to unwrap it before driving. If you get out, you carry it with you.
 
+While parked, press **R** or use **Read road map** at the glovebox. The 1963 map unfolds on your lap in the amber cabin light. The printed Cinder Court is the same name you can find on the office mileage strip, eighteen miles west of Sunset Service. You can look up and sit with the view outside. Stowing the map returns the cabin lamp to its switch setting.
+
 The current prompts focus on actions that expose a detail, change the space, move cargo, or help operate the coupe. The lists below also preserve earlier design ideas. Fixtures such as the till keys, vise, and mail slot now read as scenery.
 
 The current build exposes the station and coupe actions through **E** or a click when a fixture is within reach and under the aim point. The HUD names the fixture. Walk away to end a close view or a rest. The headlight, doorway wind, and sound behind the station respond to position or existing controls. The proposals below describe the intended feel of each action. See the roadmap for what the build and verification cover.

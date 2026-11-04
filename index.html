@@ -5465,14 +5465,17 @@ for(const item of switches) {
   },item.label+' switch label');
   controls.push({...item,button,labelMaterial,on:false,press:0});
 }
+function setDomeLight(on) {
+  domeLight.intensity=on?1.9:0;
+  domeFixture.material.emissive.setHex(0xffc183);
+  domeFixture.material.emissiveIntensity=on?1.7:0;
+}
 function toggleCarSwitch(control) {
   control.on=!control.on;
   control.press=.14;
   const on=control.on;
   if(control.kind==='dome') {
-    domeLight.intensity=on?1.9:0;
-    domeFixture.material.emissive.setHex(0xffc183);
-    domeFixture.material.emissiveIntensity=on?1.7:0;
+    setDomeLight(on);
   } else if(control.kind==='panel') {
     gaugeMaterial.emissiveIntensity=on?.85*panelDim:.04;
     for(const item of controls)item.labelMaterial.emissiveIntensity=on?.50*panelDim:.04;
@@ -5791,6 +5794,7 @@ function leaveCar() {
     if(Math.hypot(clear[0]-aimPoint.x,clear[1]-aimPoint.z)>.05) continue;
     door.open=true;
     seated=false;carSpeed=0;br=0;oo=true;inspection=null;cabinBlanketOpen=false;
+    setRoadMapOpen(false);
     Nn.position.set(aimPoint.x,y,aimPoint.z);
     Nn.lookAt(coupe.localToWorld(aimPoint.set(0,1.0,-.3)));
     Nn.fov=65;Nn.updateProjectionMatrix();
@@ -5817,7 +5821,7 @@ function carClearAt(x,z,yaw) {
   return true;
 }
 function driveCar(dt) {
-  const ready=!cabinBlanketOpen && !trunkOpen && Math.abs(trunkLid.rotation.x)<.08 &&
+  const ready=!cabinBlanketOpen && !roadMap.visible && !trunkOpen && Math.abs(trunkLid.rotation.x)<.08 &&
     doors.every(door=>!door.open && Math.abs(door.hinge.rotation.y)<.08);
   const throttle=ready && ignitionOn && !parkingBrake?(Number(!!fn.KeyW)-Number(!!fn.KeyS)):0;
   if(engine)engine.load=!fn.Space && carSpeed*throttle>=0?Math.abs(throttle):0;
@@ -6050,6 +6054,84 @@ rearMirrorTarget.texture.offset.x=1;
 const mirrorCamera=new gt(47,192/72,.14,3500);
 const mirrorAnchor=new P(), mirrorLook=new P();
 let rearMirror, mirrorYaw=0, mirrorDelay=0;
+function buildRoadMap() {
+  const canvas=document.createElement('canvas');
+  canvas.width=720;canvas.height=450;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#d5c9a5';
+  ctx.fillRect(0,0,720,450);
+  ctx.strokeStyle='#817c5c';ctx.lineWidth=2;ctx.strokeRect(18,17,684,416);
+  ctx.fillStyle='#515e54';ctx.font='bold 42px Georgia,serif';
+  ctx.fillText('DESERT HIGHWAYS',44,73);
+  ctx.font='bold 19px Georgia,serif';
+  ctx.fillText('WESTERN MOTOR GUIDE',47,104);
+  ctx.textAlign='right';ctx.fillText('1963',675,104);
+
+  ctx.strokeStyle='#9a9675';ctx.lineWidth=1.5;
+  for(const [x,y,count] of [[155,158,4],[562,315,5]]) {
+    for(let i=0;i<count;i++) {
+      ctx.beginPath();
+      ctx.ellipse(x+i*3,y+i*2,33+i*21,9+i*5,-.12,0,Math.PI*2);
+      ctx.stroke();
+    }
+  }
+  ctx.strokeStyle='#90534b';ctx.lineWidth=6;
+  ctx.beginPath();ctx.moveTo(47,238);ctx.lineTo(673,238);ctx.stroke();
+  ctx.textAlign='center';
+  for(const [x,y,name] of [[173,292,'CINDER COURT'],[475,206,'SUNSET SERVICE']]) {
+    ctx.beginPath();ctx.moveTo(x,238);ctx.lineTo(x,y>238?268:214);
+    ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#90534b';ctx.beginPath();ctx.arc(x,238,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#515e54';ctx.font='bold 21px Georgia,serif';ctx.fillText(name,x,y);
+  }
+  ctx.fillStyle='#515e54';ctx.font='19px Georgia,serif';
+  ctx.fillText('WEST',72,220);ctx.fillText('EAST',645,220);
+  ctx.fillText('18 MI',320,271);
+  ctx.fillStyle='#e2d5b0';ctx.strokeStyle='#515e54';ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(299,218);ctx.lineTo(341,218);ctx.lineTo(341,241);
+  ctx.quadraticCurveTo(336,252,320,257);ctx.quadraticCurveTo(304,252,299,241);
+  ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#515e54';ctx.font='bold 26px Georgia,serif';ctx.fillText('66',320,244);
+  ctx.font='17px Georgia,serif';ctx.fillText('U.S. ROUTE 66   •   DESERT SECTION',360,401);
+  for(const x of [240,480]) {
+    ctx.fillStyle='#63583a33';ctx.fillRect(x-2,18,2,414);
+    ctx.fillStyle='#f4e5bc88';ctx.fillRect(x,18,3,414);
+  }
+  agePaint(ctx,720,450,1963,.8);
+  const texture=new qt(canvas);texture.colorSpace='srgb';
+  texture.needsUpdate=true;
+  const material=new ji({map:texture,roughness:1});
+  const sheet=new ba(.42,.263,3,1);
+  const positions=sheet.getAttribute('position');
+  for(const i of [1,5])positions.setZ(i,.011);
+  for(const i of [2,6])positions.setZ(i,-.006);
+  sheet.computeVertexNormals();
+  const open=new dt(sheet,material);
+  open.position.set(.49,1.026,-.085);
+  open.rotation.set(-.86,Math.PI,0,'YXZ');
+  open.visible=false;
+  coupe.add(open);
+
+  const panel=new ba(.115,.085);
+  const uv=panel.getAttribute('uv');
+  for(let i=0;i<uv.count;i++)uv.setX(i,uv.getX(i)/3);
+  return {open,folded:new dt(panel,material)};
+}
+const {open:roadMap,folded:foldedRoadMap}=buildRoadMap();
+function setRoadMapOpen(open) {
+  if(roadMap.visible===open)return;
+  roadMap.visible=open;
+  foldedRoadMap.visible=!open;
+  setDomeLight(open || controls.find(control=>control.kind==='dome').on);
+  if(open)Nn.lookAt(roadMap.getWorldPosition(aimPoint));
+  else if(seated)Nn.lookAt(coupe.localToWorld(aimPoint.set(driverEye.x,1.28,3)));
+  playInteractionSound('paper');
+}
+function useGlovebox() {
+  if(glovebox.engaged && carSpeed===0 && !roadMap.visible)setRoadMapOpen(true);
+  else glovebox.action();
+}
 function buildCabinGestures() {
   const add=(...args)=>installGesture(coupe,...args);
   add('Ignition',[.24,.815,.507],{size:[.041,.05,.04],material:'brass',axis:'z',motion:.9,toggle:true,
@@ -6075,8 +6157,11 @@ function buildCabinGestures() {
   interactionPlate(visor,[0,.013,-.12],[.53,.025,.24],'enamel');
   add('Move seat one notch',[.68,.68,-.29],{size:[.087,.04,.11],motion:.73,toggle:true,radius:.13,sound:'latch',
     effect:item=>{if(Math.abs(carSpeed)<.25)driverEye.z=item.engaged?-.27:-.36;else item.engaged=driverEye.z>-.3;}});
-  const glove=add('Open glovebox',[-.57,.83,.51],{motion:-1.22,toggle:true,radius:.19,sound:'latch'});
+  const glove=add('Glovebox',[-.57,.83,.51],{motion:-1.22,toggle:true,radius:.18,sound:'latch',
+    effect:item=>{if(!item.engaged || carSpeed===0)setRoadMapOpen(item.engaged);}});
   interactionPlate(glove,[0,.076,-.026],[.35,.145,.035],'wood');
+  foldedRoadMap.position.set(0,.081,-.006);
+  glove.add(foldedRoadMap);
   const crease=detailText(coupe,[-.57,.895,.495],[.28,.106],['—    —'],['#564636','#796956']);
   crease.rotation.y=Math.PI;
   interactionPlate(coupe,[.02,.791,.497],[.13,.058,.12],'steel');
@@ -6086,8 +6171,9 @@ function buildCabinGestures() {
     effect:()=>{if(driverDoor.open && Math.abs(carSpeed)<.25){toggleDoor(driverDoor);playInteractionSound('rubber');}}});
   add('Parking brake',[.16,.718,-.15],{size:[.042,.047,.24],material:'rubber',motion:-.42,toggle:true,sound:'latch',
     effect:item=>{parkingBrake=item.engaged;}});
+  return cabinActions.find(item=>item.hinge===glove);
 }
-buildCabinGestures();
+const glovebox=buildCabinGestures();
 
 const cargoSlots=[[-.44,.53,-2.04],[0,.53,-2.06],[.44,.53,-2.04]];
 const cargoItems=[];
@@ -6290,6 +6376,7 @@ function findInteractionTarget() {
     best={label,action};distance=along;
   }
   if(seated) {
+    if(roadMap.visible)target(roadMap,0,0,0,.15,'Fold and stow map',useGlovebox);
     if(carryingBlanket() && carSpeed===0) {
       if(cabinBlanketOpen)target(cabinBlanket,0,.14,.10,.24,'Unwrap and fold blanket',toggleCabinBlanket);
       else target(coupe,foldedCabinPosition.x,foldedCabinPosition.y+.06,foldedCabinPosition.z,.21,
@@ -6299,7 +6386,15 @@ function findInteractionTarget() {
       target(item.button,0,0,-.03,.074,item.label+' '+(item.on?'OFF':'ON'),()=>toggleCarSwitch(item));
     for(const door of doors)
       target(door.hinge,-door.side*.14,.89,-.79,.105,door.open?'Close door':'Open door',()=>toggleDoor(door));
-    for(const item of cabinActions)target(item.parent,...item.position,item.radius,item.label,item.action);
+    for(const item of cabinActions) {
+      if(item!==glovebox) {
+        target(item.parent,...item.position,item.radius,item.label,item.action);
+        continue;
+      }
+      const label=roadMap.visible?'Fold and stow map':carSpeed===0?'Read road map':
+        item.engaged?'Close glovebox':'Open glovebox';
+      target(item.parent,...item.position,item.radius,label,useGlovebox);
+    }
   } else if(nearCar) {
     coupe.worldToLocal(aimPoint.copy(Nn.position));
     const side=Math.sign(aimPoint.x);
@@ -6411,6 +6506,7 @@ addEventListener('keydown',event=>{
   if(key==='KeyE')findInteractionTarget()?.action();
   if(key==='KeyC' && seated)toggleDoor(driverDoor);
   if(key==='KeyF')leaveCar();
+  if(key==='KeyR' && seated && carSpeed===0)useGlovebox();
   if(key==='KeyG'){
     if(heldPump)putDownNozzle();
     else setCargoDown();
@@ -6450,7 +6546,7 @@ function updateCarHud() {
   const hint=hovered?'E / CLICK  '+hovered.label+'  ·  ':'';
   const mode=cursorMode?'RMB look':'MOUSE look';
   const text=inspection==='rest' ? hint+mode+'  ·  Move to stand' : seated
-    ? hint + Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake  ·  C door  ·  F get out'
+    ? hint + (roadMap.visible?'Parked  ·  R fold map to drive':Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake')+(carSpeed===0 && !roadMap.visible?'  ·  R read map':'')+'  ·  C door  ·  F get out'
     : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  Coupe by the station';
   const cargoStatus=heldPump?'  ·  Holding nozzle  ·  G let go':
     seated && carryingBlanket()?(cabinBlanketOpen?'  ·  Wrapped in blanket  ·  Unwrap to drive':'  ·  Blanket on passenger seat'):
