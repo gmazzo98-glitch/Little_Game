@@ -28,7 +28,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 1 — Dusk-to-night cycle | Visually revalidated on the delivered offline file | Full night held at the 304- and 321-second captures; clock runs continuously across the highway trip. |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks) and Cinder Court sign/lamp shimmer | Phase 2 acceptance; remaining role work |
-| Phase 4 — Procedural audio | Wind, localized neon (Sunset Service and Cinder Court), indoor shelter muffling, four footstep surfaces (sand/asphalt/canopy concrete/office with grit tail and early reflection), shelter-aware night insects, and coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
+| Phase 4 — Procedural audio | Wind, localized neon (Sunset Service and Cinder Court), indoor shelter muffling, four footstep surfaces (sand/asphalt/canopy concrete/office with grit tail and early reflection), shelter-aware night insects, coupe engine with tire roll, and obstruction-aware hum timbre implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle handling, and Cinder Court show room (door, lamp switch, drawer, rate card) | Separate glovebox/map and Cinder Court room actions verified offline. Full stillness acceptance remains open. |
 
@@ -339,6 +339,12 @@ For each `index.html` change:
 
 - Use the [1963 Chevrolet Impala Sport Coupe factory reference](https://news.chevrolet.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1963-Chevrolet.pdf) for the roof, rear seat, and deck relationship. The game coupe now has a rearward roof and backlight, fixed rear quarter glass, and a separate parcel shelf behind a reclined saddle-vinyl bench.
 - Inline JavaScript parses. The transformed rear backrest vertices above the glass sill clear the rear glass plane by at least 0.128 m. In-game visual review remains open.
+
+### 2026-11-04b — Tire roll and hum obstruction timbre
+
+- **Tire roll while driving.** A second looped noise chain created with the engine (`roll` → lowpass → `rollLevel` → master) gives a restrained rolling sound tied to actual motion: gain `0.048 × road × (0.6 + 0.4 × road)` on asphalt (≈ 0.038 at the 25 m/s cap) and `0.062` off the road, with the lowpass opening from 260 Hz to 600 Hz on asphalt and 700–1100 Hz on the sand shoulder for a little more grit. `road = |carSpeed| / 25`, so it fades fully at rest, follows reverse as well as forward, and gates on `seated && ignitionOn` so it fades out with the existing engine fade on exit. Surface comes from the existing `onAsphalt()` test evaluated at the listener, which tracks the car while seated.
+- **Hum obstruction timbre.** The GAS hum's 120 Hz harmonic now ducks independently of the 60 Hz fundamental when the office wall lies between listener and sign: the harmonic gain node tracks 0.35 open / 0.12 blocked (0.045 s constant, same signal as the existing 0.23 level duck), so the wall muffles the hum's timbre, not just its level. Unobstructed hum is unchanged.
+- **Checks:** the single inline script passes `node --check`. No new files, assets, or network code. Listening acceptance on real speakers remains open in this sandbox.
 
 ### 2026-11-04 — Footstep surfaces and shelter-aware insects
 
