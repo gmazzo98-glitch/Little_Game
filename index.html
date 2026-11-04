@@ -3920,9 +3920,10 @@ void main() {
 		}`};var Sr=class extends Ut{constructor(){super();let e=_c;this.uniforms=Ln.clone(e.uniforms),this.material=new cr({name:e.name,uniforms:this.uniforms,vertexShader:e.vertexShader,fragmentShader:e.fragmentShader}),this.fsQuad=new In(this.material),this._outputColorSpace=null,this._toneMapping=null}render(e,t,n){this.uniforms.tDiffuse.value=n.texture,this.uniforms.toneMappingExposure.value=e.toneMappingExposure,(this._outputColorSpace!==e.outputColorSpace||this._toneMapping!==e.toneMapping)&&(this._outputColorSpace=e.outputColorSpace,this._toneMapping=e.toneMapping,this.material.defines={},Ge.getTransfer(this._outputColorSpace)===qe&&(this.material.defines.SRGB_TRANSFER=""),this._toneMapping===$a?this.material.defines.LINEAR_TONE_MAPPING="":this._toneMapping===Ka?this.material.defines.REINHARD_TONE_MAPPING="":this._toneMapping===Qa?this.material.defines.CINEON_TONE_MAPPING="":this._toneMapping===ns?this.material.defines.ACES_FILMIC_TONE_MAPPING="":this._toneMapping===ja&&(this.material.defines.AGX_TONE_MAPPING=""),this.material.needsUpdate=!0),this.renderToScreen===!0?(e.setRenderTarget(null),this.fsQuad.render(e)):(e.setRenderTarget(t),this.clear&&e.clear(e.autoClearColor,e.autoClearDepth,e.autoClearStencil),this.fsQuad.render(e))}dispose(){this.material.dispose(),this.fsQuad.dispose()}};function Vm(i){return function(){i|=0,i=i+1831565813|0;let e=Math.imul(i^i>>>15,1|i);return e=e+Math.imul(e^e>>>7,61|e)^e,((e^e>>>14)>>>0)/4294967296}}var pn=Vm(1966),Dn=(i,e)=>i+pn()*(e-i);function Un(i,e){let t=Math.sin(i*127.1+e*311.7)*43758.5453;return t-Math.floor(t)}function xc(i){return i*i*(3-2*i)}function ao(i,e){let t=Math.floor(i),n=Math.floor(e),s=i-t,r=e-n,o=Un(t,n),a=Un(t+1,n),l=Un(t,n+1),c=Un(t+1,n+1),h=xc(s),d=xc(r);return o+(a-o)*h+(l-o)*d+(o-a-l+c)*h*d}function Hm(i,e){return ao(i,e)*.55+ao(i*2.1,e*2.1)*.3+ao(i*4.3,e*4.3)*.15}// Continuous world-space height, shared by the surface and player/prop placement.
 // The road is flat for its entire length; the apron blends into broad, low dunes.
 // Shared extents for the apron and its two road connections.
-const motelX=-4600;
+const motelX=-4600, dinerX=4600;
 const forecourt=[[-24,-10,-9,-3.15],[-12.5,-22,13.5,-4.45],[9,-10,24,-3.15],
-  [motelX-28,-10.5,motelX-9.5,-3.15],[motelX-16,-24,motelX+16,-4.45],[motelX+9.5,-10.5,motelX+28,-3.15]];
+  [motelX-28,-10.5,motelX-9.5,-3.15],[motelX-16,-24,motelX+16,-4.45],[motelX+9.5,-10.5,motelX+28,-3.15],
+  [dinerX-28,-10.5,dinerX-9.5,-3.15],[dinerX-16,-24,dinerX+16,-4.45],[dinerX+9.5,-10.5,dinerX+28,-3.15]];
 function os(x, z) {
   const rectDistance = (x0, z0, x1, z1) => Math.hypot(Math.max(x0 - x, x - x1, 0), Math.max(z0 - z, z - z1, 0));
   let distance=Math.max(Math.abs(z)-3.5,0);
@@ -4051,23 +4052,29 @@ desertMaterial.onBeforeCompile = shader => {
       vec3 sand = mix(vec3(.29,.23,.17), vec3(.42,.34,.25), n);
       float road = 1.0 - smoothstep(3.20, 3.48, abs(p.y));
       float shoulder = 1.0 - smoothstep(3.45, 5.7, abs(p.y));
-      float west = max(desertRect(p, vec2(${forecourt[0][0]}, ${forecourt[0][1]}), vec2(${forecourt[0][2]}, ${forecourt[0][3]}), .40),
-                       desertRect(p, vec2(${forecourt[3][0]}, ${forecourt[3][1]}), vec2(${forecourt[3][2]}, ${forecourt[3][3]}), .40));
-      float east = max(desertRect(p, vec2(${forecourt[2][0]}, ${forecourt[2][1]}), vec2(${forecourt[2][2]}, ${forecourt[2][3]}), .40),
-                       desertRect(p, vec2(${forecourt[5][0]}, ${forecourt[5][1]}), vec2(${forecourt[5][2]}, ${forecourt[5][3]}), .40));
+      float west = max(max(desertRect(p, vec2(${forecourt[0][0]}, ${forecourt[0][1]}), vec2(${forecourt[0][2]}, ${forecourt[0][3]}), .40),
+                           desertRect(p, vec2(${forecourt[3][0]}, ${forecourt[3][1]}), vec2(${forecourt[3][2]}, ${forecourt[3][3]}), .40)),
+                       desertRect(p, vec2(${forecourt[6][0]}, ${forecourt[6][1]}), vec2(${forecourt[6][2]}, ${forecourt[6][3]}), .40));
+      float east = max(max(desertRect(p, vec2(${forecourt[2][0]}, ${forecourt[2][1]}), vec2(${forecourt[2][2]}, ${forecourt[2][3]}), .40),
+                           desertRect(p, vec2(${forecourt[5][0]}, ${forecourt[5][1]}), vec2(${forecourt[5][2]}, ${forecourt[5][3]}), .40)),
+                       desertRect(p, vec2(${forecourt[8][0]}, ${forecourt[8][1]}), vec2(${forecourt[8][2]}, ${forecourt[8][3]}), .40));
       float apron = desertRect(p, vec2(${forecourt[1][0]}, ${forecourt[1][1]}), vec2(${forecourt[1][2]}, ${forecourt[1][3]}), .55);
       float motelApron = desertRect(p, vec2(${forecourt[4][0]}, ${forecourt[4][1]}), vec2(${forecourt[4][2]}, ${forecourt[4][3]}), .55);
+      float dinerApron = desertRect(p, vec2(${forecourt[7][0]}, ${forecourt[7][1]}), vec2(${forecourt[7][2]}, ${forecourt[7][3]}), .55);
       vec3 asphalt = vec3(.025,.026,.032) * (.93 + .14 * n);
       vec3 ground = mix(sand, sand * .83, shoulder * .45);
       ground = mix(ground, vec3(.185,.174,.157), apron);
-      ground = mix(ground, vec3(.145,.138,.128), motelApron);
+      ground = mix(ground, vec3(.145,.138,.128), max(motelApron, dinerApron));
       ground = mix(ground, asphalt, max(road, max(west, east)));
       float serviceEdge = (1.0 - smoothstep(.027,.047,abs(p.y+7.76)))
                         * (1.0 - smoothstep(4.2,4.9,abs(p.x)));
       float motelBay = (1.0 - smoothstep(.025,.045,abs(mod(p.x - (${motelX}.0 - 7.1), 3.6) - 1.8)))
                      * (1.0 - smoothstep(7.2,7.35,abs(p.x - (${motelX}.0 - 3.5))))
                      * step(-12.2, p.y) * step(p.y, -9.2);
-      ground = mix(ground,vec3(.34,.30,.22),max(serviceEdge,motelBay*.65)*(.55+.30*n));
+      float dinerBay = (1.0 - smoothstep(.025,.045,abs(mod(p.x - (${dinerX}.0 - 5.4), 3.6) - 1.8)))
+                     * (1.0 - smoothstep(7.2,7.35,abs(p.x - ${dinerX}.0)))
+                     * step(-12.0, p.y) * step(p.y, -9.0);
+      ground = mix(ground,vec3(.34,.30,.22),max(serviceEdge,max(motelBay,dinerBay)*.65)*(.55+.30*n));
       float dash = 1.0 - smoothstep(2.7, 2.85, mod(p.x + 1.4, 7.5));
       float centerLine = (1.0 - smoothstep(.075, .105, abs(p.y))) * dash;
       float edgeLine = 1.0 - smoothstep(.025, .045, abs(abs(p.y) - 2.85));
@@ -4153,6 +4160,9 @@ var PAL = {
   tileCream: 0xc4bea8, tileTeal: 0x497a76, darkWood: 0x463a30,
   motelCoral: 0xff6e58, motelTurquoise: 0x3ad8c8, motelAmber: 0xffbe73,
   motelBlanket: 0x7a5c43, motelSheet: 0xd8ceb8, motelShade: 0xdcc59a,
+  dinerRose: 0xff4f6e, dinerGold: 0xffcb6b, dinerBurgundy: 0x682932,
+  dinerAmber: 0xffa858, dinerLampShade: 0xe6b87a, dinerVinyl: 0x45867e,
+  bottleAmber: 0x9e5422, bottleEmerald: 0x286846, bottleClear: 0xb8b09c,
 };
 
 // vector/matrix helpers
@@ -4307,6 +4317,9 @@ function roleMat(role, opts) {
     if (base === 'motelCoral') { m.emissive = new Me(PAL.motelCoral); m.emissiveIntensity = 1.55; }
     if (base === 'motelTurquoise') { m.emissive = new Me(PAL.motelTurquoise); m.emissiveIntensity = 1.15; }
     if (base === 'motelShade') { m.emissive = new Me(PAL.motelAmber); m.emissiveIntensity = .95; }
+    if (base === 'dinerRose') { m.emissive = new Me(PAL.dinerRose); m.emissiveIntensity = 1.65; }
+    if (base === 'dinerGold') { m.emissive = new Me(PAL.dinerGold); m.emissiveIntensity = 1.25; }
+    if (base === 'dinerLampShade') { m.emissive = new Me(PAL.dinerAmber); m.emissiveIntensity = .95; }
     if (base === 'canopyLamp') { m.emissive = new Me(PAL.warmGlow); m.emissiveIntensity = 1.0; }
     if (base === 'windowGlow') { m.emissive = new Me(PAL.windowGlow); m.emissiveIntensity = .55; }
     if (base === 'wallCream') { m.emissive = new Me(0x30291e); m.emissiveIntensity = .13; }
@@ -4992,7 +5005,7 @@ const gasMothPoint=new P();
   const p3 = new ba(.95, .95);
   const m3 = new ji({ map: t3, transparent: true, roughness: .8, metalness: 0 });
 
-  for (const [sx2, sz2, dirLabel, yaw] of [[-22, 5.4, 'WEST', Math.PI * .68], [motelX + 20, 5.4, 'EAST', -Math.PI * .68]]) {
+  for (const [sx2, sz2, dirLabel, yaw] of [[-22, 5.4, 'WEST', Math.PI * .68], [24, 5.4, 'EAST', -Math.PI * .68], [motelX + 20, 5.4, 'EAST', -Math.PI * .68], [dinerX - 20, 5.4, 'WEST', Math.PI * .68]]) {
     const gy2 = os(sx2, sz2);
     const rGroup = new xi();
     rGroup.position.set(sx2, gy2, sz2);
@@ -5140,9 +5153,9 @@ Nt.userData.telephoneLine=telephoneLine;
   const CELL = 7, RADIUS = 150;
   const spotBlocked = (x, z) =>
     Math.abs(z) < 6.5 || forecourt.some(([x0,z0,x1,z1])=>
-      x>=x0-1.4 && x<=x1+1.4 && z>=z0-1.4 && z<=z1+1.4) || Math.hypot(x, z - 10) < 6 || Math.hypot(x - motelX, z - 10) < 6;
+      x>=x0-1.4 && x<=x1+1.4 && z>=z0-1.4 && z<=z1+1.4) || Math.hypot(x, z - 10) < 6 || Math.hypot(x - motelX, z - 10) < 6 || Math.hypot(x - dinerX, z - 10) < 6;
   const cactusByRole = {}, rocksByRole = {}, scrubs = [];
-  for (const centerSiteX of [0, motelX]) {
+  for (const centerSiteX of [0, motelX, dinerX]) {
     for (let gx = centerSiteX - RADIUS; gx <= centerSiteX + RADIUS; gx += CELL) {
       for (let gz = -RADIUS; gz <= RADIUS; gz += CELL) {
         const x = gx + (cellHash(gx, gz, 1) - .5) * CELL * .9;
@@ -5985,7 +5998,7 @@ function animateGestures(dt) {
   }
   if(inspection) {
     inspectionTime-=dt;
-    if((inspection!=='rest' && inspectionTime<=0) || fn.KeyW || fn.KeyA || fn.KeyS || fn.KeyD || fn.Space)inspection=null;
+    if((inspection!=='rest' && inspection!=='dinerBooth' && inspectionTime<=0) || fn.KeyW || fn.KeyA || fn.KeyS || fn.KeyD || fn.Space)inspection=null;
   }
 }
 
@@ -6484,6 +6497,580 @@ function inspectMotelDrawer() {
   playInteractionSound('paper');
 }
 
+const dinerGroup=new xi();
+dinerGroup.name='Starlite Diner & Bar';
+dinerGroup.position.set(dinerX,0,0);
+Nt.add(dinerGroup);
+const dinerSignLight=new Pn(0xff5874,12,42,2);
+dinerSignLight.position.set(dinerX-5.4,5.1,-4.2);
+Nt.add(dinerSignLight);
+const dinerTurqLight=new Pn(0x3ad8c8,4.2,16,2);
+dinerTurqLight.position.set(dinerX-5.4,3.4,-4.2);
+Nt.add(dinerTurqLight);
+const dinerPorchLight=new Pn(0xffca8a,3.8,10,2);
+dinerPorchLight.position.set(dinerX,3.02,-13.2);
+Nt.add(dinerPorchLight);
+const dinerCounterLight=new Pn(0xffe0b2,9.2,12,2);
+dinerCounterLight.position.set(dinerX-3.8,2.92,-17.2);
+Nt.add(dinerCounterLight);
+const dinerBarWindowLight=new Pn(0xff4f6e,4.6,9.5,2);
+dinerBarWindowLight.position.set(dinerX+5.3,1.72,-13.55);
+Nt.add(dinerBarWindowLight);
+const dinerBarLight=new Pn(0xff7658,4.4,9.0,2);
+dinerBarLight.position.set(dinerX+5.6,2.38,-19.8);
+Nt.add(dinerBarLight);
+const dinerBarLamp=new Pn(0xffaa52,6.8,7.8,2);
+dinerBarLamp.position.set(dinerX+7.35,1.52,-18.25);
+Nt.add(dinerBarLamp);
+let dinerLampOn=true, dinerDoorOpen=false, dinerDrawerOpen=false;
+const dinerDoorCollider={minX:dinerX-.48,minZ:-14.60,maxX:dinerX+.48,maxZ:-14.38,minY:0,maxY:2.25};
+Mc.push(dinerDoorCollider);
+let dinerDoorHinge=null, dinerLampSwitchHinge=null, dinerDrawerTray=null, dinerBarNote=null, dinerOrderSlip=null;
+
+(function buildStarliteDiner() {
+  const parts={}, add=(role,p)=>(parts[role]||(parts[role]=[])).push(p);
+  const addLocal=(parent,role,list)=>addRoleMesh(parent,role,list);
+  const paintLocal=(w,h,painter,matrix,opts={})=>{
+    const m=paintedSurface(w,h,painter,matrix,opts);
+    dinerGroup.add(m);
+    return m;
+  };
+
+  // --- 1. Grounded Roadside Pylon Neon Sign at local (-5.4, 0, -4.2), angled toward highway ---
+  const sx=-5.4, sz=-4.2;
+  const signRoot=new xi();
+  signRoot.name='Starlite Diner neon sign';
+  signRoot.position.set(sx,0,sz);
+  signRoot.rotation.y=-Math.PI*.22;
+  dinerGroup.add(signRoot);
+  const sp={}, sadd=(r,p)=>(sp[r]||(sp[r]=[])).push(p);
+  // Concrete & weathered steel plinth + anchor flange
+  sadd('wornMetal',boxPart(0,.14,0,1.48,.28,1.18));
+  sadd('trimBand',boxPart(0,.30,0,1.14,.06,.88));
+  sadd('rust',boxPart(-.03,.345,.02,.88,.035,.64));
+  for(const dx of [-.36,.36])for(const dz of [-.24,.24])sadd('wornMetal',boxPart(dx,.37,dz,.055,.045,.055));
+  // Twin steel columns up to 6.8m with mid-century cross-straps
+  for(const dx of [-.98,.98]) {
+    sadd('metal',boxPart(dx,3.55,0,.18,6.42,.18));
+    sadd('trimBand',boxPart(dx,1.85,0,.22,.12,.22));
+    sadd('trimBand',boxPart(dx,3.95,0,.22,.12,.22));
+  }
+  sadd('wornMetal',boxPart(0,2.75,0,2.16,.11,.20));
+  // Mid-century 4-point star finial at top of pylon (y=6.62)
+  const starPts=[[0,.46],[.10,.10],[.46,0],[.10,-.10],[0,-.46],[-.10,-.10],[-.46,0],[-.10,.10]];
+  sadd('dinerGold',{...extrudeGeom(starPts,.08),matrix:matTranslate(0,6.64,-.04)});
+  sadd('wornMetal',boxPart(0,6.32,0,.14,.32,.14));
+
+  // Upper cabinet: STARLITE DINER (y=4.45..6.25, w=3.45, h=1.80)
+  const ucy=5.35, ucw=3.45, uch=1.80, uct=.32;
+  sadd('dinerBurgundy',boxPart(0,ucy,0,ucw,uch,uct));
+  for(const dy of [-1,1])sadd('metal',boxPart(0,ucy+dy*(uch/2+.035),0,ucw+.12,.09,uct+.06));
+  for(const dx of [-1,1])sadd('wornMetal',boxPart(dx*(ucw/2-.04),ucy,0,.08,uch,.38));
+  // Lower cabinet: BAR • COFFEE • PIES (y=3.15..3.85, w=2.48, h=.68)
+  const lcy=3.50, lcw=2.48, lch=.68, lct=.26;
+  sadd('fadedTeal',boxPart(0,lcy,0,lcw,lch,lct));
+  for(const dy of [-1,1])sadd('metal',boxPart(0,lcy+dy*(lch/2+.025),0,lcw+.08,.06,lct+.04));
+
+  // Upper sign face canvas
+  const uCnv=document.createElement('canvas');uCnv.width=640;uCnv.height=352;
+  const ug=uCnv.getContext('2d');
+  ug.fillStyle='#2b161c';ug.fillRect(0,0,640,352);
+  ug.strokeStyle='#b88b58';ug.lineWidth=8;ug.strokeRect(14,14,612,324);
+  ug.fillStyle='#f8e4d8';ug.textAlign='center';ug.textBaseline='middle';
+  ug.font='bold 90px Georgia,serif';ug.fillText('STARLITE',320,112);
+  ug.font='bold 88px Georgia,serif';ug.fillText('DINER',320,242);
+  agePaint(ug,640,352,1958,1.0);
+  const uTex=new qt(uCnv);uTex.colorSpace='srgb';uTex.needsUpdate=true;
+  const uGlowCnv=document.createElement('canvas');uGlowCnv.width=640;uGlowCnv.height=352;
+  const ugg=uGlowCnv.getContext('2d');
+  ugg.fillStyle='#000';ugg.fillRect(0,0,640,352);
+  ugg.strokeStyle='#ffcb6b';ugg.lineWidth=11;ugg.strokeRect(22,22,596,308);
+  ugg.shadowColor='#ff4f6e';ugg.shadowBlur=18;
+  ugg.fillStyle='#ff7890';ugg.textAlign='center';ugg.textBaseline='middle';
+  ugg.font='bold 90px Georgia,serif';ugg.fillText('STARLITE',320,112);
+  ugg.fillStyle='#ffd27d';
+  ugg.font='bold 88px Georgia,serif';ugg.fillText('DINER',320,242);
+  const uGlowTex=new qt(uGlowCnv);uGlowTex.colorSpace='srgb';uGlowTex.needsUpdate=true;
+  const uMat=new ji({map:uTex,emissiveMap:uGlowTex,roughness:.78,metalness:.06,emissive:new Me(0xffffff),emissiveIntensity:1.35});
+  Nt.userData.dinerSignMat=uMat;
+
+  // Lower sign face canvas (BAR • COFFEE • PIES / OPEN NIGHTS)
+  const lCnv=document.createElement('canvas');lCnv.width=512;lCnv.height=160;
+  const lg=lCnv.getContext('2d');
+  lg.fillStyle='#1d3331';lg.fillRect(0,0,512,160);
+  lg.strokeStyle='#c9b89c';lg.lineWidth=5;lg.strokeRect(10,10,492,140);
+  lg.fillStyle='#f6ead6';lg.textAlign='center';lg.textBaseline='middle';
+  lg.font='bold 40px Arial,sans-serif';lg.fillText('BAR • COFFEE • PIES',256,56);
+  lg.fillStyle='#d2ba9c';lg.font='bold 24px Courier New,monospace';lg.fillText('BOOTHS  •  COCKTAILS',256,120);
+  agePaint(lg,512,160,1961,1.05);
+  const lTex=new qt(lCnv);lTex.colorSpace='srgb';lTex.needsUpdate=true;
+  const lGlowCnv=document.createElement('canvas');lGlowCnv.width=512;lGlowCnv.height=160;
+  const lgg=lGlowCnv.getContext('2d');
+  lgg.fillStyle='#000';lgg.fillRect(0,0,512,160);
+  lgg.strokeStyle='#52e6d6';lgg.lineWidth=6;lgg.strokeRect(12,12,488,136);
+  lgg.fillStyle='#ff7890';lgg.textAlign='center';lgg.textBaseline='middle';
+  lgg.font='bold 40px Arial,sans-serif';lgg.fillText('BAR • COFFEE • PIES',256,56);
+  lgg.fillStyle='#52dcd0';lgg.font='bold 24px Courier New,monospace';lgg.fillText('BOOTHS  •  COCKTAILS',256,120);
+  const lGlowTex=new qt(lGlowCnv);lGlowTex.colorSpace='srgb';lGlowTex.needsUpdate=true;
+  const lMat=new ji({map:lTex,emissiveMap:lGlowTex,roughness:.85,metalness:.04,emissive:new Me(0xffffff),emissiveIntensity:.90});
+
+  const uPlane=new ba(ucw-.24,uch-.22), lPlane=new ba(lcw-.18,lch-.14);
+  const borderPath=[[-1.52,ucy-.72],[1.52,ucy-.72],[1.52,ucy+.72],[-1.52,ucy+.72],[-1.52,ucy-.72]];
+  const lowerBorderPath=[[-1.10,lcy-.24],[1.10,lcy-.24],[1.10,lcy+.24],[-1.10,lcy+.24],[-1.10,lcy-.24]];
+  const roseBars=[
+    [[-1.22,ucy+.80],[1.22,ucy+.80]],
+    [[-1.22,ucy-.80],[1.22,ucy-.80]]
+  ];
+  for(const side of [-1,1]) {
+    sadd('meterRecess',boxPart(0,ucy,side*(uct/2+.004),ucw-.16,uch-.14,.022));
+    const uf=new dt(uPlane,uMat);uf.position.set(0,ucy,side*.182);uf.rotation.y=side>0?0:Math.PI;signRoot.add(uf);
+    sadd('meterRecess',boxPart(0,lcy,side*(lct/2+.004),lcw-.12,lch-.10,.020));
+    const lf=new dt(lPlane,lMat);lf.position.set(0,lcy,side*.148);lf.rotation.y=side>0?0:Math.PI;signRoot.add(lf);
+    sadd('dinerGold',{...tubeGeom(borderPath.map(([dx,y])=>[side*dx,y,side*.205]),.022,6,true,[0,0,1]),matrix:matIdentity()});
+    sadd('motelTurquoise',{...tubeGeom(lowerBorderPath.map(([dx,y])=>[side*dx,y,side*.168]),.020,6,true,[0,0,1]),matrix:matIdentity()});
+    for(const seg of roseBars) {
+      sadd('dinerRose',{...tubeGeom(seg.map(([dx,y])=>[side*dx,y,side*.205]),.024,6,true,[0,0,1]),matrix:matIdentity()});
+      for(const [dx,y] of seg)sadd('trimBand',boxPart(side*dx,y,side*.188,.038,.038,.04));
+    }
+  }
+  for(const r in sp){
+    const m=addLocal(signRoot,r,sp[r]);
+    if(r==='dinerRose'||r==='dinerGold'||r==='motelTurquoise')m.castShadow=false;
+  }
+  Dt(dinerX+sx-.75,sz-1.15,dinerX+sx+.75,sz+1.15,0,4.5);
+
+  // --- 2. 1960s Streamliner Diner & Bar Building (x=-9.2..9.2, z=-13.6..-21.4) ---
+  // Raised concrete sidewalk & foundation slab
+  add('interiorFloor',boxPart(0,.04,-17.0,19.0,.08,9.4));
+  // Streamliner stainless/metal roof fascia, stepped parapet, and overhang along z=-12.75
+  add('soffit',boxPart(0,3.26,-16.9,18.8,.16,9.2));
+  add('metal',boxPart(0,3.46,-16.9,19.1,.24,9.5));
+  add('wornMetal',boxPart(0,3.62,-16.9,18.4,.12,8.8));
+  // Horizontal chrome speed-lines on roof fascia & front neon tubes
+  add('enamelCream',boxPart(0,3.46,-12.12,19.16,.08,.06));
+  add('dinerRose',{...tubeGeom([[-9.4,3.54,-12.08],[9.4,3.54,-12.08]],.022,6),matrix:matIdentity()});
+  add('motelTurquoise',{...tubeGeom([[-9.4,3.20,-12.08],[9.4,3.20,-12.08]],.020,6),matrix:matIdentity()});
+  // Central roof crest pylon above entrance
+  add('metal',boxPart(0,3.88,-13.1,3.2,.48,.44));
+  add('dinerBurgundy',boxPart(0,3.88,-12.86,2.9,.34,.06));
+  add('dinerGold',{...tubeGeom([[-1.35,3.88,-12.80],[1.35,3.88,-12.80]],.018,6),matrix:matIdentity()});
+  // Canopy soffit lamps along front walk
+  for(const lx of [-6.4,-3.0,0,3.4,6.8]) {
+    add('wornMetal',boxPart(lx,3.16,-12.95,.36,.05,.24));
+    add(lx===0||lx===-3.0?'canopyLamp':'darkGlass',boxPart(lx,3.12,-12.95,.26,.03,.16));
+  }
+
+  // Outer back wall (z=-21.4) and end walls (x=-9.2, x=9.2)
+  add('wallCream',boxPart(0,1.65,-21.4,18.6,3.3,.28));
+  add('wallCream',boxPart(-9.2,1.65,-17.5,.28,3.3,8.0));
+  add('wallCream',boxPart(9.2,1.65,-17.5,.28,3.3,8.0));
+  add('tileTeal',boxPart(-9.2,.28,-17.5,.34,.48,8.0));
+  add('dinerBurgundy',boxPart(9.2,.28,-17.5,.34,.48,8.0));
+  Dt(dinerX-9.4,-21.6,dinerX+9.4,-21.1,0,3.5);
+  Dt(dinerX-9.4,-21.6,dinerX-8.95,-13.5,0,3.5);
+  Dt(dinerX+8.95,-21.6,dinerX+9.4,-13.5,0,3.5);
+
+  // Front wall: Left Diner Wing (x=-9.2..-0.60 at z=-13.6) with two wide plate-glass booth windows
+  // Lower wainscot & upper frieze across left wing (x=-4.90, width 8.60)
+  add('wallCream',boxPart(-4.90,.44,-13.6,8.60,.88,.26));
+  add('wallCream',boxPart(-4.90,2.78,-13.6,8.60,1.04,.26));
+  add('tileTeal',boxPart(-4.90,.26,-13.45,8.60,.44,.05));
+  add('metal',boxPart(-4.90,.52,-13.44,8.60,.05,.06));
+  add('fadedRed',boxPart(-4.90,.58,-13.44,8.60,.04,.06));
+  // Piers between the two diner windows (Window 1: x=-8.3..-5.7, Window 2: x=-4.5..-1.9)
+  add('wallCream',boxPart(-8.75,1.58,-13.6,.90,1.40,.26));
+  add('wallCream',boxPart(-5.10,1.58,-13.6,1.20,1.40,.26));
+  add('wallCream',boxPart(-1.25,1.58,-13.6,1.30,1.40,.26));
+  // Stainless window frames, sills, mullions, blinds, and translucent glass panes for both diner windows
+  for(const wx of [-7.0,-3.2]) {
+    for(const wy of [.88,2.26])add('metal',boxPart(wx,wy,-13.56,2.68,.08,.30));
+    for(const sx2 of [wx-1.30,wx+1.30])add('metal',boxPart(sx2,1.57,-13.56,.08,1.44,.30));
+    add('metal',boxPart(wx,1.57,-13.58,.04,1.34,.10));
+    add('interiorShelf',boxPart(wx,.84,-13.74,2.68,.05,.24));
+    for(const by of [2.02,2.10,2.18])add('enamelCream',boxPart(wx,by,-13.66,2.52,.022,.04));
+    const dPane=paintLocal(2.54,1.30,(ctx,w,h)=>{
+      const g=ctx.createLinearGradient(0,0,0,h);
+      g.addColorStop(0,'rgba(255,224,176,.26)');
+      g.addColorStop(.55,'rgba(72,98,96,.12)');
+      g.addColorStop(1,'rgba(218,176,118,.30)');
+      ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='rgba(255,245,220,.10)';ctx.fillRect(w*.14,0,w*.12,h);
+      agePaint(ctx,w,h,1962,.40);
+    },matTranslate(wx,1.57,-13.58),{width:512,height:256,emissive:0x4a3820,intensity:.22,transparent:true,name:'Diner front window'});
+    dPane.material.side=2;dPane.material.depthWrite=false;
+  }
+  // Exterior enamel menu board beside entrance (x=-1.22, y=1.58, z=-13.45)
+  add('metal',boxPart(-1.22,1.58,-13.45,.56,.72,.04));
+  paintLocal(.50,.66,(ctx,w,h)=>{
+    ctx.fillStyle='#ede2c8';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='#3f635e';ctx.lineWidth=6;ctx.strokeRect(8,8,w-16,h-16);
+    ctx.fillStyle='#7c2f2c';ctx.textAlign='center';
+    ctx.font='bold 24px Georgia,serif';ctx.fillText('STARLITE DINER',w/2,40);
+    ctx.fillStyle='#2b3836';ctx.font='bold 17px Courier New,monospace';
+    ctx.fillText('HOT COFFEE ...... 10¢',w/2,84);
+    ctx.fillText('BLUE PLATE ...... 85¢',w/2,118);
+    ctx.fillText('CHERRY PIE ...... 25¢',w/2,152);
+    ctx.fillStyle='#682932';ctx.font='bold 18px Georgia,serif';
+    ctx.fillText('COCKTAIL BAR INSIDE',w/2,196);
+    agePaint(ctx,w,h,1963,.85);
+  },matTranslate(-1.22,1.58,-13.42),{width:256,height:320,emissive:0x3a2e20,intensity:.18,name:'Exterior diner menu board'});
+
+  // Front wall: Right Bar & Lounge Wing (x=0.60..9.2 at z=-13.6) with dark burgundy wainscot & glowing BAR neon window
+  add('wallCream',boxPart(4.90,.50,-13.6,8.60,1.00,.26));
+  add('wallCream',boxPart(4.90,2.74,-13.6,8.60,1.12,.26));
+  add('dinerBurgundy',boxPart(4.90,.28,-13.45,8.60,.48,.05));
+  add('brass',boxPart(4.90,.55,-13.44,8.60,.05,.06));
+  add('wallCream',boxPart(1.85,1.60,-13.6,2.50,1.20,.26));
+  add('wallCream',boxPart(8.05,1.60,-13.6,2.30,1.20,.26));
+  // Bar window at x=5.00 (x=3.10..6.90, y=1.00..2.18, z=-13.6) with neon BAR sign
+  for(const wy of [1.00,2.18])add('brass',boxPart(5.00,wy,-13.56,3.88,.08,.30));
+  for(const sx2 of [3.10,6.90])add('brass',boxPart(sx2,1.59,-13.56,.08,1.24,.30));
+  const barPane=paintLocal(3.72,1.10,(ctx,w,h)=>{
+    ctx.fillStyle='rgba(24,14,20,.62)';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='rgba(255,95,120,.35)';ctx.lineWidth=6;ctx.strokeRect(12,12,w-24,h-24);
+    agePaint(ctx,w,h,1961,.45);
+  },matTranslate(5.00,1.59,-13.58),{width:512,height:192,emissive:0x32141c,intensity:.25,transparent:true,name:'Bar lounge window'});
+  barPane.material.side=2;barPane.material.depthWrite=false;
+  // Hanging Neon "BAR" Sign inside the bar window (x=5.00, y=1.64, z=-13.72) visible from outside and inside
+  add('wornMetal',boxPart(5.00,1.64,-13.72,1.56,.62,.08));
+  add('dinerRose',{...tubeGeom([[4.26,1.36,-13.66],[5.74,1.36,-13.66],[5.74,1.92,-13.66],[4.26,1.92,-13.66],[4.26,1.36,-13.66]],.018,6,true,[0,0,1]),matrix:matIdentity()});
+  add('motelTurquoise',{...tubeGeom([[4.38,1.28,-13.66],[5.62,1.28,-13.66]],.016,6,true,[0,0,1]),matrix:matIdentity()});
+  for(const side of [-1,1]) {
+    const bwMat=matMul(matTranslate(5.00,1.64,-13.72+side*.045),matRotY(side>0?0:Math.PI));
+    paintLocal(1.44,.52,(ctx,w,h)=>{
+      ctx.fillStyle='#160b0f';ctx.fillRect(0,0,w,h);
+      ctx.strokeStyle='#ff5874';ctx.lineWidth=8;ctx.strokeRect(8,8,w-16,h-16);
+      ctx.shadowColor='#ff4f6e';ctx.shadowBlur=16;
+      ctx.fillStyle='#ff8ca0';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font='bold 92px Georgia,serif';ctx.fillText('BAR',w/2,h*.46);
+      ctx.shadowBlur=0;ctx.fillStyle='#52e6d6';ctx.font='bold 22px Courier New,monospace';
+      ctx.fillText('COCKTAILS • LOUNGE',w/2,h*.84);
+    },bwMat,{width:384,height:144,emissive:0xff4f6e,intensity:.95,name:'Neon BAR window sign'});
+  }
+
+  // Central Recessed Entrance Alcove (x=-0.60..0.60, z=-13.6..-14.48)
+  add('wallCream',boxPart(-.56,1.65,-14.04,.16,3.3,.88));
+  add('wallCream',boxPart(.56,1.65,-14.04,.16,3.3,.88));
+  add('wallCream',boxPart(0,2.78,-14.04,1.28,1.04,.88));
+  add('wallCream',boxPart(0,2.78,-14.48,1.28,1.04,.22));
+  for(const jx of [-.50,.50])add('metal',boxPart(jx,1.14,-14.48,.08,2.28,.22));
+  add('metal',boxPart(0,2.28,-14.48,1.08,.08,.22));
+  add('wornMetal',boxPart(0,.045,-14.12,1.04,.04,.82));
+  add('brass',boxPart(0,.066,-14.48,.96,.016,.12));
+  // Front wall & alcove colliders
+  Dt(dinerX-9.25,-13.85,dinerX-.50,-13.40,0,3.5);
+  Dt(dinerX+.50,-13.85,dinerX+9.25,-13.40,0,3.5);
+  Dt(dinerX-.68,-14.58,dinerX-.48,-13.55,0,3.5);
+  Dt(dinerX+.48,-14.58,dinerX+.68,-13.55,0,3.5);
+
+  // --- 3. Hinged Streamliner Aluminum & Glass Entrance Door (x=-0.47, z=-14.48) ---
+  dinerDoorHinge=new xi();
+  dinerDoorHinge.name='Diner entrance door';
+  dinerDoorHinge.position.set(-.47,0,-14.48);
+  dinerGroup.add(dinerDoorHinge);
+  const ddp={}, ddadd=(r,p)=>(ddp[r]||(ddp[r]=[])).push(p);
+  // Aluminum stiles, rails, and lower fluted kickplate (width 0.94m, height 2.18m)
+  ddadd('metal',boxPart(.08,1.09,0,.16,2.18,.052));
+  ddadd('metal',boxPart(.86,1.09,0,.16,2.18,.052));
+  ddadd('metal',boxPart(.47,2.08,0,.62,.20,.052));
+  ddadd('metal',boxPart(.47,.46,0,.62,.92,.052));
+  ddadd('metal',boxPart(.47,1.00,0,.62,.10,.054));
+  // Upper glass panel in door
+  ddadd('darkGlass',boxPart(.47,1.52,0,.60,.94,.018));
+  for(const side of [-1,1]) {
+    ddadd('brass',boxPart(.47,.26,side*.030,.60,.42,.008));
+    // Horizontal chrome push/pull bar + vertical handle
+    ddadd('metal',boxPart(.47,1.02,side*.045,.58,.028,.028));
+    ddadd('brass',boxPart(.81,1.08,side*.062,.028,.22,.028));
+    ddadd('brass',boxPart(.81,1.17,side*.036,.028,.028,.04));
+    ddadd('brass',boxPart(.81,.99,side*.036,.028,.028,.04));
+  }
+  for(const r in ddp){const m=addLocal(dinerDoorHinge,r,ddp[r]);if(m)m.receiveShadow=false;}
+
+  // Interior Ceiling & Perimeter Walls
+  add('interiorCeil',boxPart(0,3.18,-17.5,18.2,.08,7.8));
+  add('interiorWall',boxPart(0,1.60,-21.2,18.2,3.2,.14));
+  add('interiorWall',boxPart(-9.0,1.60,-17.5,.16,3.2,7.6));
+  add('interiorWall',boxPart(9.0,1.60,-17.5,.16,3.2,7.6));
+
+  // Dividing Partition Wall between Diner (left, x=-9.0..1.8) and Soft-Lit Bar (right, x=1.8..9.0)
+  // Leaves a wide 3.5m archway at z=-15.65..-19.15
+  add('interiorWall',boxPart(1.8,1.60,-14.65,.22,3.2,1.95));
+  add('interiorWall',boxPart(1.8,1.60,-20.20,.22,3.2,2.05));
+  add('interiorWall',boxPart(1.8,2.82,-17.40,.22,.76,3.55));
+  add('darkWood',boxPart(1.8,1.22,-15.62,.26,2.44,.12));
+  add('darkWood',boxPart(1.8,1.22,-19.18,.26,2.44,.12));
+  add('darkWood',boxPart(1.8,2.44,-17.40,.26,.10,3.68));
+  Dt(dinerX+1.65,-15.65,dinerX+1.95,-13.7,0,3.2);
+  Dt(dinerX+1.65,-21.2,dinerX+1.95,-19.15,0,3.2);
+
+  // --- 4. Zone A: Classic 1960s American Diner Interior (x=-8.9..1.7, z=-13.8..-21.1) ---
+  // Black-and-cream checkerboard linoleum floor
+  paintLocal(10.5,7.2,(ctx,w,h)=>{
+    const step=32;
+    for(let y=0;y<h;y+=step)for(let x=0;x<w;x+=step){
+      const even=((x/step+y/step)&1)===0;
+      ctx.fillStyle=even?'#dfd4bc':'#2b3032';
+      ctx.fillRect(x,y,step,step);
+    }
+    agePaint(ctx,w,h,1961,.75);
+  },matMul(matTranslate(-3.65,.083,-17.45),matRotX(-Math.PI/2)),{width:640,height:448,name:'Diner checkerboard floor'});
+
+  // Two Window Booths at x=-7.0 and x=-3.2 (z=-14.85) with turquoise vinyl seats, Formica tables, and tabletop jukeboxes
+  for(const bx of [-7.0,-3.2]) {
+    // Left and right bench seats facing each other across bx
+    for(const side of [-1,1]) {
+      const sx2=bx+side*.86;
+      add('darkWood',boxPart(sx2,.22,-14.85,.54,.44,1.48));
+      add('dinerVinyl',boxPart(sx2-side*.03,.46,-14.85,.56,.10,1.48));
+      add('dinerVinyl',boxPart(sx2+side*.20,.78,-14.85,.16,.58,1.48));
+      add('enamelCream',boxPart(sx2+side*.20,1.06,-14.85,.17,.06,1.48));
+    }
+    // Chrome pedestal & cream Formica table top (y=0.74)
+    add('metal',{...latheGeom([[0,0],[.18,0],[.14,.04],[.045,.06],[.045,.70],[.14,.72]],12),matrix:matTranslate(bx,.08,-14.85)});
+    add('enamelCream',boxPart(bx,.75,-14.85,.82,.04,1.38));
+    add('metal',boxPart(bx,.75,-14.85,.84,.028,1.40));
+    // Miniature chrome tabletop jukebox selector against the window side (z=-14.28), facing into the booth (-Z)
+    add('metal',boxPart(bx,.86,-14.28,.18,.18,.11));
+    add('dinerAmber',boxPart(bx,.87,-14.34,.14,.10,.02));
+    add('fadedRed',boxPart(bx,.80,-14.34,.14,.03,.02));
+    // Napkin dispenser + salt & pepper shakers
+    add('metal',boxPart(bx-.16,.82,-14.72,.09,.11,.07));
+    add('enamelCream',boxPart(bx+.14,.80,-14.78,.032,.07,.032));
+    add('wornMetal',boxPart(bx+.20,.80,-14.74,.032,.07,.032));
+  }
+  Dt(dinerX-8.15,-15.65,dinerX-5.85,-14.0,0,1.1);
+  Dt(dinerX-4.35,-15.65,dinerX-2.05,-14.0,0,1.1);
+
+  // Long Diner Service Counter (x=-7.8..0.8, z=-18.45, width 8.6m)
+  add('fadedTeal',boxPart(-3.5,.52,-18.45,8.6,.88,.76));
+  add('rubber',boxPart(-3.5,.12,-18.40,8.64,.10,.80));
+  add('enamelCream',boxPart(-3.5,1.00,-18.42,8.76,.06,.92));
+  add('metal',boxPart(-3.5,1.00,-17.95,8.78,.055,.04));
+  add('metal',boxPart(-3.5,.62,-18.05,8.62,.04,.03));
+  // 4 Lathe-modeled Chrome & Red-Vinyl Swivel Stools along left/center of counter (leaving right end open for close walk-up)
+  for(const stx of [-7.0,-5.5,-4.0,-2.5]) {
+    add('metal',{...latheGeom([[0,0],[.18,0],[.15,.03],[.035,.05],[.035,.62],[.12,.64]],12),matrix:matTranslate(stx,.08,-17.32)});
+    add('fadedRed',{...latheGeom([[0,.64],[.18,.64],[.19,.67],[.18,.73],[0,.74]],14),matrix:matTranslate(stx,.08,-17.32)});
+    add('metal',{...latheGeom([[.185,.66],[.185,.70]],14),matrix:matTranslate(stx,.08,-17.32)});
+  }
+  Dt(dinerX-7.35,-17.95,dinerX-2.15,-17.05,0,1.0);
+  Dt(dinerX-7.85,-21.1,dinerX+.85,-17.92,0,1.2);
+
+  // Hero Diner Counter Props:
+  // 1) Glass-domed Pie Display Stand (x=-5.8, y=1.03, z=-18.35)
+  add('metal',{...latheGeom([[0,0],[.12,0],[.04,.03],[.04,.10],[.18,.11],[.19,.13]],14),matrix:matTranslate(-5.8,1.03,-18.35)});
+  add('fadedRed',boxPart(-5.8,1.18,-18.35,.24,.05,.24));
+  add('enamelCream',{...latheGeom([[.17,.13],[.165,.24],[.11,.30],[0,.32]],14),matrix:matTranslate(-5.8,1.03,-18.35)});
+  // 2) Twin-Carafe Commercial Coffee Brewer (x=-3.8, y=1.03, z=-18.52)
+  add('metal',boxPart(-3.8,1.22,-18.56,.46,.38,.28));
+  add('metal',boxPart(-3.8,1.38,-18.44,.44,.08,.36));
+  add('rubber',boxPart(-3.92,1.05,-18.34,.16,.03,.16));
+  add('wornMetal',boxPart(-3.68,1.05,-18.34,.16,.03,.16));
+  add('dinerRose',boxPart(-3.68,1.12,-18.41,.028,.028,.015));
+  for(const cx2 of [-3.92,-3.68]) {
+    add('darkGlass',{...latheGeom([[0,0],[.07,0],[.085,.06],[.075,.13],[.04,.16],[.05,.18]],12),matrix:matTranslate(cx2,1.07,-18.34)});
+    add('rubber',boxPart(cx2+.07,1.16,-18.34,.03,.10,.02));
+  }
+  // 3) Vintage Chrome Cash Register (x=-0.55, y=1.03, z=-18.35)
+  add('metal',boxPart(-.55,1.16,-18.35,.38,.24,.34));
+  add('metal',boxPart(-.55,1.34,-18.40,.34,.20,.22));
+  add('enamelCream',boxPart(-.55,1.38,-18.28,.26,.10,.02));
+  add('brass',boxPart(-.33,1.22,-18.32,.04,.12,.08));
+  // 4) Inspectable Guest Check / Order Slip on Counter (x=-1.55, y=1.035, z=-18.18)
+  dinerOrderSlip=paintLocal(.30,.20,(ctx,w,h)=>{
+    ctx.fillStyle='#e5d9bc';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='#4e6864';ctx.lineWidth=4;ctx.strokeRect(8,8,w-16,h-16);
+    ctx.fillStyle='#2b3836';ctx.font='bold 22px Georgia,serif';
+    ctx.fillText('STARLITE DINER  •  CHECK #042',18,36);
+    ctx.font='18px Courier New,monospace';
+    ctx.fillText('2 HOT COFFEE ............ 0.20',18,70);
+    ctx.fillText('1 CHERRY PIE ............ 0.25',18,98);
+    ctx.fillStyle='#682932';ctx.font='17px Georgia,serif';
+    ctx.fillText('Last westbound rig left for Sunset',18,136);
+    ctx.fillText('Service & Cinder Court at sundown.',18,160);
+    ctx.fillText('Left the bar lamp & neon burning.',18,184);
+    agePaint(ctx,w,h,1966,.85);
+  },matMul(matTranslate(-1.55,1.036,-18.18),matRotX(-Math.PI/2)),{width:384,height:256,emissive:0x4a3c28,intensity:.28,name:'Diner counter order slip'});
+
+  // Back Kitchen Pass-Through & Letterboard Menu (z=-21.0, x=-7.8..0.8)
+  add('metal',boxPart(-3.5,.52,-20.65,8.4,.96,.56));
+  add('metal',boxPart(-3.5,1.52,-20.98,4.2,.96,.12));
+  add('interiorCounter',boxPart(-3.5,1.45,-21.04,2.6,.78,.08));
+  // Letterboard Menu on upper back wall (x=-3.5, y=2.32, z=-21.02)
+  add('metal',boxPart(-3.5,2.32,-21.04,3.4,.86,.06));
+  paintLocal(3.24,.74,(ctx,w,h)=>{
+    ctx.fillStyle='#1b1d1e';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='#c8b89a';ctx.lineWidth=6;ctx.strokeRect(8,8,w-16,h-16);
+    ctx.fillStyle='#f4ead2';ctx.textAlign='center';
+    ctx.font='bold 28px Courier New,monospace';
+    ctx.fillText('STARLITE FOUNTAIN & GRILL',w/2,42);
+    ctx.font='bold 20px Courier New,monospace';
+    ctx.fillText('HAMBURGER .45    CHEESEBURGER .55    CHILI .40',w/2,88);
+    ctx.fillText('HOT COFFEE .10   HOMEMADE PIE .25    MILKSHAKE .35',w/2,126);
+    agePaint(ctx,w,h,1962,.65);
+  },matTranslate(-3.5,2.32,-21.00),{width:640,height:160,emissive:0x383226,intensity:.24,name:'Diner letterboard menu'});
+
+  // --- 5. Zone B: Soft-Lit 1960s Bar & Cocktail Lounge (x=1.9..8.9, z=-13.8..-21.1) ---
+  // Warm dark walnut floor & burgundy lounge rug
+  paintLocal(6.9,7.2,(ctx,w,h)=>{
+    ctx.fillStyle='#2e201b';ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#4a2128';ctx.fillRect(w*.12,h*.14,w*.76,h*.70);
+    ctx.strokeStyle='#9e7852';ctx.lineWidth=6;ctx.strokeRect(w*.15,h*.17,w*.70,h*.64);
+    agePaint(ctx,w,h,1960,.85);
+  },matMul(matTranslate(5.40,.083,-17.45),matRotX(-Math.PI/2)),{width:448,height:448,name:'Bar lounge floor'});
+
+  // Intimate Cocktail Booth under the glowing BAR window (x=5.0, z=-14.80)
+  for(const side of [-1,1]) {
+    const sx2=5.0+side*.82;
+    add('darkWood',boxPart(sx2,.22,-14.80,.50,.44,1.36));
+    add('dinerBurgundy',boxPart(sx2-side*.03,.46,-14.80,.52,.10,1.36));
+    add('dinerBurgundy',boxPart(sx2+side*.18,.76,-14.80,.16,.54,1.36));
+  }
+  add('darkWood',boxPart(5.0,.72,-14.80,.74,.04,1.24));
+  add('brass',{...latheGeom([[0,0],[.16,0],[.04,.05],[.04,.64],[.12,.66]],12),matrix:matTranslate(5.0,.08,-14.80)});
+  // Two cocktail glasses on the lounge table
+  for(const gx of [4.86,5.14]) {
+    add('enamelCream',{...latheGeom([[0,0],[.032,0],[.008,.01],[.008,.05],[.042,.09],[.044,.10]],10),matrix:matTranslate(gx,.74,-14.78)});
+  }
+  Dt(dinerX+4.0,-15.55,dinerX+6.0,-14.0,0,1.1);
+
+  // Hero Mahogany & Quilted-Burgundy Bar Counter (x=3.1..8.3, z=-18.35, width 5.2m)
+  add('darkWood',boxPart(5.7,.54,-18.35,5.2,.92,.78));
+  add('dinerBurgundy',boxPart(5.7,.54,-17.94,5.0,.76,.04));
+  add('darkWood',boxPart(5.7,1.04,-18.32,5.36,.07,.92));
+  // Padded burgundy armrest bolster along front edge of bar
+  add('dinerBurgundy',boxPart(5.7,1.06,-17.85,5.38,.08,.12));
+  // Polished brass footrail along front of bar (z=-17.74, y=0.22)
+  add('brass',{...tubeGeom([[3.15,.22,-17.74],[8.25,.22,-17.74]],.018,8),matrix:matIdentity()});
+  for(const bx of [3.3,4.5,5.7,6.9,8.1])add('brass',boxPart(bx,.22,-17.84,.04,.04,.18));
+
+  // 3 Tall Burgundy & Brass Barstools on left half of bar (x=3.6, 4.6, 5.6), leaving x=6.0..8.4 open for direct player access to drawer & lamp
+  for(const stx of [3.6,4.6,5.6]) {
+    add('brass',{...latheGeom([[0,0],[.17,0],[.035,.04],[.035,.68],[.12,.70]],12),matrix:matTranslate(stx,.08,-17.25)});
+    add('dinerBurgundy',{...latheGeom([[0,.70],[.18,.70],[.19,.74],[.18,.80],[0,.81]],14),matrix:matTranslate(stx,.08,-17.25)});
+  }
+  Dt(dinerX+3.3,-17.85,dinerX+5.95,-17.05,0,1.1);
+  Dt(dinerX+3.05,-21.1,dinerX+8.45,-17.82,0,1.2);
+
+  // Chrome & Brass Draft Beer Tap Tower on the bar (x=4.35, y=1.08, z=-18.32)
+  add('metal',boxPart(4.35,1.085,-18.18,.34,.02,.22));
+  add('metal',{...latheGeom([[0,0],[.075,0],[.065,.03],[.055,.28],[.065,.30],[0,.31]],12),matrix:matTranslate(4.35,1.08,-18.35)});
+  for(const tx of [4.31,4.39]) {
+    add('brass',boxPart(tx,1.33,-18.26,.022,.04,.08));
+    add('rubber',boxPart(tx,1.42,-18.22,.024,.14,.024));
+    add('enamelCream',boxPart(tx,1.50,-18.22,.028,.03,.028));
+  }
+
+  // Back-Bar Mirror, Neon Valance & Stepped Bottle Shelves (x=3.2..8.3, z=-20.85)
+  add('darkWood',boxPart(5.75,.52,-20.72,5.2,.96,.52));
+  add('darkWood',boxPart(5.75,1.88,-20.98,5.2,1.68,.12));
+  add('darkWood',boxPart(5.75,2.68,-20.78,5.36,.14,.46));
+  //Concealed warm rose-amber neon tube under back-bar valance
+  add('dinerRose',{...tubeGeom([[3.35,2.58,-20.66],[8.15,2.58,-20.66]],.018,6),matrix:matIdentity()});
+  // Tarnished back-bar mirror (x=5.75, y=1.92, z=-20.90)
+  paintLocal(4.84,1.24,(ctx,w,h)=>{
+    const g=ctx.createLinearGradient(0,0,w,h);
+    g.addColorStop(0,'#2c1f24');g.addColorStop(.45,'#5e4648');g.addColorStop(.55,'#7c6258');g.addColorStop(1,'#24191e');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='#8c6d46';ctx.lineWidth=8;ctx.strokeRect(6,6,w-12,h-12);
+    agePaint(ctx,w,h,1957,.85);
+  },matTranslate(5.75,1.92,-20.90),{width:512,height:160,emissive:0x3d2226,intensity:.28,name:'Tarnished back-bar mirror'});
+  // Two stepped backlit liquor shelves with lathe-modeled vintage bottles
+  add('interiorShelf',boxPart(5.75,1.12,-20.68,4.9,.05,.28));
+  add('interiorShelf',boxPart(5.75,1.42,-20.76,4.9,.05,.22));
+  const bottleProf=[[0,0],[.042,0],[.042,.15],[.036,.19],[.015,.22],[.015,.28],[.019,.29],[0,.29]];
+  const tallBottleProf=[[0,0],[.036,0],[.036,.18],[.028,.22],[.013,.26],[.013,.33],[0,.33]];
+  for(let bi=0;bi<11;bi++) {
+    const bx=3.55+bi*.44;
+    const role=bi%3===0?'bottleAmber':(bi%3===1?'bottleEmerald':'bottleClear');
+    add(role,{...latheGeom(bi%2===0?bottleProf:tallBottleProf,10),matrix:matTranslate(bx,1.14,-20.66)});
+  }
+  for(let bi=0;bi<9;bi++) {
+    const bx=3.75+bi*.48;
+    const role=bi%2===0?'bottleEmerald':'bottleAmber';
+    add(role,{...latheGeom(bottleProf,10),matrix:matTranslate(bx,1.44,-20.75)});
+  }
+
+  // --- 6. Movable Bartender's Till Drawer & Hero Brass Bar Lamp (x=6.35..7.35, z=-18.25) ---
+  dinerDrawerTray=new xi();
+  dinerDrawerTray.name='Bar till drawer';
+  dinerDrawerTray.position.set(6.35,.91,-17.98);
+  dinerGroup.add(dinerDrawerTray);
+  const bdp={}, bdadd=(r,p)=>(bdp[r]||(bdp[r]=[])).push(p);
+  bdadd('darkWood',boxPart(0,0,.225,.48,.15,.032));
+  bdadd('dinerBurgundy',boxPart(0,0,.242,.42,.11,.012));
+  bdadd('interiorShelf',boxPart(0,-.06,.02,.44,.022,.38));
+  for(const dx of [-.21,.21])bdadd('darkWood',boxPart(dx,0,.02,.024,.12,.38));
+  bdadd('darkWood',boxPart(0,0,-.16,.44,.12,.024));
+  bdadd('brass',boxPart(0,0,.252,.14,.032,.012));
+  bdadd('brass',{...tubeGeom([[-.045,0,.255],[-.045,0,.282],[.045,0,.282],[.045,0,.255]],.008,6),matrix:matIdentity()});
+  for(const r in bdp)addLocal(dinerDrawerTray,r,bdp[r]);
+
+  // Inside the bar drawer: 1966 closing tab & coaster note
+  dinerBarNote=paintLocal(.36,.24,(ctx,w,h)=>{
+    ctx.fillStyle='#d8c8a8';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='#682932';ctx.lineWidth=4;ctx.strokeRect(10,10,w-20,h-20);
+    ctx.fillStyle='#4a2026';ctx.font='bold 24px Georgia,serif';
+    ctx.fillText('STARLITE BAR  •  CLOSING TAB',22,40);
+    ctx.fillStyle='#2d2620';ctx.font='18px Courier New,monospace';
+    ctx.fillText('1 BOURBON NEAT .......... $0.65',22,74);
+    ctx.fillText('1 DRAFT BEER ............ $0.35',22,100);
+    ctx.fillStyle='#3d3228';ctx.font='17px Georgia,serif';
+    ctx.fillText('Highway 66 is quiet all 18 miles',22,138);
+    ctx.fillText('back west to Sunset Service.',22,164);
+    ctx.fillText('Leave the amber bar lamp on. — 1966',22,190);
+    agePaint(ctx,w,h,1966,.9);
+  },matMul(matTranslate(0,-.045,.05),matRotX(-Math.PI/2)),{width:448,height:300,emissive:0x523c28,intensity:.30,name:'Bar closing tab and note'});
+  dinerDrawerTray.add(dinerBarNote);
+
+  // Hero Brass & Amber-Glass Bar Lamp on top of bar counter at (7.35, 1.075, -18.25)
+  const blx=7.35, bly=1.075, blz=-18.25;
+  add('brass',{...latheGeom([[0,0],[.11,0],[.105,.025],[.075,.045],[.042,.06]],14),matrix:matTranslate(blx,bly,blz)});
+  add('dinerBurgundy',{...latheGeom([[.042,.06],[.076,.12],[.084,.20],[.062,.28],[.032,.33],[.024,.36]],14),matrix:matTranslate(blx,bly,blz)});
+  add('brass',{...latheGeom([[.024,.36],[.036,.38],[.018,.44],[.028,.46]],12),matrix:matTranslate(blx,bly,blz)});
+  add('dinerLampShade',{...latheGeom([[.165,.38],[.158,.40],[.122,.58],[.115,.60],[.122,.58],[.158,.40]],16),matrix:matTranslate(blx,bly,blz)});
+  add('brass',{...latheGeom([[.167,.38],[.167,.395]],16),matrix:matTranslate(blx,bly,blz)});
+  add('brass',{...latheGeom([[.117,.585],[.117,.60]],16),matrix:matTranslate(blx,bly,blz)});
+  add('canopyLamp',boxPart(blx,bly+.46,blz,.048,.065,.048));
+  dinerLampSwitchHinge=new xi();
+  dinerLampSwitchHinge.position.set(blx-.038,bly+.37,blz+.025);
+  dinerGroup.add(dinerLampSwitchHinge);
+  addLocal(dinerLampSwitchHinge,'brass',[boxPart(-.018,0,0,.042,.016,.018),boxPart(-.036,0,0,.014,.028,.024)]);
+
+  for(const role in parts)addLocal(dinerGroup,role,parts[role]);
+})();
+
+function toggleDinerDoor() {
+  dinerDoorOpen=!dinerDoorOpen;
+  playInteractionSound('latch');
+}
+function toggleDinerLamp() {
+  dinerLampOn=!dinerLampOn;
+  playInteractionSound('metal');
+}
+function toggleDinerDrawer() {
+  dinerDrawerOpen=!dinerDrawerOpen;
+  if(!dinerDrawerOpen && inspection==='dinerDrawer')inspection=null;
+  playInteractionSound('wood');
+}
+function inspectDinerDrawer() {
+  if(!dinerDrawerOpen)dinerDrawerOpen=true;
+  inspection=inspection==='dinerDrawer'?null:'dinerDrawer';
+  inspectionTime=inspection?8:0;
+  playInteractionSound('paper');
+}
+function inspectDinerSlip() {
+  inspection=inspection==='dinerSlip'?null:'dinerSlip';
+  inspectionTime=inspection?8:0;
+  playInteractionSound('paper');
+}
+function sitInDinerBooth() {
+  inspection='dinerBooth';
+  Nn.lookAt(dinerX-5.4,2.1,-4.2);
+  playInteractionSound('wood');
+}
+
 function buildStationGestures() {
   const add=(...args)=>installGesture(Nt,...args);
   function prop(position,{size,material='steel'}={}) {
@@ -6535,7 +7122,7 @@ function buildStationGestures() {
   interactionPlate(Nt,[3.7,.32,-16.58],[.06,.59,.06],'steel');
   interactionPlate(stool,[.025,.041,0],[.028,.007,.25],'enamel');
   const mileage=add('Tip mileage strip',[2.84,1.14,-15.31],{motion:-.85,toggle:true,sound:'paper'});
-  detailText(mileage,[0,.03,0],[.30,.13],['WEST   18 MI','CINDER COURT']).rotation.x=-Math.PI/2;
+  detailText(mileage,[0,.03,0],[.34,.15],['WEST 18 MI  CINDER CT','EAST 18 MI  STARLITE']).rotation.x=-Math.PI/2;
 
   const vise=prop([-4.91,1.03,-19.61],{size:[.14,.035,.04]});
   interactionPlate(vise,[0,0,-.06],[.055,.051,.13],'steel');
@@ -6609,21 +7196,21 @@ function buildRoadMap() {
   ctx.strokeStyle='#90534b';ctx.lineWidth=6;
   ctx.beginPath();ctx.moveTo(47,238);ctx.lineTo(673,238);ctx.stroke();
   ctx.textAlign='center';
-  for(const [x,y,name] of [[173,292,'CINDER COURT'],[475,206,'SUNSET SERVICE']]) {
-    ctx.beginPath();ctx.moveTo(x,238);ctx.lineTo(x,y>238?268:214);
+  for(const [x,y,name] of [[148,292,'CINDER COURT'],[360,202,'SUNSET SERVICE'],[572,292,'STARLITE DINER']]) {
+    ctx.beginPath();ctx.moveTo(x,238);ctx.lineTo(x,y>238?268:212);
     ctx.lineWidth=2;ctx.stroke();
     ctx.fillStyle='#90534b';ctx.beginPath();ctx.arc(x,238,6,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#515e54';ctx.font='bold 21px Georgia,serif';ctx.fillText(name,x,y);
+    ctx.fillStyle='#515e54';ctx.font='bold 20px Georgia,serif';ctx.fillText(name,x,y);
   }
   ctx.fillStyle='#515e54';ctx.font='19px Georgia,serif';
-  ctx.fillText('WEST',72,220);ctx.fillText('EAST',645,220);
-  ctx.fillText('18 MI',320,271);
+  ctx.fillText('WEST',68,220);ctx.fillText('EAST',650,220);
+  ctx.fillText('18 MI',254,268);ctx.fillText('18 MI',466,268);
   ctx.fillStyle='#e2d5b0';ctx.strokeStyle='#515e54';ctx.lineWidth=2;
   ctx.beginPath();
-  ctx.moveTo(299,218);ctx.lineTo(341,218);ctx.lineTo(341,241);
-  ctx.quadraticCurveTo(336,252,320,257);ctx.quadraticCurveTo(304,252,299,241);
+  ctx.moveTo(339,254);ctx.lineTo(381,254);ctx.lineTo(381,277);
+  ctx.quadraticCurveTo(376,288,360,293);ctx.quadraticCurveTo(344,288,339,277);
   ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.fillStyle='#515e54';ctx.font='bold 26px Georgia,serif';ctx.fillText('66',320,244);
+  ctx.fillStyle='#515e54';ctx.font='bold 26px Georgia,serif';ctx.fillText('66',360,280);
   ctx.font='17px Georgia,serif';ctx.fillText('U.S. ROUTE 66   •   DESERT SECTION',360,401);
   for(const x of [240,480]) {
     ctx.fillStyle='#63583a33';ctx.fillRect(x-2,18,2,414);
@@ -6865,11 +7452,12 @@ function renderInteractionMirror(dt) {
   }
 }
 
-const inspectionAmounts={read:.28,cabin:.16,motelDrawer:.24};
+const inspectionAmounts={read:.28,cabin:.16,motelDrawer:.24,dinerDrawer:.24,dinerSlip:.26};
 function renderWithInspection() {
   if(!inspection){ls.render();return;}
   inspectionOffset.copy(Nn.position);
   if(inspection==='rest')Nn.position.set(-3.83,1.285,-13.58);
+  else if(inspection==='dinerBooth')Nn.position.set(dinerX-2.55,1.28,-14.85);
   else {
     Nn.position.addScaledVector(Nn.getWorldDirection(inspectionForward),inspectionAmounts[inspection]||.22);
     const [x,z]=vc(Nn.position.x,Nn.position.y,Nn.position.z);
@@ -6880,13 +7468,14 @@ function renderWithInspection() {
 
 let cursorMode=false, cursorX=innerWidth/2, cursorY=innerHeight/2;
 function findInteractionTarget() {
-  if(inspection==='rest')return {label:'Stand up',action:()=>{inspection=null;}};
+  if(inspection==='rest' || inspection==='dinerBooth')return {label:'Stand up',action:()=>{inspection=null;}};
   const nearCar=seated || Nn.position.distanceTo(coupe.position)<6;
   const nearStation=Math.abs(Nn.position.x)<16 && Nn.position.z>-25 && Nn.position.z<-2;
   const nearMotel=Math.abs(Nn.position.x-motelX)<18 && Nn.position.z>-24 && Nn.position.z<-2;
+  const nearDiner=Math.abs(Nn.position.x-dinerX)<18 && Nn.position.z>-24 && Nn.position.z<-2;
   const nearCargo=!seated && !heldPump && !carriedCargo && cargoItems.some(item=>item.slot<0 &&
     item.mesh.position.distanceToSquared(Nn.position)<11);
-  if(!nearCar && !nearStation && !nearMotel && !nearCargo)return null;
+  if(!nearCar && !nearStation && !nearMotel && !nearDiner && !nearCargo)return null;
   Nn.updateMatrixWorld(true);
   coupe.updateMatrixWorld(true);
   if(cursorMode) {
@@ -6971,6 +7560,18 @@ function findInteractionTarget() {
     if(motelDrawerOpen)
       target(motelDrawerTray,0,.02,.05,.15,'Read motel rate card and note',inspectMotelDrawer,true);
   }
+  if(!seated && nearDiner) {
+    dinerDoorHinge.updateMatrixWorld(true);
+    dinerDrawerTray.updateMatrixWorld(true);
+    for(const side of [-1,1])
+      target(dinerDoorHinge,.78,1.04,side*.06,.24,dinerDoorOpen?'Close diner door':'Open diner door',toggleDinerDoor,true);
+    target(dinerGroup,-1.55,1.04,-18.18,.22,'Read counter order slip',inspectDinerSlip,true);
+    target(dinerGroup,-2.55,.72,-14.85,.28,'Sit in diner booth',sitInDinerBooth,true);
+    target(dinerGroup,7.31,1.45,-18.23,.22,dinerLampOn?'Switch off bar lamp':'Switch on bar lamp',toggleDinerLamp,true);
+    target(dinerDrawerTray,0,-.02,.27,dinerDrawerOpen?.08:.19,dinerDrawerOpen?'Close bar drawer':'Open bar drawer',toggleDinerDrawer,true);
+    if(dinerDrawerOpen)
+      target(dinerDrawerTray,0,.02,.05,.15,'Read bar closing tab and note',inspectDinerDrawer,true);
+  }
   return best;
 }
 
@@ -7005,6 +7606,25 @@ function officeWallInWay(delta) {
       if(t>0 && t<.98 && depth<-13.85 && depth>-14.58)return true;
     }
   }
+  if(Math.abs(x-dinerX)<16) {
+    const lx=x-dinerX;
+    for(const wall of [-13.60,-14.48,-21.25]) {
+      const t=(wall-z)/delta.z;
+      if(t>0 && t<.98) {
+        const hx=lx+delta.x*t;
+        if(wall===-13.60 && Math.abs(hx)<9.25 && Math.abs(hx)>.52)return true;
+        if(wall!==-13.60 && Math.abs(hx)<9.25 && (wall<-20 || !dinerDoorOpen || Math.abs(hx)>.48))return true;
+      }
+    }
+    for(const wall of [-9.1,9.1]) {
+      const t=(wall-lx)/delta.x, depth=z+delta.z*t;
+      if(t>0 && t<.98 && depth<-13.60 && depth>-21.25)return true;
+    }
+    for(const wall of [-.52,.52]) {
+      const t=(wall-lx)/delta.x, depth=z+delta.z*t;
+      if(t>0 && t<.98 && depth<-13.60 && depth>-14.48)return true;
+    }
+  }
   return false;
 }
 function animateCar(dt) {
@@ -7036,6 +7656,23 @@ function animateCar(dt) {
   if(motelLampSwitchHinge) {
     const swGoal=motelLampOn?0:.52;
     motelLampSwitchHinge.rotation.z+=(swGoal-motelLampSwitchHinge.rotation.z)*Math.min(1,14*dt);
+  }
+  if(dinerDoorHinge) {
+    const dDoorGoal=dinerDoorOpen?1.45:0;
+    dinerDoorHinge.rotation.y+=(dDoorGoal-dinerDoorHinge.rotation.y)*Math.min(1,10*dt);
+    if(dinerDoorOpen) {
+      Object.assign(dinerDoorCollider,{minX:dinerX-.56,maxX:dinerX-.36,minZ:-15.42,maxZ:-14.48});
+    } else {
+      Object.assign(dinerDoorCollider,{minX:dinerX-.48,maxX:dinerX+.48,minZ:-14.60,maxZ:-14.38});
+    }
+  }
+  if(dinerDrawerTray) {
+    const dDrawerGoal=-17.98+(dinerDrawerOpen?.36:0);
+    dinerDrawerTray.position.z+=(dDrawerGoal-dinerDrawerTray.position.z)*Math.min(1,12*dt);
+  }
+  if(dinerLampSwitchHinge) {
+    const dSwGoal=dinerLampOn?0:-.52;
+    dinerLampSwitchHinge.rotation.z+=(dSwGoal-dinerLampSwitchHinge.rotation.z)*Math.min(1,14*dt);
   }
 }
 
@@ -7123,9 +7760,9 @@ function updateCarHud() {
   mn.domElement.style.cursor=cursorMode && hovered?'pointer':'';
   const hint=hovered?'E / CLICK  '+hovered.label+'  ·  ':'';
   const mode=cursorMode?'RMB look':'MOUSE look';
-  const text=inspection==='rest' ? hint+mode+'  ·  Move to stand' : seated
+  const text=(inspection==='rest' || inspection==='dinerBooth') ? hint+mode+'  ·  Move to stand' : seated
     ? hint + (roadMap.visible?'Parked  ·  R fold map to drive':Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake')+(carSpeed===0 && glovebox.engaged && !roadMap.visible?'  ·  R unfold map':'')+'  ·  C door  ·  F get out'
-    : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  '+(Math.abs(Nn.position.x-motelX)<120?'Cinder Court Motor Lodge':'Coupe by the station');
+    : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  '+(Math.abs(Nn.position.x-motelX)<120?'Cinder Court Motor Lodge':(Math.abs(Nn.position.x-dinerX)<120?'Starlite Diner & Bar':'Coupe by the station'));
   const cargoStatus=heldPump?'  ·  Holding nozzle  ·  G let go':
     seated && carryingBlanket()?(cabinBlanketOpen?'  ·  Wrapped in blanket  ·  Unwrap to drive':'  ·  Blanket on passenger seat'):
     inspection==='rest'?(lapBlanket.visible?'  ·  Blanket across your lap':''):
@@ -7153,10 +7790,11 @@ updatePumpHoses(i);
 updateCarriedCargo();
 updateEngineAudio();
 updateCarHud();
-Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);Qt.position.set(Nn.position.x+52,26,Nn.position.z+20);Qt.target.position.set(Nn.position.x,0,Nn.position.z);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}let mfl=.95+.05*Math.sin(t*31),mwfk=1+.007*Math.sin(t*1.1);motelSignLight.intensity=12*mfl;motelTurqLight.intensity=4.2*(.96+.04*Math.sin(t*43));motelPorchLight.intensity=3.8*mwfk;motelRoomLamp.intensity=motelLampOn?7.5*mwfk:0;motelDoorSpill.intensity=(motelLampOn?1.15:.18)*(motelDoorOpen?1:.22)*mwfk;if(ROLE_MATS.motelShade){ROLE_MATS.motelShade.emissiveIntensity=motelLampOn?.95*mwfk:.05}if(Nt.userData.motelSignMat){Nt.userData.motelSignMat.emissiveIntensity=1.05+.35*mfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
+Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);Qt.position.set(Nn.position.x+52,26,Nn.position.z+20);Qt.target.position.set(Nn.position.x,0,Nn.position.z);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}let mfl=.95+.05*Math.sin(t*31),mwfk=1+.007*Math.sin(t*1.1);motelSignLight.intensity=12*mfl;motelTurqLight.intensity=4.2*(.96+.04*Math.sin(t*43));motelPorchLight.intensity=3.8*mwfk;motelRoomLamp.intensity=motelLampOn?7.5*mwfk:0;motelDoorSpill.intensity=(motelLampOn?1.15:.18)*(motelDoorOpen?1:.22)*mwfk;if(ROLE_MATS.motelShade){ROLE_MATS.motelShade.emissiveIntensity=motelLampOn?.95*mwfk:.05}if(Nt.userData.motelSignMat){Nt.userData.motelSignMat.emissiveIntensity=1.05+.35*mfl}let dfl=.95+.05*Math.sin(t*29+1.2),dwfk=1+.007*Math.sin(t*.95+.6);dinerSignLight.intensity=12*dfl;dinerTurqLight.intensity=4.2*(.96+.04*Math.sin(t*39+.8));dinerPorchLight.intensity=3.8*dwfk;dinerCounterLight.intensity=9.2*dwfk;dinerBarWindowLight.intensity=4.6*dfl;dinerBarLight.intensity=4.4*dwfk;dinerBarLamp.intensity=dinerLampOn?6.8*dwfk:0;if(ROLE_MATS.dinerLampShade){ROLE_MATS.dinerLampShade.emissiveIntensity=dinerLampOn?.95*dwfk:.06}if(Nt.userData.dinerSignMat){Nt.userData.dinerSignMat.emissiveIntensity=1.05+.35*dfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
 const depthStation=Math.min(5.84-Math.abs(x),z+20.52,-12.72-z);
 const depthMotel=Math.min(2.35-Math.abs(x-(motelX+1.15)),z+21.2,-14.58-z);
-const shelter=xc(Math.max(0,Math.min(1,Math.max(depthStation,depthMotel)/.9)));
+const depthDiner=Math.min(8.95-Math.abs(x-dinerX),z+21.2,-13.65-z);
+const shelter=xc(Math.max(0,Math.min(1,Math.max(depthStation,depthMotel,depthDiner)/.9)));
 const cabin=seated?(ventOpen?.26:.68):0;
 const muffled=Math.max(shelter*.72,cabin);
 const now=audio.ctx.currentTime;
@@ -7164,10 +7802,10 @@ audio.windFilter.frequency.setTargetAtTime((280+260*Hm(t*.02,7.7))*(1-muffled*.6
 audio.windGain.gain.setTargetAtTime((.026+.014*Hm(t*.013,3.1))*(1-muffled),now,.13);
 if(audio.windPan){
   Nn.getWorldDirection(Ni);
-  const threshold=Math.abs(x)<.68?Math.max(0,1-Math.abs(z+12.76)/.72):(Math.abs(x-(motelX+1.38))<.55?Math.max(0,1-Math.abs(z+14.58)/.72):0);
+  const threshold=Math.abs(x)<.68?Math.max(0,1-Math.abs(z+12.76)/.72):(Math.abs(x-(motelX+1.38))<.55?Math.max(0,1-Math.abs(z+14.58)/.72):(Math.abs(x-dinerX)<.55?Math.max(0,1-Math.abs(z+14.48)/.72):0));
   audio.windPan.pan.setTargetAtTime(threshold*Ni.x*.6+(seated&&ventOpen?.24:0),now,.12);
-}let L=audio.ctx.listener;Nn.getWorldDirection(Ni);if(L.positionX){L.positionX.value=Nn.position.x;L.positionY.value=Nn.position.y;L.positionZ.value=Nn.position.z;L.forwardX.value=Ni.x;L.forwardY.value=Ni.y;L.forwardZ.value=Ni.z;L.upX.value=0;L.upY.value=1;L.upZ.value=0}else{L.setPosition(Nn.position.x,Nn.position.y,Nn.position.z);L.setOrientation(Ni.x,Ni.y,Ni.z,0,1,0)}const nearMotelSign=Math.abs(x-motelX)<Math.abs(x);const signPos=nearMotelSign?motelSignLight.position:$n.position;if(audio.gasPanner.positionX){audio.gasPanner.positionX.value=signPos.x;audio.gasPanner.positionY.value=signPos.y;audio.gasPanner.positionZ.value=signPos.z}else audio.gasPanner.setPosition(signPos.x,signPos.y,signPos.z);const blocked=officeWallInWay(inspectionForward.copy(signPos).sub(Nn.position));
-audio.humGain.gain.setTargetAtTime(.16*(nearMotelSign?.85*(.6+.4*mfl):(.3+.7*gfl))*(blocked?.23:1)*(1-cabin*.70),now,.045);if(k>.85&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectChirp(audio.ctx.currentTime+Dn(.1,.9))}}let wfk=1+.008*Math.sin(t*.8);Ec.intensity=officeLampOn?10*wfk:0;Vsp.intensity=officeLampOn?1.1*wfk:.16;sillLight.intensity=officeLampOn?.72:0;benchLight.intensity=officeLampOn?4.0:0;if(ROLE_MATS.windowGlow){ROLE_MATS.windowGlow.emissiveIntensity=officeLampOn?.55*wfk:0}if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57)}for(let di=0;di<DUST_N;di++){dustPos[di*3]+=dustSeed[di].x*i;dustPos[di*3+1]+=dustSeed[di].y*i;dustPos[di*3+2]+=dustSeed[di].z*i;if(dustPos[di*3+1]<.5)dustPos[di*3+1]=3.9;if(dustPos[di*3]>4.2)dustPos[di*3]=-4.2;if(dustPos[di*3]<-4.2)dustPos[di*3]=4.2;if(dustPos[di*3+2]>-7.4)dustPos[di*3+2]=-11.2;if(dustPos[di*3+2]<-11.2)dustPos[di*3+2]=-7.4}dustGeo.attributes.position.needsUpdate=!0;dust.material.opacity=(.04+.14*sk)*wfk;for(let mi=0;mi<MOTH_N;mi++){
+}let L=audio.ctx.listener;Nn.getWorldDirection(Ni);if(L.positionX){L.positionX.value=Nn.position.x;L.positionY.value=Nn.position.y;L.positionZ.value=Nn.position.z;L.forwardX.value=Ni.x;L.forwardY.value=Ni.y;L.forwardZ.value=Ni.z;L.upX.value=0;L.upY.value=1;L.upZ.value=0}else{L.setPosition(Nn.position.x,Nn.position.y,Nn.position.z);L.setOrientation(Ni.x,Ni.y,Ni.z,0,1,0)}const nearMotelSign=Math.abs(x-motelX)<Math.abs(x);const nearDinerSign=Math.abs(x-dinerX)<Math.abs(x)&&Math.abs(x-dinerX)<Math.abs(x-motelX);const signPos=nearDinerSign?dinerSignLight.position:(nearMotelSign?motelSignLight.position:$n.position);if(audio.gasPanner.positionX){audio.gasPanner.positionX.value=signPos.x;audio.gasPanner.positionY.value=signPos.y;audio.gasPanner.positionZ.value=signPos.z}else audio.gasPanner.setPosition(signPos.x,signPos.y,signPos.z);const blocked=officeWallInWay(inspectionForward.copy(signPos).sub(Nn.position));
+audio.humGain.gain.setTargetAtTime(.16*(nearDinerSign?.85*(.6+.4*dfl):(nearMotelSign?.85*(.6+.4*mfl):(.3+.7*gfl)))*(blocked?.23:1)*(1-cabin*.70),now,.045);if(k>.85&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectChirp(audio.ctx.currentTime+Dn(.1,.9))}}let wfk=1+.008*Math.sin(t*.8);Ec.intensity=officeLampOn?10*wfk:0;Vsp.intensity=officeLampOn?1.1*wfk:.16;sillLight.intensity=officeLampOn?.72:0;benchLight.intensity=officeLampOn?4.0:0;if(ROLE_MATS.windowGlow){ROLE_MATS.windowGlow.emissiveIntensity=officeLampOn?.55*wfk:0}if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57)}for(let di=0;di<DUST_N;di++){dustPos[di*3]+=dustSeed[di].x*i;dustPos[di*3+1]+=dustSeed[di].y*i;dustPos[di*3+2]+=dustSeed[di].z*i;if(dustPos[di*3+1]<.5)dustPos[di*3+1]=3.9;if(dustPos[di*3]>4.2)dustPos[di*3]=-4.2;if(dustPos[di*3]<-4.2)dustPos[di*3]=4.2;if(dustPos[di*3+2]>-7.4)dustPos[di*3+2]=-11.2;if(dustPos[di*3+2]<-11.2)dustPos[di*3+2]=-7.4}dustGeo.attributes.position.needsUpdate=!0;dust.material.opacity=(.04+.14*sk)*wfk;for(let mi=0;mi<MOTH_N;mi++){
   const seed=mothSeed[mi], angle=t*seed.s+seed.p;
   const strike=Math.pow(Math.abs(Math.sin(angle*.43)),12), radius=seed.r*(1-.85*strike);
   gasMothPoint.set(Math.cos(angle)*radius+.12*Math.sin(angle*13.1),

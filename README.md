@@ -32,7 +32,10 @@ The sea-green coupe is parked on the shoulder to the left of Sunset Service. App
 
 The normal mouse-look mode uses the center reticle for clicks. **Play with cursor and right-drag to look** lets you aim clicks with the visible mouse cursor.
 
-While stopped, use **Open glovebox** on the passenger side. Aim at the folded paper on the inside of the lid and use **Unfold road map**. The cabin lamp lights the map. Use **Fold map** to return it to the open lid, then aim at the edge of the lid to close the compartment. Cinder Court Motor Lodge — named on the paper map and office mileage strip — stands 4.6 km **west** along the highway (`x = -4600`, to the **left** when facing Sunset Service, past the `WEST / ROUTE 66` shield and straight toward the **setting sun**). To return **east** to Sunset Service, follow the `EAST / ROUTE 66` shield and drive toward the **rising moon** in the eastern sky.
+While stopped, use **Open glovebox** on the passenger side. Aim at the folded paper on the inside of the lid and use **Unfold road map**. The cabin lamp lights the map. Use **Fold map** to return it to the open lid, then aim at the edge of the lid to close the compartment. Two roadside destinations stand an equal 4.6 km (18 period miles on the map and office mileage strip) in opposite directions from Sunset Service:
+
+- **West (`x = -4600`) — Cinder Court Motor Lodge:** Turn **left** out of Sunset Service past the `WEST / ROUTE 66` shield and drive straight toward the **setting sun** to reach the motel, its coral-and-turquoise neon sign, and its walkable furnished show room (Room 1).
+- **East (`x = +4600`) — Starlite Diner & Bar:** Turn **right** out of Sunset Service past the `EAST / ROUTE 66` shield and drive straight toward the **rising moon** to reach the 1960s streamliner diner and cocktail lounge, complete with its rose-and-gold pylon sign, glowing `BAR` neon window, checkerboard diner booths and pie/coffee counter, and soft-lit mahogany bar with a working bar lamp and bartender's till drawer.
 
 [See the coupe's cabin at night](captures/coupe-cabin.jpg).
 
