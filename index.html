@@ -49,6 +49,12 @@
   @keyframes pulse { 0%,100% { opacity: 0.65; } 50% { opacity: 1; } }
   #cursor-entry { margin-top: 14px; padding: 8px 12px; border: 1px solid #806952; background: #211423; color: #ffe1b0; font: inherit; font-size: 12px; cursor: pointer; }
   #crosshair.action { background: #ffd597; box-shadow: 0 0 9px #ffca8b; }
+  #binoculars-overlay {
+    display: none; position: fixed; inset: 0; pointer-events: none; z-index: 10;
+    background: radial-gradient(circle at 37% 50%, transparent 170px, rgba(10,12,10,0.92) 220px, #040504 290px),
+                radial-gradient(circle at 63% 50%, transparent 170px, rgba(10,12,10,0.92) 220px, #040504 290px);
+    box-shadow: inset 0 0 120px #000;
+  }
   #rest-fade { position: fixed; inset: 0; background: #06050a; opacity: 0; pointer-events: none; transition: opacity 0.42s ease; z-index: 8; }
   #rest-modal {
     position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
@@ -76,6 +82,7 @@
 <body>
 <div id="app"></div>
 <div id="vignette"></div>
+<div id="binoculars-overlay"></div>
 <div id="crosshair"></div>
 <div id="hud">WASD move &nbsp;·&nbsp; MOUSE look &nbsp;·&nbsp; SHIFT run &nbsp;·&nbsp; SPACE jump &nbsp;·&nbsp; ESC release</div>
 <div id="rest-fade"></div>
@@ -5734,6 +5741,8 @@ const carMaterials = {
   bulb: new Lm({color:0xe0bd83}),
   headlamp: new Lm({color:0xb3ad97}),
   taillamp: new Lm({color:0x9e3027}),
+  brokenHeadlamp: new Lm({color:0x1b1c1b, roughness:.85}),
+  crackGlass: new ji({color:0xaec6c0, roughness:.70, transparent:true, opacity:.38, depthWrite:false, side:2}),
 };
 function carMesh(parent, role, parts, shadow = false) {
   const data = mergeParts(parts);
@@ -5753,16 +5762,22 @@ function carQuad(a,b,c,d) {
 function carTube(points, radius, sides=6) { return tubeGeom(points,radius,sides); }
 
 // Loft the bonnet and boot from broad, gently crowned cross-sections.
-function deck(z0,z1,y0,y1,width) {
-  const a = [-width,.48,z0], b = [width,.48,z0];
-  const c = [-width,.48,z1], d = [width,.48,z1];
+function deck(z0,z1,y0,y1,width,baseY=.48) {
+  const a = [-width,baseY,z0], b = [width,baseY,z0];
+  const c = [-width,baseY,z1], d = [width,baseY,z1];
   const e = [-width,y0,z0], f = [width,y0,z0];
   const g = [-width,y1,z1], h = [width,y1,z1];
   const m = [0,y0+.04,z0], n = [0,y1+.04,z1];
   return [carQuad(g,n,m,e),carQuad(n,h,f,m),carQuad(c,g,e,a),
     carQuad(f,h,d,b),carQuad(e,f,b,a),carQuad(d,h,g,c)];
 }
-carMesh(coupe,'paint',[...deck(.72,2.47,1.01,.81,.91),
+// Front hood on dedicated safety-latch hinge for collision popping and repair
+const hoodHinge = new xi();
+hoodHinge.position.set(0, 1.01, .72);
+coupe.add(hoodHinge);
+carMesh(hoodHinge, 'paint', deck(0, 1.75, 0, -.20, .91, -.53), true);
+
+carMesh(coupe,'paint',[
   ...[-1,1].map(side=>boxPart(side*.87,.73,-1.33,.10,.49,.60)),
   boxPart(0,.48,-.18,1.75,.20,1.9)],true);
 // Fixed quarter panels and sill surround a separate, shallow luggage well.
@@ -5809,8 +5824,14 @@ const trunkLamp=new Pn(0xffb46e,0,.83,2);
 trunkLamp.position.set(-.51,.80,-1.75);
 coupe.add(trunkLamp);
 let trunkOpen=false;
+// Front bumper on dedicated crumple hinge for collision deformation and roadside prying
+const frontBumperHinge = new xi();
+frontBumperHinge.position.set(0, .53, 2.50);
+coupe.add(frontBumperHinge);
+carMesh(frontBumperHinge, 'chrome', [boxPart(0, 0, 0, 1.94, .13, .15)]);
+
 carMesh(coupe,'chrome',[
-  boxPart(0,.53,2.50,1.94,.13,.15),boxPart(0,.53,-2.47,1.94,.13,.15),
+  boxPart(0,.53,-2.47,1.94,.13,.15),
   boxPart(0,.70,2.48,1.46,.17,.065),
   ...Array.from({length:6},(_,i)=>boxPart(0,.64+i*.022,2.540,1.34,.009,.018))
 ]);
@@ -5845,6 +5866,38 @@ for (const side of [-1,1]) {
 const rearGlowLight = new Pn(0xff2a1a, 0, 9.5, 2);
 rearGlowLight.position.set(0, .72, -2.72);
 coupe.add(rearGlowLight);
+
+// Windshield impact spider-web crack overlay
+const windshieldCrackMesh = new dt(new Cn(.46, .34, .01), carMaterials.crackGlass);
+windshieldCrackMesh.position.set(-.36, 1.18, .54);
+windshieldCrackMesh.rotation.x = -.32;
+windshieldCrackMesh.visible = false;
+coupe.add(windshieldCrackMesh);
+
+// Pooled radiator steam particles
+const RADIATOR_STEAM_N = 24;
+const radiatorSteamGeom = new Cn(.05, .05, .05);
+const radiatorSteamMat = new ji({color:0xf2f2f2, roughness:.95, transparent:true, opacity:0, depthWrite:false});
+const radiatorSteam = Array.from({length: RADIATOR_STEAM_N}, () => {
+  const mesh = new dt(radiatorSteamGeom, radiatorSteamMat.clone());
+  mesh.visible = false;
+  coupe.add(mesh);
+  return { mesh, pos: new P(), vel: new P(), age: 0, life: 1, active: false };
+});
+let steamCursor = 0;
+
+// Authentic vehicle collision damage & roadside repair state
+const carDamage = {
+  bumperBent: false,
+  bumperSide: 0,
+  hoodPopped: false,
+  leftLightBroken: false,
+  rightLightBroken: false,
+  radiatorPunctured: false,
+  windshieldCracked: false,
+  alignmentPull: 0,
+  coolantLevel: 1.0
+};
 
 const wheelGroups=[];
 const frontPivots=[];
@@ -6347,19 +6400,25 @@ function syncHeadlampBeams() {
   const lightsOn = controls.find(c => c.kind === 'headlights')?.on;
   for (let i = 0; i < roadLights.length; i++) {
     const light = roadLights[i], side = i === 0 ? -1 : 1;
-    light.intensity = lightsOn ? (highBeams ? 940 : 420) : 0;
+    const isBroken = (i === 0 && carDamage.leftLightBroken) || (i === 1 && carDamage.rightLightBroken);
+    light.intensity = (lightsOn && !isBroken) ? (highBeams ? 940 : 420) : 0;
     light.distance = highBeams ? 175 : 72;
     light.angle = highBeams ? .26 : .34;
     light.penumbra = highBeams ? .50 : .62;
     light.target.position.set(side * (highBeams ? .65 : .90), highBeams ? -.32 : -.90, highBeams ? 68 : 22);
   }
-  for (const lens of headlights) {
-    lens.material.emissive.setHex(0xffdfa7);
-    lens.material.emissiveIntensity = lightsOn ? (highBeams ? 3.2 : 2.1) : 0;
+  for (let i = 0; i < headlights.length; i++) {
+    const lens = headlights[i];
+    const isBroken = (i === 0 && carDamage.leftLightBroken) || (i === 1 && carDamage.rightLightBroken);
+    lens.material = isBroken ? carMaterials.brokenHeadlamp : carMaterials.headlamp;
+    lens.material.emissive.setHex(isBroken ? 0x000000 : 0xffdfa7);
+    lens.material.emissiveIntensity = (lightsOn && !isBroken) ? (highBeams ? 3.2 : 2.1) : 0;
   }
-  for (const inner of innerHeadlights) {
-    inner.material.emissive.setHex(0xffe6b8);
-    inner.material.emissiveIntensity = lightsOn && highBeams ? 3.4 : (lightsOn ? .25 : 0);
+  for (let i = 0; i < innerHeadlights.length; i++) {
+    const inner = innerHeadlights[i];
+    const isBroken = (i === 0 && carDamage.leftLightBroken) || (i === 1 && carDamage.rightLightBroken);
+    inner.material.emissive.setHex(isBroken ? 0x000000 : 0xffe6b8);
+    inner.material.emissiveIntensity = (lightsOn && highBeams && !isBroken) ? 3.4 : (lightsOn && !isBroken ? .25 : 0);
   }
   updateInstrumentCluster();
 }
@@ -6820,6 +6879,407 @@ function playStarterCrank() {
     osc.start(t0);osc.stop(t0+.105);
   }
 }
+function playCarCrash(sev, isFront, contactSide) {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  
+  // 1. Sub-frequency structural frame thud
+  const subOsc = ctx.createOscillator(), subGain = ctx.createGain();
+  subOsc.type = 'triangle';
+  const baseFreq = sev === 1 ? 85 : (sev === 2 ? 65 : 46);
+  subOsc.frequency.setValueAtTime(baseFreq, at);
+  subOsc.frequency.exponentialRampToValueAtTime(22, at + (sev === 1 ? .09 : .18));
+  const subLvl = sev === 1 ? .07 : (sev === 2 ? .14 : .24);
+  subGain.gain.setValueAtTime(subLvl, at);
+  subGain.gain.exponentialRampToValueAtTime(.0001, at + (sev === 1 ? .12 : .22));
+  subOsc.connect(subGain); subGain.connect(audio.master);
+  subOsc.start(at); subOsc.stop(at + .24);
+
+  // 2. Sheet metal crunch & bumper impact
+  if (audio.noiseBuf) {
+    const metalSrc = ctx.createBufferSource(), metalFilt = ctx.createBiquadFilter(), metalGain = ctx.createGain();
+    metalSrc.buffer = audio.noiseBuf;
+    metalFilt.type = 'bandpass';
+    metalFilt.frequency.setValueAtTime(sev === 1 ? 750 : 520, at);
+    metalFilt.Q.value = 1.4;
+    const crunchDur = sev === 1 ? .12 : (sev === 2 ? .26 : .42);
+    metalGain.gain.setValueAtTime(sev === 1 ? .05 : .16, at);
+    metalGain.gain.exponentialRampToValueAtTime(.0001, at + crunchDur);
+    metalSrc.connect(metalFilt); metalFilt.connect(metalGain); metalGain.connect(audio.master);
+    metalSrc.start(at, Math.random(), crunchDur); metalSrc.stop(at + crunchDur + .02);
+  }
+
+  // 3. Popped hood latch spring release
+  if (sev >= 2) {
+    const latchOsc = ctx.createOscillator(), latchGain = ctx.createGain();
+    latchOsc.type = 'sawtooth';
+    latchOsc.frequency.setValueAtTime(280, at + .03);
+    latchOsc.frequency.exponentialRampToValueAtTime(560, at + .09);
+    latchGain.gain.setValueAtTime(.06, at + .03);
+    latchGain.gain.exponentialRampToValueAtTime(.0001, at + .11);
+    latchOsc.connect(latchGain); latchGain.connect(audio.master);
+    latchOsc.start(at + .03); latchOsc.stop(at + .12);
+  }
+
+  // 4. Shattered headlight / glass fracture
+  if (sev >= 3 && audio.noiseBuf) {
+    const glassSrc = ctx.createBufferSource(), glassFilt = ctx.createBiquadFilter(), glassGain = ctx.createGain();
+    glassSrc.buffer = audio.noiseBuf;
+    glassFilt.type = 'highpass';
+    glassFilt.frequency.setValueAtTime(3200, at + .05);
+    glassGain.gain.setValueAtTime(.09, at + .05);
+    glassGain.gain.exponentialRampToValueAtTime(.0001, at + .34);
+    glassSrc.connect(glassFilt); glassFilt.connect(glassGain); glassGain.connect(audio.master);
+    glassSrc.start(at + .05, Math.random(), .34); glassSrc.stop(at + .38);
+  }
+}
+function playMetalPry() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  const osc = ctx.createOscillator(), gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(620, at);
+  osc.frequency.exponentialRampToValueAtTime(190, at + 0.12);
+  gain.gain.setValueAtTime(0.08, at);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.14);
+  osc.connect(gain); gain.connect(audio.master);
+  osc.start(at); osc.stop(at + 0.15);
+  if (audio.noiseBuf) {
+    const src = ctx.createBufferSource(), filt = ctx.createBiquadFilter(), fGain = ctx.createGain();
+    src.buffer = audio.noiseBuf;
+    filt.type = 'bandpass';
+    filt.frequency.setValueAtTime(480, at);
+    filt.Q.value = 3.5;
+    fGain.gain.setValueAtTime(0.06, at);
+    fGain.gain.exponentialRampToValueAtTime(0.0001, at + 0.28);
+    src.connect(filt); filt.connect(fGain); fGain.connect(audio.master);
+    src.start(at, Math.random(), 0.28); src.stop(at + 0.30);
+  }
+}
+function playHoodSlam() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  const sub = ctx.createOscillator(), sGain = ctx.createGain();
+  sub.type = 'triangle';
+  sub.frequency.setValueAtTime(92, at);
+  sub.frequency.exponentialRampToValueAtTime(32, at + 0.14);
+  sGain.gain.setValueAtTime(0.12, at);
+  sGain.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
+  sub.connect(sGain); sGain.connect(audio.master);
+  sub.start(at); sub.stop(at + 0.18);
+  const latch = ctx.createOscillator(), lGain = ctx.createGain();
+  latch.type = 'sawtooth';
+  latch.frequency.setValueAtTime(540, at + 0.02);
+  latch.frequency.exponentialRampToValueAtTime(180, at + 0.08);
+  lGain.gain.setValueAtTime(0.07, at + 0.02);
+  lGain.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+  latch.connect(lGain); latch.connect(audio.master);
+  latch.start(at + 0.02); latch.stop(at + 0.10);
+}
+function playRadiatorPour() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  for (let i = 0; i < 4; i++) {
+    const t0 = at + i * 0.11;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(380 + i * 45, t0);
+    osc.frequency.exponentialRampToValueAtTime(260 + i * 30, t0 + 0.09);
+    gain.gain.setValueAtTime(0.038, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.10);
+    osc.connect(gain); gain.connect(audio.master);
+    osc.start(t0); osc.stop(t0 + 0.11);
+  }
+  if (audio.noiseBuf) {
+    const src = ctx.createBufferSource(), filt = ctx.createBiquadFilter(), gain = ctx.createGain();
+    src.buffer = audio.noiseBuf;
+    filt.type = 'bandpass';
+    filt.frequency.setValueAtTime(3200, at);
+    filt.frequency.exponentialRampToValueAtTime(1200, at + 0.65);
+    filt.Q.value = 1.8;
+    gain.gain.setValueAtTime(0.05, at);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.70);
+    src.connect(filt); filt.connect(gain); gain.connect(audio.master);
+    src.start(at, Math.random(), 0.70); src.stop(at + 0.72);
+  }
+}
+function playCokeVend() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  const coin = ctx.createOscillator(), cGain = ctx.createGain();
+  coin.type = 'sine';
+  coin.frequency.setValueAtTime(1420, at);
+  coin.frequency.exponentialRampToValueAtTime(1380, at + 0.22);
+  cGain.gain.setValueAtTime(0.05, at);
+  cGain.gain.exponentialRampToValueAtTime(0.0001, at + 0.24);
+  coin.connect(cGain); cGain.connect(audio.master);
+  coin.start(at); coin.stop(at + 0.25);
+  for (let i = 0; i < 3; i++) {
+    const t0 = at + 0.14 + i * 0.05;
+    const r = ctx.createOscillator(), rg = ctx.createGain();
+    r.type = 'triangle';
+    r.frequency.setValueAtTime(420, t0);
+    rg.gain.setValueAtTime(0.025, t0);
+    rg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
+    r.connect(rg); rg.connect(audio.master);
+    r.start(t0); r.stop(t0 + 0.035);
+  }
+  const tDrop = at + 0.35;
+  const bot = ctx.createOscillator(), bGain = ctx.createGain();
+  bot.type = 'triangle';
+  bot.frequency.setValueAtTime(160, tDrop);
+  bot.frequency.exponentialRampToValueAtTime(55, tDrop + 0.12);
+  bGain.gain.setValueAtTime(0.08, tDrop);
+  bGain.gain.exponentialRampToValueAtTime(0.0001, tDrop + 0.14);
+  bot.connect(bGain); bGain.connect(audio.master);
+  bot.start(tDrop); bot.stop(tDrop + 0.16);
+}
+function playCokeDrink() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  if (audio.noiseBuf) {
+    const src = ctx.createBufferSource(), filt = ctx.createBiquadFilter(), gain = ctx.createGain();
+    src.buffer = audio.noiseBuf;
+    filt.type = 'highpass';
+    filt.frequency.setValueAtTime(2600, at);
+    gain.gain.setValueAtTime(0.07, at);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+    src.connect(filt); filt.connect(gain); gain.connect(audio.master);
+    src.start(at, Math.random(), 0.22); src.stop(at + 0.24);
+  }
+  for (let i = 0; i < 2; i++) {
+    const t0 = at + 0.30 + i * 0.22;
+    const g = ctx.createOscillator(), gg = ctx.createGain();
+    g.type = 'sine';
+    g.frequency.setValueAtTime(220, t0);
+    g.frequency.exponentialRampToValueAtTime(130, t0 + 0.14);
+    gg.gain.setValueAtTime(0.04, t0);
+    gg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
+    g.connect(gg); gg.connect(audio.master);
+    g.start(t0); g.stop(t0 + 0.16);
+  }
+}
+let payphoneAudioNodes = null;
+function stopPayphoneAudio() {
+  if (payphoneAudioNodes) {
+    payphoneAudioNodes.forEach(n => { try { n.stop(); n.disconnect(); } catch(e){} });
+    payphoneAudioNodes = null;
+  }
+}
+function playPhoneTone(type) {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  stopPayphoneAudio();
+  const at = ctx.currentTime;
+  if (type === 'dialtone') {
+    const osc1 = ctx.createOscillator(), osc2 = ctx.createOscillator(), gain = ctx.createGain();
+    osc1.type = 'sine'; osc1.frequency.value = 350;
+    osc2.type = 'sine'; osc2.frequency.value = 440;
+    gain.gain.setValueAtTime(0.032, at);
+    osc1.connect(gain); osc2.connect(gain); gain.connect(audio.master);
+    osc1.start(at); osc2.start(at);
+    payphoneAudioNodes = [osc1, osc2, gain];
+  } else if (type === 'rotary') {
+    for (let i = 0; i < 7; i++) {
+      const t0 = at + i * 0.055;
+      const p = ctx.createOscillator(), pg = ctx.createGain();
+      p.type = 'square';
+      p.frequency.setValueAtTime(450, t0);
+      pg.gain.setValueAtTime(0.02, t0);
+      pg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.02);
+      p.connect(pg); pg.connect(audio.master);
+      p.start(t0); p.stop(t0 + 0.025);
+    }
+    setTimeout(() => {
+      if (inspection === 'payphone') playPhoneTone('disconnected');
+    }, 900);
+  } else if (type === 'disconnected') {
+    const sitFreqs = [914, 1370, 1776];
+    sitFreqs.forEach((freq, idx) => {
+      const t0 = at + idx * 0.32;
+      const sit = ctx.createOscillator(), sg = ctx.createGain();
+      sit.type = 'sine';
+      sit.frequency.setValueAtTime(freq, t0);
+      sg.gain.setValueAtTime(0.035, t0);
+      sg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.30);
+      sit.connect(sg); sg.connect(audio.master);
+      sit.start(t0); sit.stop(t0 + 0.31);
+    });
+    for (let i = 0; i < 8; i++) {
+      const t0 = at + 1.1 + i * 0.40;
+      for (const f of [480, 620]) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(f, t0);
+        g.gain.setValueAtTime(0.025, t0);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.20);
+        o.connect(g); g.connect(audio.master);
+        o.start(t0); o.stop(t0 + 0.21);
+      }
+    }
+  } else if (type === 'hangup') {
+    const h = ctx.createOscillator(), hg = ctx.createGain();
+    h.type = 'triangle';
+    h.frequency.setValueAtTime(280, at);
+    h.frequency.exponentialRampToValueAtTime(75, at + 0.09);
+    hg.gain.setValueAtTime(0.07, at);
+    hg.gain.exponentialRampToValueAtTime(0.0001, at + 0.10);
+    h.connect(hg); hg.connect(audio.master);
+    h.start(at); h.stop(at + 0.12);
+  }
+}
+function playIceDispense() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  const comp = ctx.createOscillator(), cg = ctx.createGain();
+  comp.type = 'sawtooth'; comp.frequency.setValueAtTime(58, at);
+  cg.gain.setValueAtTime(0.03, at);
+  cg.gain.exponentialRampToValueAtTime(0.0001, at + 0.9);
+  comp.connect(cg); cg.connect(audio.master);
+  comp.start(at); comp.stop(at + 0.95);
+  for (let i = 0; i < 9; i++) {
+    const t0 = at + 0.12 + i * 0.07 + Math.random() * 0.03;
+    const ice = ctx.createOscillator(), ig = ctx.createGain();
+    ice.type = 'sine';
+    ice.frequency.setValueAtTime(680 + Math.random() * 520, t0);
+    ice.frequency.exponentialRampToValueAtTime(240, t0 + 0.04);
+    ig.gain.setValueAtTime(0.035, t0);
+    ig.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+    ice.connect(ig); ig.connect(audio.master);
+    ice.start(t0); ice.stop(t0 + 0.055);
+  }
+}
+function playCoffeePour() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  for (let i = 0; i < 6; i++) {
+    const t0 = at + i * 0.085;
+    const p = ctx.createOscillator(), pg = ctx.createGain();
+    p.type = 'sine';
+    p.frequency.setValueAtTime(420 + i * 35, t0);
+    p.frequency.exponentialRampToValueAtTime(280 + i * 20, t0 + 0.07);
+    pg.gain.setValueAtTime(0.028, t0);
+    pg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);
+    p.connect(pg); pg.connect(audio.master);
+    p.start(t0); p.stop(t0 + 0.085);
+  }
+  if (audio.noiseBuf) {
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = audio.noiseBuf; f.type = 'bandpass'; f.frequency.value = 1600; f.Q.value = 2;
+    g.gain.setValueAtTime(0.03, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.55);
+    s.connect(f); f.connect(g); g.connect(audio.master);
+    s.start(at, Math.random(), 0.55); s.stop(at + 0.57);
+  }
+}
+function playCoffeeSip() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  const clink = ctx.createOscillator(), cg = ctx.createGain();
+  clink.type = 'sine';
+  clink.frequency.setValueAtTime(1850, at);
+  clink.frequency.exponentialRampToValueAtTime(1420, at + 0.06);
+  cg.gain.setValueAtTime(0.04, at);
+  cg.gain.exponentialRampToValueAtTime(0.0001, at + 0.08);
+  clink.connect(cg); cg.connect(audio.master);
+  clink.start(at); clink.stop(at + 0.09);
+  if (audio.noiseBuf) {
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = audio.noiseBuf; f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 1.5;
+    g.gain.setValueAtTime(0.02, at + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.38);
+    s.connect(f); f.connect(g); g.connect(audio.master);
+    s.start(at + 0.12, Math.random(), 0.26); s.stop(at + 0.40);
+  }
+}
+function playStoneSkip() {
+  const ctx = audio.ctx;
+  if (!ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  if (audio.noiseBuf) {
+    const w = ctx.createBufferSource(), wf = ctx.createBiquadFilter(), wg = ctx.createGain();
+    w.buffer = audio.noiseBuf; wf.type = 'bandpass'; wf.frequency.value = 650; wf.Q.value = 1;
+    wg.gain.setValueAtTime(0.03, at); wg.gain.exponentialRampToValueAtTime(0.0001, at + 0.18);
+    w.connect(wf); wf.connect(wg); wg.connect(audio.master);
+    w.start(at, Math.random(), 0.18); w.stop(at + 0.20);
+  }
+  const skipDelays = [0.32, 0.62, 0.88, 1.10];
+  const skipPitches = [1420, 1680, 1920, 480];
+  skipDelays.forEach((del, idx) => {
+    const t0 = at + del;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = idx === 3 ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(skipPitches[idx], t0);
+    osc.frequency.exponentialRampToValueAtTime(skipPitches[idx] * (idx === 3 ? 0.45 : 0.8), t0 + (idx === 3 ? 0.12 : 0.035));
+    gain.gain.setValueAtTime(idx === 3 ? 0.045 : 0.032, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + (idx === 3 ? 0.14 : 0.04));
+    osc.connect(gain); gain.connect(audio.master);
+    osc.start(t0); osc.stop(t0 + (idx === 3 ? 0.15 : 0.045));
+  });
+}
+let motelRadioAudioNodes = null, motelRadioOn = false;
+function toggleMotelRadio() {
+  motelRadioOn = !motelRadioOn;
+  const ctx = audio.ctx;
+  if (motelRadioAudioNodes) {
+    motelRadioAudioNodes.forEach(n => { try { n.stop(); n.disconnect(); } catch(e){} });
+    motelRadioAudioNodes = null;
+  }
+  if (!motelRadioOn || !ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  const hum = ctx.createOscillator(), hGain = ctx.createGain();
+  hum.type = 'sawtooth'; hum.frequency.value = 60;
+  hGain.gain.value = 0.018;
+  hum.connect(hGain); hGain.connect(audio.master);
+  hum.start(at);
+  const lead = ctx.createOscillator(), lFilt = ctx.createBiquadFilter(), lGain = ctx.createGain();
+  lead.type = 'triangle';
+  lFilt.type = 'bandpass'; lFilt.frequency.value = 750; lFilt.Q.value = 2.5;
+  lGain.gain.value = 0.035;
+  lead.connect(lFilt); lFilt.connect(lGain); lGain.connect(audio.master);
+  lead.start(at);
+  const notes = [220, 261.6, 293.7, 329.6, 392, 440, 329.6, 261.6];
+  for (let step = 0; step < 64; step++) {
+    const tNote = at + step * 0.45;
+    lead.frequency.setValueAtTime(notes[step % notes.length], tNote);
+  }
+  motelRadioAudioNodes = [hum, hGain, lead, lFilt, lGain];
+}
+let jukeboxAudioNodes = null, jukeboxPlaying = false;
+function toggleJukebox() {
+  jukeboxPlaying = !jukeboxPlaying;
+  const ctx = audio.ctx;
+  if (jukeboxAudioNodes) {
+    jukeboxAudioNodes.forEach(n => { try { n.stop(); n.disconnect(); } catch(e){} });
+    jukeboxAudioNodes = null;
+  }
+  if (!jukeboxPlaying || !ctx || ctx.state !== 'running') return;
+  const at = ctx.currentTime;
+  const bass = ctx.createOscillator(), bGain = ctx.createGain();
+  bass.type = 'triangle'; bass.frequency.value = 110;
+  bGain.gain.value = 0.045;
+  bass.connect(bGain); bGain.connect(audio.master);
+  bass.start(at);
+  const lead = ctx.createOscillator(), lFilt = ctx.createBiquadFilter(), lGain = ctx.createGain();
+  lead.type = 'sawtooth';
+  lFilt.type = 'lowpass'; lFilt.frequency.value = 950;
+  lGain.gain.value = 0.038;
+  lead.connect(lFilt); lFilt.connect(lGain); lGain.connect(audio.master);
+  lead.start(at);
+  const jukeMelody = [220, 261.6, 329.6, 392, 440, 392, 329.6, 261.6, 196, 246.9, 293.7, 349.2, 392, 349.2, 293.7, 246.9];
+  for (let s = 0; s < 64; s++) {
+    const tNote = at + s * 0.40;
+    lead.frequency.setValueAtTime(jukeMelody[s % jukeMelody.length], tNote);
+    bass.frequency.setValueAtTime((s % 8 < 4) ? 110 : 98, tNote);
+  }
+  jukeboxAudioNodes = [bass, bGain, lead, lFilt, lGain];
+}
 function updateEngineAudio() {
   if(!engine || audio.ctx.state!=='running')return;
   const now=audio.ctx.currentTime;
@@ -7031,6 +7491,58 @@ function spawnTireDust(dt, intensity) {
     p.life = .55 + Math.random() * .45;
   }
 }
+function handleCarCollision(speed, steer) {
+  const absSpd = Math.abs(speed);
+  if (absSpd < 0.25) {
+    carSpeed = 0;
+    lateralSlip = 0;
+    return;
+  }
+  const isFront = speed > 0;
+  carSpeed = -speed * 0.22;
+  lateralSlip *= 0.4;
+  
+  const jolt = Math.sign(speed) * Math.min(2.8, absSpd * 0.32);
+  suspBounceVel -= jolt;
+  suspPitch += Math.sign(speed) * Math.min(0.09, absSpd * 0.014);
+  suspRoll += (steer < 0 ? -1 : 1) * Math.min(0.06, absSpd * 0.008);
+  if (seated) {
+    driverHeadInertia.z += Math.sign(speed) * Math.min(0.075, absSpd * 0.011);
+    driverHeadInertia.y += Math.min(0.05, absSpd * 0.007);
+    driverHeadInertia.x += (steer < 0 ? 1 : -1) * Math.min(0.04, absSpd * 0.006);
+  }
+  steeringAngle += (steer >= 0 ? -0.08 : 0.08);
+
+  const sev = absSpd < 3.2 ? 1 : (absSpd < 7.5 ? 2 : 3);
+  const contactSide = steer < -0.05 ? -1 : (steer > 0.05 ? 1 : (Math.random() > 0.5 ? 1 : -1));
+  playCarCrash(sev, isFront, contactSide);
+
+  if (isFront) {
+    if (absSpd >= 2.2) {
+      carDamage.bumperBent = true;
+      carDamage.bumperSide = contactSide;
+      carDamage.alignmentPull = contactSide * 0.014;
+      frontBumperHinge.rotation.y = contactSide * 0.12;
+      frontBumperHinge.rotation.z = contactSide * 0.04;
+      frontBumperHinge.position.z = 2.44;
+    }
+    if (absSpd >= 4.0) {
+      carDamage.hoodPopped = true;
+    }
+    if (absSpd >= 6.2) {
+      if (contactSide <= 0) carDamage.leftLightBroken = true;
+      if (contactSide >= 0) carDamage.rightLightBroken = true;
+      syncHeadlampBeams();
+    }
+    if (absSpd >= 8.2) {
+      carDamage.radiatorPunctured = true;
+    }
+    if (absSpd >= 11.5) {
+      carDamage.windshieldCracked = true;
+      windshieldCrackMesh.visible = true;
+    }
+  }
+}
 function driveCar(dt) {
   const ready=!cabinBlanketOpen && !roadMap.visible && !trunkOpen && Math.abs(trunkLid.rotation.x)<.08 &&
     doors.every(door=>!door.open && Math.abs(door.hinge.rotation.y)<.08);
@@ -7121,6 +7633,9 @@ function driveCar(dt) {
   } else {
     const casterRate = Math.max(1.4, Math.min(8.0, 1.4 + absSpd * 0.30));
     steeringAngle += (-steeringAngle) * Math.min(1, casterRate * dt);
+    if(carDamage.alignmentPull !== 0 && absSpd > 1.0) {
+      steeringAngle += carDamage.alignmentPull * dt * 2.8;
+    }
     if(Math.abs(steeringAngle) < 0.0008) steeringAngle = 0;
   }
 
@@ -7154,7 +7669,7 @@ function driveCar(dt) {
     const sin=Math.sin(yaw), cos=Math.cos(yaw);
     const x=coupe.position.x+(sin*carSpeed + cos*lateralSlip*.35)*step;
     const z=coupe.position.z+(cos*carSpeed - sin*lateralSlip*.35)*step;
-    if(!carClearAt(x,z,yaw)){carSpeed=0;lateralSlip=0;break;}
+    if(!carClearAt(x,z,yaw)){handleCarCollision(carSpeed, steeringAngle);break;}
     traveled += Math.hypot(x - coupe.position.x, z - coupe.position.z);
     coupe.rotation.y=yaw;
     coupe.position.x=x;
@@ -7176,7 +7691,11 @@ function driveCar(dt) {
     tripMiles += milesDelta;
     fuelLevel = Math.max(.06, fuelLevel - milesDelta * (gearState==='L' ? .018 : .009));
   }
-  const targetTemp = ignitionOn ? (.48 + Math.min(.28, absSpd / 32 * .14 + (currentSurface==='sand' ? .10 : 0) + engineRev * .08)) : .15;
+  if(carDamage.radiatorPunctured && carDamage.coolantLevel > 0) {
+    carDamage.coolantLevel = Math.max(0, carDamage.coolantLevel - dt * 0.006);
+  }
+  const radiatorPenalty = carDamage.radiatorPunctured ? (0.35 * (1 - carDamage.coolantLevel) + 0.15) : 0;
+  const targetTemp = ignitionOn ? (.48 + Math.min(.45, absSpd / 32 * .14 + (currentSurface==='sand' ? .10 : 0) + engineRev * .08 + radiatorPenalty)) : .15;
   engineTemp += (targetTemp - engineTemp) * Math.min(1, dt * .25);
 
   // Highway tar expansion joint detection with front-then-rear dual-axle strike
@@ -7245,6 +7764,79 @@ function keepWalkerOutsideCar(previousX,previousZ) {
 }
 
 // Optional interactions share the coupe's aiming and input path.
+
+function slamHoodShut() {
+  carDamage.hoodPopped = false;
+  hoodHinge.rotation.x = 0;
+  playHoodSlam();
+}
+function pryBumperClear() {
+  carDamage.bumperBent = false;
+  carDamage.alignmentPull = 0;
+  frontBumperHinge.rotation.set(0, 0, 0);
+  frontBumperHinge.position.set(0, .53, 2.50);
+  playMetalPry();
+}
+function refillRadiator() {
+  carDamage.radiatorPunctured = false;
+  carDamage.coolantLevel = 1.0;
+  if(carriedCargo && carriedCargo.label === 'service water can') {
+    carriedCargo.full = false;
+  }
+  for(const p of radiatorSteam) {
+    p.mesh.visible = false;
+    p.active = false;
+  }
+  playRadiatorPour();
+}
+function fillWaterCanSpigot() {
+  if(carriedCargo && carriedCargo.label === 'service water can') {
+    carriedCargo.full = true;
+    playInteractionSound('glass');
+  }
+}
+function fillWaterCanRiver() {
+  if(carriedCargo && carriedCargo.label === 'service water can') {
+    carriedCargo.full = true;
+    playInteractionSound('glass');
+  }
+}
+function vendCokeBottle() {
+  playCokeVend();
+  setTimeout(() => {
+    carriedCargo = { label: 'Coca-Cola bottle', mesh: createCokeBottleMesh(), slot: -1, empty: false };
+    Nt.add(carriedCargo.mesh);
+  }, 400);
+}
+function drinkCokeBottle() {
+  if(carriedCargo && carriedCargo.label === 'Coca-Cola bottle') {
+    carriedCargo.empty = true;
+    playCokeDrink();
+  }
+}
+function returnCokeBottle() {
+  if(carriedCargo && carriedCargo.label === 'Coca-Cola bottle') {
+    Nt.remove(carriedCargo.mesh);
+    carriedCargo = null;
+    playInteractionSound('glass');
+  }
+}
+function sitAtPorchBench() {
+  inspection = 'porchBench';
+  Nn.lookAt(Nn.position.x, Nn.position.y, Nn.position.z + 10);
+  playInteractionSound('wood');
+}
+function inspectPostcard() {
+  inspection = inspection === 'postcard' ? null : 'postcard';
+  inspectionTime = inspection ? 8 : 0;
+  playInteractionSound('paper');
+}
+function inspectMatchbook() {
+  inspection = inspection === 'matchbook' ? null : 'matchbook';
+  inspectionTime = inspection ? 8 : 0;
+  playInteractionSound('paper');
+}
+let coffeePoured = false;
 const stationActions=[], cabinActions=[];
 const interactionMaterials={
   steel:new Lm({color:0x77736b}), brass:new Lm({color:0x9c8057}),
@@ -7763,6 +8355,33 @@ let motelDoorHinge=null, motelLampSwitchHinge=null, motelDrawerTray=null, motelR
   add('trimBand',{...latheGeom([[.117,.585],[.117,.60]],16),matrix:matTranslate(lx,ly,lz)});
   // Warm bulb inside shade
   add('canopyLamp',boxPart(lx,ly+.46,lz,.048,.065,.048));
+
+  // Scotsman Ice Machine under covered breezeway
+  const iceMachine = new xi();
+  iceMachine.position.set(3.2, 0, -14.2);
+  motelGroup.add(iceMachine);
+  addLocal(iceMachine, 'paint', [boxPart(0, .58, 0, .88, 1.16, .64)]);
+  addLocal(iceMachine, 'chrome', [boxPart(0, 1.18, 0, .92, .06, .68), boxPart(0, .82, .33, .22, .04, .03)]);
+
+  // Room 1 Nightstand Philco Table Radio
+  const motelRadio = new xi();
+  motelRadio.position.set(-.68, .76, -18.4);
+  motelGroup.add(motelRadio);
+  addLocal(motelRadio, 'wood', [boxPart(0, .11, 0, .28, .22, .16)]);
+  const radioDialMesh = carMesh(motelRadio, 'ivory', [boxPart(0, .14, .082, .14, .08, .01)]);
+  const radioDialMat = new Lm({color: 0xe8b868, emissive: 0xffa040, emissiveIntensity: 0});
+  radioDialMesh.material = radioDialMat;
+  const motelRadioLight = new Pn(0xff9a3e, 0, 2.2, 2);
+  motelRadioLight.position.set(-.68, .92, -18.3);
+  motelGroup.add(motelRadioLight);
+
+  // Thunderbird Motel Matchbook on dresser
+  const matchbookMesh = detailText(motelGroup, [.45, .822, -17.5], [.18, .12], [
+    'THUNDERBIRD MOTEL',
+    'AIR CONDITIONED',
+    'CLOSE COVER BEFORE STRIKING'
+  ], ['#2a3d34', '#dfc9a5']);
+  matchbookMesh.rotation.x = -Math.PI / 2;
   // Rotary / toggle switch on the lamp socket neck
   motelLampSwitchHinge=new xi();
   motelLampSwitchHinge.position.set(lx+.038,ly+.37,lz+.025);
@@ -8374,6 +8993,26 @@ let dinerDoorHinge=null, dinerLampSwitchHinge=null, dinerDrawerTray=null, dinerB
   dinerLampSwitchHinge.position.set(blx-.038,bly+.37,blz+.025);
   dinerGroup.add(dinerLampSwitchHinge);
   addLocal(dinerLampSwitchHinge,'brass',[boxPart(-.018,0,0,.042,.016,.018),boxPart(-.036,0,0,.014,.028,.024)]);
+
+  // Wurlitzer 2100 Jukebox
+  const jukebox = new xi();
+  jukebox.position.set(5.2, 0, -18.2);
+  jukebox.rotation.y = -Math.PI / 2;
+  dinerGroup.add(jukebox);
+  addLocal(jukebox, 'wood', [boxPart(0, .82, 0, .92, 1.64, .64)]);
+  addLocal(jukebox, 'chrome', [
+    boxPart(0, 1.66, 0, .94, .06, .66),
+    boxPart(-.44, .82, .33, .06, 1.60, .03),
+    boxPart(.44, .82, .33, .06, 1.60, .03)
+  ]);
+  const jukeLight = new Pn(0xff3366, 0, 4.5, 2);
+  jukeLight.position.set(0, 1.15, .4);
+  jukebox.add(jukeLight);
+
+  // Pyrex Coffee Carafe & Ceramic Mug on counter
+  addLocal(dinerGroup, 'glass', [boxPart(-1.2, 1.12, -17.8, .16, .18, .16)]);
+  addLocal(dinerGroup, 'black', [boxPart(-1.2, 1.02, -17.8, .18, .02, .18), boxPart(-1.2, 1.22, -17.88, .04, .12, .06)]);
+  addLocal(dinerGroup, 'ivory', [boxPart(-1.0, 1.06, -17.8, .09, .10, .09)]);
 
   for(const role in parts)addLocal(dinerGroup,role,parts[role]);
 })();
@@ -9418,6 +10057,59 @@ function buildStationGestures() {
   interactionPlate(bracket,[0,.09,0],[.19,.022,.13],'steel');
   const seam=interactionPlate(Nt,[.82,.003,-5.22],[1.9,.004,.035],'rubber');
   seam.rotation.y=.27;
+
+  // Vendo 39 Coca-Cola coin-op bottle dispenser
+  const cokeGroup = new xi();
+  cokeGroup.position.set(4.8, 0, -12.4);
+  Nt.add(cokeGroup);
+  carMesh(cokeGroup, 'taillamp', [boxPart(0, .70, 0, .68, 1.40, .52)]);
+  carMesh(cokeGroup, 'ivory', [boxPart(0, 1.28, .02, .64, .20, .50)]);
+  carMesh(cokeGroup, 'chrome', [
+    boxPart(.22, .65, .27, .16, .82, .04),
+    boxPart(-.18, 1.05, .27, .08, .06, .03)
+  ]);
+  carMesh(cokeGroup, 'wood', [boxPart(.55, .11, .05, .32, .20, .40)]); // bottle return crate
+
+  // Bell System 3-slot rotary coin payphone on roadside pole
+  const payphoneGroup = new xi();
+  payphoneGroup.position.set(7.5, 1.42, -4.2);
+  payphoneGroup.rotation.y = -Math.PI / 2;
+  Nt.add(payphoneGroup);
+  carMesh(payphoneGroup, 'black', [boxPart(0, 0, 0, .24, .48, .18)]);
+  carMesh(payphoneGroup, 'chrome', [
+    boxPart(0, .19, .095, .20, .05, .02),
+    boxPart(-.08, -.14, .095, .06, .08, .03)
+  ]);
+  carMesh(payphoneGroup, 'ivory', [{...latheGeom([[0,-.01],[.05,-.01],[.05,.01],[0,.01]], 14), matrix: matMul(matTranslate(0, -.02, .095), matRotX(Math.PI/2))}]);
+  const payphoneHandset = new xi();
+  payphoneHandset.position.set(-.14, .05, 0);
+  payphoneGroup.add(payphoneHandset);
+  carMesh(payphoneHandset, 'black', [
+    boxPart(0, 0, 0, .04, .28, .06),
+    boxPart(0, .11, .03, .07, .06, .08),
+    boxPart(0, -.11, .03, .07, .06, .08)
+  ]);
+
+  // Weathered wooden porch bench under awning
+  const porchBench = new xi();
+  porchBench.position.set(-1.5, 0, -12.3);
+  Nt.add(porchBench);
+  carMesh(porchBench, 'wood', [
+    boxPart(0, .44, 0, 1.50, .04, .42),
+    boxPart(0, .74, -.19, 1.50, .36, .04),
+    boxPart(-.70, .22, 0, .06, .44, .40),
+    boxPart(.70, .22, 0, .06, .44, .40)
+  ]);
+
+  // Faded 1958 linen postcard on counter
+  const postcardMesh = detailText(Nt, [2.15, 1.125, -15.39], [.28, .18], [
+    'OCTOBER 14, 1958',
+    'Stopped for gas at Sunset.',
+    'Route 66 is quiet tonight.',
+    'Mojave wind smells like sage.',
+    'Hope all is well in Needles. -R'
+  ], ['#d6c8b0', '#3b2f27']);
+  postcardMesh.rotation.x = -Math.PI / 2;
 }
 buildStationGestures();
 
@@ -9930,6 +10622,39 @@ for(const [role,shapes] of Object.entries({
 coupe.add(blanketItem.mesh);
 blanketItem.mesh.position.copy(foldedCabinPosition);
 cargoItems.push(blanketItem);
+function createCokeBottleMesh() {
+  const g = new xi();
+  carMesh(g, 'glass', [
+    boxPart(0, .09, 0, .065, .18, .065),
+    boxPart(0, .21, 0, .028, .06, .028)
+  ]);
+  carMesh(g, 'chrome', [boxPart(0, .245, 0, .032, .012, .032)]);
+  return g;
+}
+
+// Vintage forged steel lug wrench / tire iron in trunk
+const tireIronMesh = new xi();
+carMesh(tireIronMesh, 'chrome', [
+  boxPart(0, .015, 0, .42, .024, .024),
+  boxPart(-.15, .015, .07, .024, .024, .14)
+]);
+const tireIronItem = { label: 'tire iron', mesh: tireIronMesh, slot: 0 };
+coupe.add(tireIronItem.mesh);
+tireIronItem.mesh.position.set(...cargoSlots[0]);
+cargoItems.push(tireIronItem);
+
+// Galvanized steel service watering can with long spout
+const waterCanMesh = new xi();
+carMesh(waterCanMesh, 'chrome', [
+  boxPart(0, .14, 0, .22, .28, .22),
+  boxPart(0, .32, 0, .03, .08, .24),
+  boxPart(0, .20, .16, .04, .20, .14)
+]);
+const waterCanItem = { label: 'service water can', full: true, mesh: waterCanMesh, slot: -1 };
+waterCanItem.mesh.position.set(-4.95, os(-4.95, -12.4), -12.4);
+Nt.add(waterCanItem.mesh);
+cargoItems.push(waterCanItem);
+
 addCargo('tool case',{
   wood:[boxPart(0,.085,0,.34,.17,.24)],
   chrome:[boxPart(0,.174,0,.115,.028,.034),boxPart(-.10,.123,-.123,.034,.044,.014),
@@ -10048,7 +10773,18 @@ function renderWithInspection() {
   else if(inspection==='dinerBooth')Nn.position.set(dinerX-2.55,1.28,-14.85);
   else if(inspection==='motelBed')Nn.position.set(motelX-.02,.85,-17.0);
   else if(inspection==='ridgeOverlook')Nn.position.set(-28390.2,18.62,-6433.8);
-  else {
+  else if(inspection==='porchBench') {
+    Nn.position.set(-1.5, 0.95, -12.4);
+    Nn.lookAt(-1.5, 1.0, 5.0);
+  } else if(inspection==='payphone') {
+    Nn.position.set(7.32, 1.52, -4.05);
+    Nn.lookAt(7.5, 1.45, -4.2);
+  } else if(inspection==='binoculars') {
+    Nn.position.set(-28391.8, 19.38, -6432.8);
+    Nn.fov = 18;
+    Nn.updateProjectionMatrix();
+    Nn.lookAt(-28350, 7.0, -6400);
+  } else {
     Nn.position.addScaledVector(Nn.getWorldDirection(inspectionForward),inspectionAmounts[inspection]||.22);
     const [x,z]=vc(Nn.position.x,Nn.position.y,Nn.position.z);
     Nn.position.x=x;Nn.position.z=z;
@@ -10058,7 +10794,9 @@ function renderWithInspection() {
 
 let cursorMode=false, cursorX=innerWidth/2, cursorY=innerHeight/2;
 function findInteractionTarget() {
-  if(inspection==='rest' || inspection==='dinerBooth' || inspection==='ridgeOverlook')return {label:'Stand up',action:()=>{inspection=null;}};
+  if(inspection==='rest' || inspection==='dinerBooth' || inspection==='ridgeOverlook' || inspection==='porchBench')return {label:'Stand up',action:()=>{inspection=null;}};
+  if(inspection==='payphone')return {label:'Dial rotary telephone (or move to hang up)',action:()=>playPhoneTone('rotary')};
+  if(inspection==='binoculars')return {label:'Step down from binoculars',action:()=>{inspection=null;if(Nn.fov!==65){Nn.fov=65;Nn.updateProjectionMatrix();}}};
   if(inspection==='motelBed')return {label:'Rest until… (set wake time)',action:()=>openRestModal('bed')};
   const nearCar=seated || Nn.position.distanceTo(coupe.position)<6;
   const nearStation=Math.abs(Nn.position.x)<16 && Nn.position.z>-25 && Nn.position.z<-2;
@@ -10149,6 +10887,18 @@ function findInteractionTarget() {
     target(coupe,.71,1.19,-.58,.16,'Look into empty cabin',()=>{
       inspection='cabin';inspectionTime=5;
     });
+    // Front hood, radiator, and bumper roadside repairs
+    if(aimPoint.z > 1.6 && Math.abs(aimPoint.x) < 1.45) {
+      if(carDamage.hoodPopped) {
+        target(coupe, 0, .88, 2.45, .42, 'Slam hood shut', slamHoodShut, true);
+      }
+      if(carriedCargo && carriedCargo.label === 'service water can' && carriedCargo.full) {
+        target(coupe, 0, .85, 2.30, .45, 'Refill radiator with water', refillRadiator, true);
+      }
+      if(carDamage.bumperBent && carriedCargo && carriedCargo.label === 'tire iron') {
+        target(coupe, carDamage.bumperSide * .72, .53, 2.50, .45, 'Pry bumper clear with tire iron', pryBumperClear, true);
+      }
+    }
   }
   if(nearCargo)for(const item of cargoItems)if(item.slot<0)
     target(item.mesh,0,.085,0,.21,'Pick up '+item.label,()=>takeCargo(item),true);
@@ -10156,6 +10906,28 @@ function findInteractionTarget() {
     const label=item.label==='Sit by the window' && carriedCargo?.label==='folded blanket'
       ?'Sit and unfold blanket':item.label;
     target(item.parent,...item.position,item.radius,label,item.action,true);
+  }
+  if(!seated && nearStation) {
+    // Vendo 39 Coca-Cola dispenser
+    if(!carriedCargo) {
+      target(Nt, 4.8, 1.05, -12.12, .35, 'Vend cold Coca-Cola ($0.10)', vendCokeBottle, true);
+    } else if(carriedCargo.label === 'Coca-Cola bottle') {
+      if(!carriedCargo.empty) target(Nt, 4.8, 1.05, -12.12, .35, 'Drink cold Coca-Cola', drinkCokeBottle, true);
+      else target(Nt, 5.35, .15, -12.35, .38, 'Place empty bottle in return crate', returnCokeBottle, true);
+    }
+    // Payphone on pole
+    if(inspection !== 'payphone') {
+      target(Nt, 7.5, 1.42, -4.2, .38, 'Pick up payphone receiver', () => { inspection = 'payphone'; playPhoneTone('dialtone'); }, true);
+    }
+    // Awning wooden porch bench
+    target(Nt, -1.5, .44, -12.3, .55, 'Sit under the awning', sitAtPorchBench, true);
+    // Water spigot for radiator can
+    if(carriedCargo && carriedCargo.label === 'service water can' && !carriedCargo.full) {
+      target(Nt, -4.95, 0.95, -12.4, .38, 'Fill water can from spigot', fillWaterCanSpigot, true);
+    }
+    // Linen postcard & bell on counter
+    target(Nt, 2.15, 1.13, -15.39, .25, 'Read linen postcard', inspectPostcard, true);
+    target(Nt, 2.60, 1.16, -15.23, .22, 'Ring service bell', () => playInteractionSound('bell'), true);
   }
   if(!seated && nearStation)for(const pump of pumpHoses) {
     if(Nn.position.distanceToSquared(pump.dock)>5.3)continue;
@@ -10176,6 +10948,12 @@ function findInteractionTarget() {
       Nn.lookAt(motelX+1.15,1.35,-14.6);
       playInteractionSound('wood');
     },true);
+    // Scotsman Ice Machine under breezeway
+    target(motelGroup, 3.2, .85, -13.88, .42, 'Dispense ice cubes', playIceDispense, true);
+    // Room 1 Nightstand Philco Table Radio
+    target(motelGroup, -.68, .90, -18.32, .26, motelRadioOn ? 'Turn off bedside radio' : 'Turn on bedside radio', toggleMotelRadio, true);
+    // Thunderbird Motel Matchbook on dresser
+    target(motelGroup, .45, .82, -17.5, .25, 'Inspect Thunderbird matchbook', inspectMatchbook, true);
   }
   if(!seated && nearDiner) {
     dinerDoorHinge.updateMatrixWorld(true);
@@ -10188,6 +10966,14 @@ function findInteractionTarget() {
     target(dinerDrawerTray,0,-.02,.27,dinerDrawerOpen?.08:.19,dinerDrawerOpen?'Close bar drawer':'Open bar drawer',toggleDinerDrawer,true);
     if(dinerDrawerOpen)
       target(dinerDrawerTray,0,.02,.05,.15,'Read bar closing tab and note',inspectDinerDrawer,true);
+    // Wurlitzer 2100 Jukebox
+    target(dinerGroup, 5.2, 1.15, -17.88, .45, jukeboxPlaying ? 'Stop jukebox' : 'Select record on jukebox (B-4)', toggleJukebox, true);
+    // Pyrex coffee carafe and ceramic mug
+    if(!coffeePoured) {
+      target(dinerGroup, -1.2, 1.08, -17.8, .28, 'Pour black coffee into mug', () => { coffeePoured = true; playCoffeePour(); }, true);
+    } else {
+      target(dinerGroup, -1.0, 1.05, -17.8, .24, 'Sip hot coffee', playCoffeeSip, true);
+    }
   }
   if(!seated && nearFernBend) {
     if(fernDoorHinge) {
@@ -10201,6 +10987,13 @@ function findInteractionTarget() {
     target(Nt,-28460,os(-28460,-6408)+1.45,-6408,.38,'Read ridge trail sign',()=>{inspection='read';inspectionTime=7;});
     target(Nt,-28390,18.66,-6435.2,.38,'Sit at ridge overlook bench',sitAtRidgeOverlook);
     target(Nt,-28391.8,19.28,-6432.2,.26,'Read overlook orientation plaque',inspectRidgePlaque);
+    // Cedar River stone skipping & water can filling
+    target(Nt, -28292, os(-28292, -6392) + 0.35, -6392, .65, 'Skip flat stone across Cedar River', playStoneSkip);
+    if(carriedCargo && carriedCargo.label === 'service water can' && !carriedCargo.full) {
+      target(Nt, -28292, os(-28292, -6392) + 0.2, -6392, .75, 'Fill water can from Cedar River', fillWaterCanRiver);
+    }
+    // Ridge viewpoint coin-op binoculars
+    target(Nt, -28392, 18.66, -6433, .45, 'Look through coin-op binoculars', () => { inspection = 'binoculars'; playInteractionSound('metal'); });
   }
   return best;
 }
@@ -10272,6 +11065,41 @@ function officeWallInWay(delta) {
   return false;
 }
 function animateCar(dt) {
+  if(carDamage.hoodPopped) {
+    const idleTremor = ignitionOn ? Math.sin(eg.elapsedTime * 34) * 0.0035 : 0;
+    hoodHinge.rotation.x += (0.045 + idleTremor - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
+  } else {
+    hoodHinge.rotation.x += (0 - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
+  }
+  if(carDamage.radiatorPunctured && carDamage.coolantLevel > 0) {
+    if(Math.random() < Math.min(1, dt * 18)) {
+      const p = radiatorSteam[steamCursor];
+      steamCursor = (steamCursor + 1) % RADIATOR_STEAM_N;
+      p.active = true;
+      p.age = 0;
+      p.life = 0.8 + Math.random() * 0.5;
+      p.pos.set((Math.random() - 0.5) * 0.45, 0.78, 2.42);
+      p.vel.set((Math.random() - 0.5) * 0.15, 0.42 + Math.random() * 0.35, -carSpeed * 0.15 + (Math.random() - 0.5) * 0.12);
+      p.mesh.position.copy(p.pos);
+      p.mesh.visible = true;
+    }
+  }
+  for(let i = 0; i < RADIATOR_STEAM_N; i++) {
+    const p = radiatorSteam[i];
+    if(p.active) {
+      p.age += dt;
+      if(p.age >= p.life) {
+        p.active = false;
+        p.mesh.visible = false;
+      } else {
+        p.pos.addScaledVector(p.vel, dt);
+        p.mesh.position.copy(p.pos);
+        const progress = p.age / p.life;
+        p.mesh.scale.setScalar(1 + progress * 2.8);
+        p.mesh.material.opacity = (1 - progress) * 0.38;
+      }
+    }
+  }
   trunkLid.rotation.x+=((trunkOpen?1.22:0)-trunkLid.rotation.x)*Math.min(1,9*dt);
   const lamp=xc(Math.max(0,Math.min(1,(trunkLid.rotation.x-.17)/.28)));
   trunkLamp.intensity=.58*lamp;
@@ -10532,9 +11360,23 @@ function updateCarHud() {
   const gearBadge=gearState==='D'?'D'+autoSubGear:gearState;
   const surfBadge=currentSurface==='sand'?'  ·  DESERT SAND':(currentSurface==='drift'?'  ·  SAND DRIFT':(currentSurface==='shoulder'?'  ·  SHOULDER':''));
   const carExtras=(highBeams?'  ·  HI BEAM':'')+(wipersOn?'  ·  WIPERS':'')+(radioOn?'  ·  AM '+radioStations[radioIndex].freq:'')+surfBadge;
-  const text=(inspection==='rest' || inspection==='dinerBooth' || inspection==='ridgeOverlook') ? hint+mode+'  ·  Move to stand' : (inspection==='motelBed' ? hint+mode+'  ·  E / CLICK / T rest until wake time  ·  Move to stand' : seated
-    ? hint + (roadMap.visible?'Parked  ·  R fold map to drive':Math.round(Math.abs(carSpeed)*2.237)+' MPH ['+gearBadge+']  ·  WASD drive  ·  SPACE brake  ·  V gear  ·  H beams  ·  K horn')+(carSpeed===0 && glovebox.engaged && !roadMap.visible?'  ·  R unfold map':'')+carExtras+'  ·  C door  ·  F get out'
-    : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  '+(Math.abs(Nn.position.x-motelX)<120?'Cinder Court Motor Lodge':(Math.abs(Nn.position.x-dinerX)<120?'Starlite Diner & Bar':(Math.abs(Nn.position.x-fernBendX)<140?'Fern Bend Drive-In & Gorge Trail':'Coupe by the station'))));
+  const binocOverlay = document.getElementById('binoculars-overlay');
+  if(binocOverlay) binocOverlay.style.display = inspection === 'binoculars' ? 'block' : 'none';
+  let text = '';
+  if (inspection === 'rest' || inspection === 'dinerBooth' || inspection === 'ridgeOverlook' || inspection === 'porchBench') {
+    text = hint + mode + '  ·  Move to stand';
+  } else if (inspection === 'payphone') {
+    text = hint + mode + '  ·  Move or E to dial / hang up';
+  } else if (inspection === 'binoculars') {
+    text = hint + mode + '  ·  Move or E to step down';
+  } else if (inspection === 'motelBed') {
+    text = hint + mode + '  ·  E / CLICK / T rest until wake time  ·  Move to stand';
+  } else if (seated) {
+    text = hint + (roadMap.visible ? 'Parked  ·  R fold map to drive' : Math.round(Math.abs(carSpeed) * 2.237) + ' MPH [' + gearBadge + ']  ·  WASD drive  ·  SPACE brake  ·  V gear  ·  H beams  ·  K horn') + (carSpeed === 0 && glovebox.engaged && !roadMap.visible ? '  ·  R unfold map' : '') + carExtras + '  ·  C door  ·  F get out';
+  } else {
+    const locName = Math.abs(Nn.position.x - motelX) < 120 ? 'Cinder Court Motor Lodge' : (Math.abs(Nn.position.x - dinerX) < 120 ? 'Starlite Diner & Bar' : (Math.abs(Nn.position.x - fernBendX) < 140 ? 'Fern Bend Drive-In & Gorge Trail' : 'Coupe by the station'));
+    text = hint + 'WASD walk  ·  ' + mode + '  ·  SHIFT run  ·  SPACE jump  ·  ' + locName;
+  }
   const brakeSet = parkingBrake || gearState === 'P';
   const cargoStatus=heldPump?'  ·  Holding nozzle  ·  G let go':
     seated && carryingBlanket()?(cabinBlanketOpen?(brakeSet?'  ·  Wrapped in blanket  ·  E / T rest until…  ·  Unwrap to drive':'  ·  Wrapped in blanket  ·  Set brake to rest  ·  Unwrap to drive'):'  ·  Blanket on passenger seat'):
@@ -10797,7 +11639,36 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   get seated() { return seated; },
   toggleDoor, driverDoor,
   terrainWetnessUniform,
-  audio
+  audio,
+  setActive,
+  carDamage,
+  handleCarCollision,
+  slamHoodShut,
+  pryBumperClear,
+  refillRadiator,
+  frontBumperHinge,
+  hoodHinge,
+  windshieldCrackMesh,
+  radiatorSteam,
+  vendCokeBottle,
+  drinkCokeBottle,
+  returnCokeBottle,
+  sitAtPorchBench,
+  inspectPostcard,
+  playPhoneTone,
+  stopPayphoneAudio,
+  playIceDispense,
+  toggleMotelRadio,
+  inspectMatchbook,
+  toggleJukebox,
+  playCoffeePour,
+  playCoffeeSip,
+  playStoneSkip,
+  get carriedCargo() { return carriedCargo; },
+  set carriedCargo(v) { carriedCargo = v; },
+  get motelRadioOn() { return motelRadioOn; },
+  get jukeboxPlaying() { return jukeboxPlaying; },
+  updateCarHud
 };Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
 /*! Bundled license information:
 

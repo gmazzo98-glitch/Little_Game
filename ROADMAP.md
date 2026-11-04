@@ -213,6 +213,47 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-04 — Period Vehicle Damage, Roadside Repairs, and Nostalgic World Interactables
+
+- **Vehicle Collision Damage Mechanics:**
+  - Front bumper separated onto `frontBumperHinge` for crumple / angular displacement (`carDamage.bumperBent`, `rotation.y = 0.12 * side`, `rotation.z = 0.04 * side`, `position.z = 2.44`).
+  - Front hood deck separated onto `hoodHinge` (`carDamage.hoodPopped`). On impact >= 4.0 m/s, releases onto the safety catch (~0.05m ajar) with authentic engine vibration tremor at idle (`0.045 + Math.sin(t * 34) * 0.0035`). Visible from driver seat over dashboard.
+  - Direction-sensitive sealed-beam headlight shattering on severe collisions (>= 6.2 m/s): dark shattered lens (`carMaterials.brokenHeadlamp`) and forward light beam knockout (`roadLights[i].intensity = 0`), creating asymmetrical night lighting down the highway.
+  - Radiator puncture (>= 8.2 m/s): white steam plume from grille (`radiatorSteam` 24 pooled particles) billowing with speed-dependent drift, accompanied by escaping steam hiss. Engine coolant level depletes, inducing thermal penalty and needle climb on the temperature gauge.
+  - Spider-web windshield impact crack overlay (`carMaterials.crackGlass`, `windshieldCrackMesh`).
+  - Rebound dynamics on crash: elastic bounceback (`carSpeed = -speed * 0.22`), suspension pitch/roll, driver bench seat G-force shock, steering wheel kick.
+  - Multi-layer procedural crash audio (`playCarCrash`): sub-frequency frame impact thud (46–85 Hz), mid-range sheet metal crunch (bandpass filtered noise), hood spring release twang, and high-frequency glass fracture.
+  - Alignment pull: bent bumper rubs against tire/suspension, pulling steering toward the damaged side while rolling (`steeringAngle += carDamage.alignmentPull * dt * 2.8`).
+- **Tactile Roadside Repairs:**
+  - Period forged steel lug wrench / tire iron nestled in coupe trunk slot 0 (`tireIronItem`): taking from trunk allows player to aim at bent bumper to "Pry bumper clear with tire iron" (`pryBumperClear`), playing heavy metal clank and restoring bumper alignment.
+  - Hood slam: approaching popped front hood displays "Slam hood shut" (`slamHoodShut`), latching hood flush with heavy dual-latch thunk.
+  - Galvanized service watering can (`waterCanItem`) at Sunset Service & water spigot: "Fill water can from spigot" (or dipping into Cedar River at Fern Bend) -> "Refill radiator with water" (`refillRadiator`), playing bubbling pour, quenching steam, and restoring coolant to 100%. Resting in coupe or motel bed cools engine to ambient.
+- **Nostalgic World Interactables Across All 4 Locations:**
+  - **Sunset Service**:
+    - Vendo 39 Coca-Cola coin-op bottle cooler (`cokeGroup`): "Vend cold Coca-Cola ($0.10)" with nickel drop, internal ratchet churn, and bottle drop thud; "Drink cold Coca-Cola" with crown cap pop fizz and refreshing sip; "Place empty bottle in return crate".
+    - Roadside utility pole payphone: Bell System 3-slot chrome/black payphone (`payphoneGroup`). "Pick up payphone receiver" -> authentic 350+440 Hz dial tone; "Dial rotary telephone" -> rotary pulse ratcheting clicks, relay click, SIT disconnect tones (914/1370/1776 Hz), and rapid off-hook busy; "Hang up telephone receiver" cradle clank.
+    - Weathered slatted wood porch bench under awning: "Sit under the awning" -> comfortable sitting perspective watching desert highway, still camera.
+    - Water spigot & service can filling.
+    - Counter desk call bell: "Ring service bell" -> crisp brass chime ping (`playInteractionSound('bell')`).
+    - 1958 linen postcard: "Read linen postcard" -> handwritten note from Barstow.
+  - **Cinder Court Motor Lodge**:
+    - Scotsman Ice Machine under breezeway: "Dispense ice cubes" -> compressor rumble, auger churn, and cascading hollow ice chunks.
+    - Room 1 Nightstand Philco Table Radio: "Turn on bedside radio" / "Turn off bedside radio" -> warm tube filament hum (60 Hz), amber dial glow (`motelRadioLight`), and late-night blues guitar chords.
+    - Thunderbird Motel matchbook on dresser: "Inspect Thunderbird matchbook".
+  - **Starlite Diner**:
+    - Wurlitzer 2100 Jukebox: "Select record on jukebox (B-4)" -> nickel chime, mechanical turntable whirr, vinyl needle drop hiss, and melancholic 1960s slow guitar ballad with pulsating neon pilaster glow.
+    - Counter coffee service: "Pour black coffee into mug" with bubbling glass pour; "Sip hot coffee" with ceramic mug clink and hot sip.
+  - **Fern Bend**:
+    - Cedar River stone skipping: "Skip flat stone across Cedar River" at turnout -> `tack... tack... tack... plop!` across dark water.
+    - Overlook coin-op tower viewer binoculars: "Look through coin-op binoculars" -> 18° FOV optical zoom with vintage dual-circle vignette overlay (`#binoculars-overlay`).
+- **Verification Evidence (Chrome CDP Offline via `file://`):**
+  - All 25 unit test assertions passed 100% with 0 failures and 0 exceptions.
+  - Driving collision into physical collider at 8 m/s rebounded to -1.75 m/s, popped hood, and bent bumper.
+  - Roadside repairs (hood slam, tire iron prying, water radiator refill) successfully restored vehicle state.
+  - Interactive props across all 4 locations tested and verified without runtime errors.
+  - Script passed `node --check` with 0 syntax errors.
+  - Zero external runtime network requests; 100% self-contained `index.html`.
+
 ### 2026-11-04 — Period Coupe Driving Dynamics, Caster Steering, 3-Speed Kickdown, and Cozy Dash Illumination
 
 - **Cozy interior lighting:** Added soft amber incandescent instrument panel illumination (`dashGlowLight` point light at `x = 0.18, y = 0.98, z = 0.38`, `0xffa855`, intensity `0.36 * panelDim`) casting warm glow over the lower dashboard, steering column, horn ring, gear selector, and saddle vinyl bench seat when the `PANEL` light switch is active. Fully responsive to the period rheostat dimmer knob (`Dim instrument panel`).
