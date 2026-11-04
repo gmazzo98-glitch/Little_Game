@@ -2,7 +2,7 @@
 
 The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02. The G0 style decision and the G1/G2 graphical overhaul were implemented on 2026-11-02 on `vibe/neon-gas-voxel-f660eb` (PR #1); see the validation record for what is and is not verified.
 
-**Next: finish the remaining G3 interaction/offline checks and review the latest station pass.** The user confirmed the painterly, non-voxel direction. The residual cube ground and box mesas have now been replaced with continuous terrain, a world-space highway, and remote layered mountains. Do not restore them. Preserve the implemented Phase 1 cycle and finish the visual foundation before Phase 2.
+**Next: close the remaining G3 graphics review.** The delivered file passed the offline cycle check, and the new forecourt passed a sustained driving sample. The user confirmed the painterly direction, with continuous terrain, a world-space highway, and remote layered mountains. Preserve the Phase 1 cycle and finish the visual foundation before Phase 2.
 
 **Style state:** painterly surfaces and modeled props (style B) are selected. Architecture uses hard-surface meshes; the desert has continuous heights and interpolated normals. The old voxel emitter, cube terrain grid, road-extension boxes, and rectangular mesa solids are removed. The moon remains the only shadow-caster. See the newest validation record and [actual landscape comparison](captures/landscape-comparison.jpg).
 
@@ -24,8 +24,8 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
 | G1 — Composition and period silhouettes | Office, exterior GAS lettering, and drive-through forecourt built | The forecourt gives the coupe a clear lane alongside the pumps and a road connection at either end. |
 | G2 — Palette, surfaces, and light hierarchy | Office and neon pass implemented | Warm counter shade and sill spill, cyan canopy edge and spill, and red glass GAS lettering. Matching visual review remains open. |
-| G3 — Graphics acceptance and performance | Station geometry/render checks passed; full input/offline acceptance still open | 61,364 built triangles including pole instances; 60-second Intel Iris Xe night-station sample: median 16.7ms / p95 16.9ms at 1280×720, DPR 1.25 |
-| Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
+| G3 — Graphics acceptance and performance | Offline run and sustained drive verified | Remaining graphics review includes matched G0 views and shadow checks. The 60-second driving sample measured 16.7 ms median and 16.9 ms p95 on Intel Iris Xe at 960 × 540 and DPR 1. |
+| Phase 1 — Dusk-to-night cycle | Visually revalidated on the delivered offline file | Full night held at the 304- and 321-second captures. |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
@@ -105,18 +105,18 @@ Required asset deliverables: one finished station/canopy assembly; two detailed 
 - [ ] Repeat the G0 captures and frame measurements with the selected style and G1/G2 work, on the same machine/settings. Explain differences rather than comparing unmatched resolutions.
 - [x] Remove internal/hidden geometry, bound batches appropriately, and use spatial chunks for meaningful culling. In the painterly path, disable GAS shadows and evaluate a 1024-square moon map or contact quads. (Walls are built from aperture panels with no hidden fills; terrain emits tops and exposed sides only; every batch mesh has real bounds with culling on; GAS shadows already disabled; the 2048 moon map is kept — its 1024 variant can only be judged in captures)
 - [ ] Finish shadow/resize/interactive view acceptance. Station and road renders, shader checks, distant line continuity, and a real-GPU sample are now available; resize and full first-person input/file checks remain open.
-- [ ] Complete the offline and interaction checks below and revalidate Phase 1. Keep real screenshots clearly separate from the existing concept image in review evidence.
+- [x] Open the delivered file offline, verify pointer-lock release and re-entry, and revalidate Phase 1 with an uninterrupted run. The forecourt and office input checks are recorded separately below.
 
 **Pass:** G1/G2 visual criteria pass, the delivered file works offline, and sustained 60 fps is demonstrated on the recorded mid-range laptop in representative views. Report median and p95 frame times and any remaining spikes. If the target is missed, keep G3 open and reduce cost before adding atmosphere features.
 
 ## Phase 1 — Slow dusk-to-night cycle
 
-**Implemented, not newly visually approved in this audit.** Existing code uses `k = smoothstep(clamp(elapsedTime / 300, 0, 1))` to blend the sky's `uNight`, fog, hemisphere fill, and moon intensity. A 2600-point star field fades from `k > 0.3`; GAS and an interior warm point light flicker. Full night holds.
+The delivered offline file passed a full run from dusk to the night hold. The code uses `k = smoothstep(clamp(elapsedTime / 300, 0, 1))` to blend the sky's `uNight`, fog, hemisphere fill, and moon intensity. A 2600-point star field fades from `k > 0.3`. The GAS sign and office retain their local light behavior as the sky settles.
 
 - [x] Approximately five-minute one-way blend; no day/night toggle.
 - [x] Coordinated sky, fog, ambient fill, moonlight, and star fade in source.
 - [x] 2600 stars, initially invisible; basic light flicker.
-- [ ] Revalidate all three time keyframes in the actual game after the graphics foundation.
+- [x] Revalidate dusk, blue hour, and night in the actual game. The fixed approach view was captured at 1.8, 120.5, 240.1, 304.0, and 321.0 seconds.
 
 **Pass:** fresh reload has warm dusk and no stars; around 120 seconds warmth is receding and faint stars begin emerging; at/after 300 seconds full night holds with dense stars. Watch the interval as well as endpoints; no discontinuity. Pausing on unlock is tracked in Phase 6, not claimed here.
 
@@ -211,6 +211,12 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Live cycle and sustained driving verification
+
+- Opened the delivered file from commit `e1a3576` in offline Chrome at 960 × 540 and DPR 1. The fixed approach view ran for 321 seconds on the normal clock. The first image had warm dusk and no visible stars, the 120.5-second image had faint stars, and the 240.1-second image showed a much cooler sky. The upper sky matched pixel for pixel at 304 and 321 seconds. Chrome reported one local file request and zero application or shader errors. A separate launch verified pointer-lock release and re-entry on the same file.
+- With the cycle run finished, drove an instrumented copy on a Samsung Galaxy Book (950XDB/951XDB/950XDY) with Intel Iris Xe and ANGLE Direct3D11. The harness used the game's normal throttle and steering states to enter from the west, pass through the pump lane, and rejoin the highway heading east. It covered about 594 m. The coupe center remained between −6.446 and −6.344 m through the pump lane, then within 0.060 m of the highway centerline after the exit.
+- The 60.015-second driving sample collected 3,600 frame intervals at 960 × 540 and DPR 1. Median was 16.7 ms, p95 was 16.9 ms, and the maximum was 27.7 ms. These figures cover one route, viewport, and machine. The earlier preset camera comparisons and the matched G0 and shadow review remain separate from this result.
 
 ### 2026-11-04 — Ground the coupe and its shadow
 
