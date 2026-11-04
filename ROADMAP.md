@@ -28,7 +28,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 1 — Dusk-to-night cycle | Visually revalidated on the delivered offline file | Full night held at the 304- and 321-second captures; clock runs continuously across the highway trip. |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks) and Cinder Court sign/lamp shimmer | Phase 2 acceptance; remaining role work |
-| Phase 4 — Procedural audio | Wind, localized neon (Sunset Service and Cinder Court), indoor shelter muffling, footsteps, night insects, and coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
+| Phase 4 — Procedural audio | Wind, localized neon (Sunset Service and Cinder Court), indoor shelter muffling, four footstep surfaces (sand/asphalt/canopy concrete/office with grit tail and early reflection), shelter-aware night insects, and coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle handling, and Cinder Court show room (door, lamp switch, drawer, rate card) | Separate glovebox/map and Cinder Court room actions verified offline. Full stillness acceptance remains open. |
 
@@ -339,6 +339,12 @@ For each `index.html` change:
 
 - Use the [1963 Chevrolet Impala Sport Coupe factory reference](https://news.chevrolet.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1963-Chevrolet.pdf) for the roof, rear seat, and deck relationship. The game coupe now has a rearward roof and backlight, fixed rear quarter glass, and a separate parcel shelf behind a reclined saddle-vinyl bench.
 - Inline JavaScript parses. The transformed rear backrest vertices above the glass sill clear the rear glass plane by at least 0.128 m. In-game visual review remains open.
+
+### 2026-11-04 — Footstep surfaces and shelter-aware insects
+
+- **Footstep surfaces.** Steps now distinguish four surfaces instead of two: sand scuff (unchanged), asphalt thud (unchanged), canopy concrete (slightly harder attack ~4 ms, bandpass ~460–580 Hz, Q 1.1, scuff peak 0.058, body tap 0.055), and the office floor (asphalt-like main body plus a dry highpassed grit tail at ~1.3 kHz playback-rate noise, peak 0.010, dying by 90 ms, and one barely audible early reflection: the same step lowpassed at 900 Hz, delayed 19 ms, at 22% of the step peak, dead by ~140 ms so it dies between footfalls). A new `footSurface()` classifier derives the surface from the actual player position: the office floor rect (|x| < 5.7, −20.4 < z < −12.9) wins over the apron it sits inside, the canopy slab (|x| < 8.5, −12.94 ≤ z ≤ −4.45) reads as concrete, and everything else keeps the existing asphalt/sand test. Stride, pan alternation, and mute routing unchanged.
+- **Shelter-aware insects.** Night chirps now duck with the existing shelter/cabin factors: `insectGain` tracks `0.5 × (1 − muffled × 0.8)` (same `muffled` the wind bed uses), so chirps fall to roughly 42% inside the buildings and ~46% seated in the coupe with the vent closed, recovering smoothly outdoors (0.4 s time constant). Chirp sparseness, night gating past 85%, and scheduling unchanged.
+- **Checks:** the single inline script passes `node --check`. No new files, assets, or network code. Headphone/laptop-speaker listening acceptance remains open in this sandbox.
 
 ### 2026-11-03 — Recorded V8 cabin sound
 
