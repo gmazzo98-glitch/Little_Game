@@ -212,6 +212,12 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-04 — Ground the coupe and its shadow
+
+- G2 coupe lighting and grounding. Each wheel follows the rendered terrain triangle beneath its hub, and the chassis rides at the average height. The terrain shader shades the tire contact patches and the space under the chassis. The roof also casts into the existing moon shadow map.
+- The inline script passes syntax and resource checks. A drive harness verified wheel contact at the station, while steering, on a blocked move, and on uneven terrain after recentering.
+- A localhost preview was reviewed at preset dusk, blue hour, and night, plus a sand shoulder pose. The static dusk sample at 1280 × 720, DPR 1.25 on Intel Iris Xe / ANGLE Direct3D11 measured 16.7 ms median and 16.8 ms p95 over 120 intervals. Direct file access was blocked by the in-app browser, so offline launch, pointer lock, and sustained driving performance remain open for this build.
+
 ### 2026-11-04 — Drive-through forecourt and station prompts
 
 - Formed two flat road connections around the station apron and moved the front canopy columns toward the highway. The lane alongside the pump curb has about 3.18 m between the curb and the front column bases. The coupe starts aligned with this lane, with the loose cargo set back from it. Vegetation placement respects the new apron and driveway bounds.
