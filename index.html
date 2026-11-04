@@ -6294,6 +6294,9 @@ const domeFixture=carMesh(coupe,'bulb',[boxPart(0,1.513,-.54,.23,.022,.12)]);
 const domeLight=new Pn(0xffc18a,0,2.6,2);
 domeLight.position.set(0,1.42,-.49);
 coupe.add(domeLight);
+const dashGlowLight=new Pn(0xffa855,0,1.4,2);
+dashGlowLight.position.set(.18,.98,.38);
+coupe.add(dashGlowLight);
 // The bundled lighting renderer supports spotlights. These use the light base
 // and only the fields needed by its unshadowed spotlight path.
 const roadLights=[];
@@ -6381,6 +6384,7 @@ function toggleCarSwitch(control) {
     dashClockMaterial.emissiveIntensity=on?.75*panelDim:.05;
     radioMaterial.emissiveIntensity=radioOn?.62*panelDim:(on?.28*panelDim:.04);
     for(const item of controls)item.labelMaterial.emissiveIntensity=on?.50*panelDim:.04;
+    dashGlowLight.intensity=on?.36*panelDim:0;
   } else if(control.kind==='wiper') {
     wipersOn = on;
   } else {
@@ -6391,6 +6395,8 @@ function toggleCarSwitch(control) {
 
 let seated=false, carSpeed=0, steeringAngle=0;
 let engine=null;
+let carburetorMoan=0, lastRawInput=0, kickdownCooldown=0;
+const driverHeadInertia=new P(0,0,0);
 // CC0 Mustang idle by lmbubec (Freesound #119449), edited into a 6 kHz mono PCM loop.
 const engineIdlePcm=[
   'Oc2qzdPMzMxdzK3LvcvazTjTINrP4a/nnewo8eD1ef1wBK4L2hCvFt4cNiFPJiUsdzICOLQ64DqtOXk8NkHCQF88RDmrN881EDVH',
@@ -6733,7 +6739,22 @@ function startEngineAudio() {
   wetTireGain.connect(audio.master);
   wetTireSrc.start();
 
-  engine={exhaust,tone,level,load:0,tireFilter,tireGain,wetTireFilter,wetTireGain,radioFilter,radioGain,radioOsc,radioOscGain};
+  // Carburetor intake induction moan (4-barrel secondaries resonant roar)
+  const indSrc=ctx.createBufferSource();
+  indSrc.buffer=audio.noiseBuf;
+  indSrc.loop=true;
+  const inductionFilter=ctx.createBiquadFilter();
+  inductionFilter.type='bandpass';
+  inductionFilter.frequency.value=320;
+  inductionFilter.Q.value=1.35;
+  const inductionGain=ctx.createGain();
+  inductionGain.gain.value=0;
+  indSrc.connect(inductionFilter);
+  inductionFilter.connect(inductionGain);
+  inductionGain.connect(audio.master);
+  indSrc.start();
+
+  engine={exhaust,tone,level,load:0,tireFilter,tireGain,wetTireFilter,wetTireGain,radioFilter,radioGain,radioOsc,radioOscGain,inductionFilter,inductionGain};
 }
 function playTarThump(speed) {
   const ctx=audio.ctx;
@@ -6819,10 +6840,18 @@ function updateEngineAudio() {
   const rate=1 + Math.max(0,gearRpm) + .16*load + .52*engineRev + .14*shiftFlare;
   engine.exhaust.playbackRate.setTargetAtTime(rate,now,.16);
   engine.tone.frequency.setTargetAtTime(255 - 65*road + 110*load + 160*engineRev,now,.16);
-  // Audible inside cabin or fading with distance when idling outside the coupe
+  // Audible inside cabin or fading with distance when idling outside the coupe; subtle overrun burble on deceleration
   const distFade=!seated && ignitionOn ? Math.max(0,1-Nn.position.distanceTo(coupe.position)/22)*.25 : 0;
-  const targetGain=ignitionOn ? (seated ? .44+.07*load+.12*engineRev-.13*Math.min(1,road) : distFade) : 0;
+  const decelBurble=seated && speedAbs>8 && load===0 ? Math.sin(now*36)*.014*Math.min(1,(speedAbs-8)/14) : 0;
+  const targetGain=ignitionOn ? (seated ? .44+.07*load+.12*engineRev-.13*Math.min(1,road)+decelBurble : distFade) : 0;
   engine.level.gain.setTargetAtTime(targetGain,now,.14);
+
+  // Carburetor 4-barrel induction moan on throttle tip-in and passing kickdown
+  if(engine.inductionGain) {
+    const indLvl=seated && ignitionOn ? carburetorMoan * (.042 + .018 * load) : 0;
+    engine.inductionFilter.frequency.setTargetAtTime(290 + 90 * load + 140 * engineRev, now, .08);
+    engine.inductionGain.gain.setTargetAtTime(indLvl, now, .08);
+  }
 
   // Surface-dependent tire, gravel shoulder, desert sand, and slip scrub audio
   const slipAmt=Math.min(1,Math.abs(lateralSlip)/3.5);
@@ -6932,7 +6961,7 @@ const driverEye=new P(.49,1.322,-.36);
 const eyeWorld=new P(), aimRay=new P(), aimPoint=new P();
 function updateDriverCamera() {
   coupe.updateMatrixWorld(true);
-  Nn.position.copy(coupe.localToWorld(eyeWorld.copy(driverEye)));
+  Nn.position.copy(coupe.localToWorld(eyeWorld.copy(driverEye).add(driverHeadInertia)));
 }
 function sitInCar() {
   if(seated || !driverDoor.open || heldPump || (carriedCargo && !carryingBlanket())) return;
@@ -7006,6 +7035,14 @@ function driveCar(dt) {
   const ready=!cabinBlanketOpen && !roadMap.visible && !trunkOpen && Math.abs(trunkLid.rotation.x)<.08 &&
     doors.every(door=>!door.open && Math.abs(door.hinge.rotation.y)<.08);
   const rawInput=ready && ignitionOn && !parkingBrake?(Number(!!fn.KeyW)-Number(!!fn.KeyS)):0;
+
+  // Throttle tip-in carburetor induction resonance
+  if(rawInput > 0.25 && lastRawInput <= 0.05) {
+    carburetorMoan = Math.min(.55, carburetorMoan + .44);
+  }
+  lastRawInput = rawInput;
+  carburetorMoan = Math.max(0, carburetorMoan - dt * 2.4);
+
   // Auto-engage D or R from stop unless the driver manually selected N, P, or L
   if(rawInput!==0 && !gearHoldManual) {
     if(rawInput<0 && carSpeed<=.15) gearState='R';
@@ -7024,9 +7061,30 @@ function driveCar(dt) {
   const reverseBraking = throttle!==0 && carSpeed*throttle<0 && Math.abs(carSpeed)>.2;
   activeBraking = !!fn.Space || reverseBraking;
 
+  const absSpd = Math.abs(carSpeed);
+
+  // Automatic 3-speed shift logic & passing kickdown in Drive
+  kickdownCooldown = Math.max(0, kickdownCooldown - dt);
+  if(gearState==='D') {
+    // Passing gear kickdown from 3rd to 2nd under wide-open throttle
+    if(rawInput > 0.85 && absSpd > 8.5 && absSpd < 23.5 && kickdownCooldown <= 0 && autoSubGear === 3) {
+      autoSubGear = 2;
+      shiftFlare = 0.35;
+      carburetorMoan = 0.58;
+      kickdownCooldown = 2.8;
+    } else if(kickdownCooldown <= 0 || absSpd >= 23.5 || rawInput <= 0.2) {
+      const nextSub = absSpd < 10.2 ? 1 : (absSpd < 19.8 ? 2 : 3);
+      if(nextSub > autoSubGear && throttle > 0) shiftFlare = .24;
+      autoSubGear = nextSub;
+    }
+  } else {
+    autoSubGear = 1;
+  }
+
   currentSurface = carSurfaceAt(coupe.position.x, coupe.position.z);
-  const surfaceDrag = currentSurface==='sand' ? (gearState==='L'?1.25:2.05) : (currentSurface==='shoulder'?1.35:(currentSurface==='drift'?1.28:.78));
-  const maxFwd = gearState==='L' ? 15.5 : (currentSurface==='sand' ? 19.5 : (currentSurface==='shoulder' ? 25.5 : 31.3));
+  // Authentic low rolling resistance on asphalt for long, serene highway coasting
+  const surfaceDrag = currentSurface==='sand' ? (gearState==='L'?1.25:1.75) : (currentSurface==='shoulder'?0.55:(currentSurface==='drift'?0.16:(0.095 + 0.0032 * absSpd)));
+  const maxFwd = gearState==='L' ? 15.5 : (currentSurface==='sand' ? 19.5 : (currentSurface==='shoulder' ? 25.5 : 31.8));
   const maxRev = 7.2;
 
   if(engine)engine.load=!fn.Space && carSpeed*throttle>=0?Math.abs(throttle):0;
@@ -7038,48 +7096,60 @@ function driveCar(dt) {
     if(reverseBraking) accelRate = 15.2;
     else if(gearState==='L') accelRate = 7.4;
     else if(gearState==='D') {
-      accelRate = autoSubGear===1 ? 6.2 : (autoSubGear===2 ? 5.1 : 4.0);
+      accelRate = autoSubGear===1 ? 6.2 : (autoSubGear===2 ? (kickdownCooldown > 0 ? 6.4 : 5.2) : 4.2);
       if(currentSurface==='sand') accelRate *= .78;
     }
     carSpeed += throttle * accelRate * dt;
   } else {
-    const engineBrake = gearState==='L' ? 1.85 : surfaceDrag;
+    // Momentum coasting with gentle engine glide and mountain grade acceleration/braking
+    const roadGrade = -Math.sin(coupe.rotation.x);
+    const gradeForce = roadGrade * 9.81 * 0.30;
+    const engineBrake = gearState==='L' ? (1.65 + 0.02 * absSpd) : surfaceDrag;
+    carSpeed += gradeForce * dt;
     carSpeed *= Math.exp(-engineBrake * dt);
   }
   carSpeed = Math.max(-maxRev, Math.min(maxFwd, carSpeed));
   if(Math.abs(carSpeed)<.025) carSpeed=0;
 
-  // Automatic 3-speed shift logic in Drive
-  const absSpd = Math.abs(carSpeed);
-  if(gearState==='D') {
-    const nextSub = absSpd < 10.2 ? 1 : (absSpd < 19.8 ? 2 : 3);
-    if(nextSub > autoSubGear && throttle > 0) shiftFlare = .24;
-    autoSubGear = nextSub;
+  // Steering: relaxed center feel + speed-sensitive self-aligning caster return
+  const steerRaw = Number(!!fn.KeyA) - Number(!!fn.KeyD);
+  const steerProgressive = Math.sign(steerRaw) * Math.pow(Math.abs(steerRaw), 1.25);
+  if(steerRaw !== 0) {
+    const steerTarget = steerProgressive * 0.38;
+    const steerSpeed = currentSurface === 'sand' ? 5.2 : (absSpd > 16 ? 6.5 : 7.8);
+    steeringAngle += (steerTarget - steeringAngle) * Math.min(1, steerSpeed * dt);
   } else {
-    autoSubGear = 1;
+    const casterRate = Math.max(1.4, Math.min(8.0, 1.4 + absSpd * 0.30));
+    steeringAngle += (-steeringAngle) * Math.min(1, casterRate * dt);
+    if(Math.abs(steeringAngle) < 0.0008) steeringAngle = 0;
   }
 
-  // Steering + surface feedback + lateral slip/drift
-  const steer=Number(!!fn.KeyA)-Number(!!fn.KeyD);
-  steeringAngle+=(steer*.36-steeringAngle)*Math.min(1,8*dt);
   const surfRough = currentSurface==='shoulder' ? .012 : (currentSurface==='sand' ? .018 : (currentSurface==='drift' ? .010 : 0));
   const steerVib = absSpd > .5 ? Math.sin(eg.elapsedTime * 34) * surfRough * Math.min(1, absSpd / 16) : 0;
   for(const pivot of frontPivots)pivot.rotation.y=steeringAngle;
-  steering.rotation.z=-(steeringAngle+steerVib)*3;
+  steering.rotation.z=-(steeringAngle+steerVib)*3.2;
 
-  const slipGrip = currentSurface==='asphalt' ? (fn.Space?2.6:6.2) : (currentSurface==='shoulder'?3.1:2.4);
-  const cornerForce = steeringAngle * carSpeed * Math.min(1, absSpd / 11) * (currentSurface==='asphalt' ? .35 : .82);
+  // RWD power-oversteer on loose surfaces & counter-steer catch
+  const onLoose = currentSurface !== 'asphalt';
+  const throttleOversteer = (onLoose || fn.Space) ? (throttle * Math.sign(steeringAngle) * (currentSurface === 'sand' ? 2.8 : 1.7)) : 0;
+  const cornerForce = steeringAngle * carSpeed * Math.min(1, absSpd / 10) * (currentSurface === 'asphalt' ? 0.35 : 0.82) + throttleOversteer;
+
+  const isCounterSteering = lateralSlip !== 0 && Math.sign(steeringAngle) !== Math.sign(lateralSlip) && Math.abs(steeringAngle) > 0.04;
+  const counterGrip = isCounterSteering ? 4.2 : 0;
+  const slipGrip = (currentSurface==='asphalt' ? (fn.Space?2.5:6.4) : (currentSurface==='shoulder'?3.0:2.2)) + counterGrip;
+
   // Open-desert crosswind nudge at high speed away from buildings
   const dSite = Math.min(Math.abs(coupe.position.x), Math.abs(coupe.position.x - motelX), Math.abs(coupe.position.x - dinerX));
   const crossWind = (dSite > 95 && absSpd > 14) ? (Hm(eg.elapsedTime * .16, coupe.position.x * .0015) - .5) * .38 * Math.min(1, (absSpd - 14) / 15) : 0;
-  lateralSlip += (cornerForce + crossWind - lateralSlip * slipGrip) * Math.min(1, dt * 5.5);
-  if(absSpd < .4) lateralSlip = 0;
+  lateralSlip += (cornerForce + crossWind - lateralSlip * slipGrip) * Math.min(1, dt * 5.8);
+  if(absSpd < .3 && throttle === 0) lateralSlip = 0;
 
   const steps=Math.max(1,Math.ceil((absSpd+Math.abs(lateralSlip))*dt/.30));
   let traveled = 0;
   for(let i=0;i<steps;i++) {
     const step=dt/steps;
-    const turn=Math.tan(steeringAngle)*carSpeed*step/(2.95+absSpd*.075);
+    const oversteerYaw = lateralSlip * (currentSurface === 'sand' ? 0.34 : 0.16);
+    const turn = (Math.tan(steeringAngle)*carSpeed/(2.95+absSpd*.075) + oversteerYaw)*step;
     const yaw=coupe.rotation.y+turn;
     const sin=Math.sin(yaw), cos=Math.cos(yaw);
     const x=coupe.position.x+(sin*carSpeed + cos*lateralSlip*.35)*step;
@@ -7109,13 +7179,17 @@ function driveCar(dt) {
   const targetTemp = ignitionOn ? (.48 + Math.min(.28, absSpd / 32 * .14 + (currentSurface==='sand' ? .10 : 0) + engineRev * .08)) : .15;
   engineTemp += (targetTemp - engineTemp) * Math.min(1, dt * .25);
 
-  // Highway tar expansion joint detection & suspension bounce/pitch/roll
+  // Highway tar expansion joint detection with front-then-rear dual-axle strike
   const tarCell = Math.floor((coupe.position.x + 4.2) / 18);
   if(tarCell !== lastTarCell) {
     lastTarCell = tarCell;
     if(Math.abs(coupe.position.z) <= 3.35 && absSpd > 2.0) {
       playTarThump(absSpd);
-      suspBounceVel += .055 * Math.min(1, absSpd / 20);
+      suspBounceVel += .048 * Math.min(1, absSpd / 20);
+      const wbDelay = Math.max(.06, Math.min(.32, 2.95 / Math.max(4, absSpd)));
+      setTimeout(() => {
+        if(seated && absSpd > 2.0) suspBounceVel += .038 * Math.min(1, absSpd / 20);
+      }, wbDelay * 1000);
     }
   }
   if(surfRough > 0 && absSpd > .8) {
@@ -7125,13 +7199,29 @@ function driveCar(dt) {
   suspBounceVel -= (suspBounce * 68 + suspBounceVel * 9.5) * dt;
   if(absSpd === 0 && engineRev === 0 && Math.abs(suspBounce) < .0005) { suspBounce = 0; suspBounceVel = 0; }
 
+  // Acceleration squat, braking dive, and cornering body roll
   const longAccel = (carSpeed - prevSpeed) / Math.max(.008, dt);
-  const goalPitch = absSpd === 0 && throttle === 0 ? 0 : Math.max(-.034, Math.min(.042, -longAccel * .0032 + (activeBraking && absSpd > .3 ? .024 : 0)));
-  const goalRoll = (absSpd === 0 && engineRev === 0) ? 0 : Math.max(-.055, Math.min(.055, -steeringAngle * Math.min(1, absSpd / 13) * .095 + Math.sin(eg.elapsedTime * 30) * .012 * engineRev));
-  suspPitch += (goalPitch - suspPitch) * Math.min(1, dt * 7.5);
+  const goalPitch = absSpd === 0 && throttle === 0 ? 0 : Math.max(-.038, Math.min(.045, -longAccel * .0036 + (activeBraking && absSpd > .3 ? .028 : 0)));
+  const goalRoll = (absSpd === 0 && engineRev === 0) ? 0 : Math.max(-.062, Math.min(.062, -steeringAngle * Math.min(1, absSpd / 12) * .105 + Math.sin(eg.elapsedTime * 30) * .012 * engineRev));
+  suspPitch += (goalPitch - suspPitch) * Math.min(1, dt * 7.2);
   suspRoll += (goalRoll - suspRoll) * Math.min(1, dt * 6.5);
   if(absSpd === 0 && engineRev === 0 && Math.abs(suspPitch) < .0004 && Math.abs(suspRoll) < .0004) {
     suspPitch = 0; suspRoll = 0;
+  }
+
+  // Driver bench seat head inertia (subtle G-force feel while driving, exact zero at rest)
+  if(seated) {
+    const goalHeadZ = absSpd === 0 ? 0 : Math.max(-.028, Math.min(.035, -longAccel * .0030 + (activeBraking && absSpd > .3 ? .022 : 0)));
+    const goalHeadX = absSpd === 0 ? 0 : Math.max(-.032, Math.min(.032, -cornerForce * .024));
+    const goalHeadY = absSpd === 0 ? 0 : suspBounce * .32;
+    driverHeadInertia.x += (goalHeadX - driverHeadInertia.x) * Math.min(1, dt * 7.5);
+    driverHeadInertia.y += (goalHeadY - driverHeadInertia.y) * Math.min(1, dt * 8.5);
+    driverHeadInertia.z += (goalHeadZ - driverHeadInertia.z) * Math.min(1, dt * 7.5);
+    if(absSpd === 0 && throttle === 0 && Math.abs(driverHeadInertia.x) < 0.0002 && Math.abs(driverHeadInertia.z) < 0.0002) {
+      driverHeadInertia.set(0, 0, 0);
+    }
+  } else {
+    driverHeadInertia.set(0, 0, 0);
   }
 
   // Kick up rear tire dust on sand, gravel shoulder, or highway sand drifts
@@ -7140,7 +7230,9 @@ function driveCar(dt) {
     if(!wipersOn && absSpd > 8) windshieldDust = Math.min(.22, windshieldDust + dt * .012);
   }
 
-  needle.position.x=.218-Math.min(1,absSpd*2.237/80)*.436;
+  // Speedometer with subtle mechanical quiver over bumps
+  const speedoQuiver = absSpd > 0.5 ? (Math.sin(eg.elapsedTime * 46) * (surfRough > 0 ? 0.009 : 0.0035) * Math.min(1, absSpd / 12)) : 0;
+  needle.position.x = .218 - Math.min(1, (absSpd * 2.237 + speedoQuiver * 80) / 80) * .436;
   groundCoupe();
   updateDriverCamera();
   updateInstrumentCluster();
@@ -9742,6 +9834,7 @@ function buildCabinGestures() {
       if(panelOn) {
         gaugeMaterial.emissiveIntensity=.85*panelDim;
         for(const control of controls)control.labelMaterial.emissiveIntensity=.50*panelDim;
+        dashGlowLight.intensity=.36*panelDim;
       }
       radioMaterial.emissiveIntensity=radioOn?.62*panelDim:(panelOn?.28*panelDim:.04);
     }});
@@ -10684,6 +10777,23 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   set cabinBlanketOpen(v) { cabinBlanketOpen = v; },
   get gearState() { return gearState; },
   set gearState(v) { gearState = v; },
+  get autoSubGear() { return autoSubGear; },
+  set autoSubGear(v) { autoSubGear = v; },
+  get carSpeed() { return carSpeed; },
+  set carSpeed(v) { carSpeed = v; },
+  get steeringAngle() { return steeringAngle; },
+  set steeringAngle(v) { steeringAngle = v; },
+  get lateralSlip() { return lateralSlip; },
+  set lateralSlip(v) { lateralSlip = v; },
+  get shiftFlare() { return shiftFlare; },
+  set shiftFlare(v) { shiftFlare = v; },
+  get carburetorMoan() { return carburetorMoan; },
+  set carburetorMoan(v) { carburetorMoan = v; },
+  get kickdownCooldown() { return kickdownCooldown; },
+  set kickdownCooldown(v) { kickdownCooldown = v; },
+  driverHeadInertia,
+  dashGlowLight,
+  controls,
   get seated() { return seated; },
   toggleDoor, driverDoor,
   terrainWetnessUniform,
