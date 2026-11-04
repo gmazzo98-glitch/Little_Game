@@ -2,6 +2,14 @@
 
 Read [AESTHETIC.md](AESTHETIC.md), [ROADMAP.md](ROADMAP.md), and [ASSET_GUIDE.md](ASSET_GUIDE.md) before changing the scene. The user's current instructions take precedence. These files are the project's art direction, execution plan, and modeling specifications, not optional background. [AGENT_PROMPT.md](AGENT_PROMPT.md) is the implementation launch prompt.
 
+## Playable branch
+
+The playable branch is [`vibe/neon-gas-voxel-f660eb`](https://github.com/gmazzo98-glitch/Little_Game/tree/vibe/neon-gas-voxel-f660eb) in `gmazzo98-glitch/Little_Game`. Players download and open the [branch's `index.html`](https://github.com/gmazzo98-glitch/Little_Game/blob/vibe/neon-gas-voxel-f660eb/index.html).
+
+- Before editing, check the repository, branch, and remote. If the workspace is a plain folder without Git metadata, use a checkout of the playable branch or clearly identify the work as local-only.
+- When authorized to publish a game change, land it on the playable branch and verify the remote `index.html` at the resulting commit. Test the player-facing action in that exact file before saying the change is available on the playable branch.
+- In the handoff, name the branch and commit, link the playable file, and give the exact steps to reach the changed feature. State explicitly when changes are only local or live on a separate branch.
+
 ## Scope
 
 - Build one first-person, walkable 1960s gas station on an empty desert highway. Preserve melancholy, isolation, and stillness.
