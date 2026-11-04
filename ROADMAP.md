@@ -30,7 +30,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Station and coupe actions, including trunk cargo | Browser and performance acceptance in progress |
+| Phase 6 — Stillness and interaction polish | Window rest, usable blanket, and focused prompts | Browser and performance acceptance in progress |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -211,6 +211,12 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Window seat, blanket, and purposeful actions
+
+- Added a padded seat below the office window and a small amber pool linked to the office lamp. Sitting puts the view at the low opening in the pane. Bringing the folded blanket spreads it across the lap, and bringing the canvas roll sets it beside the seat. Standing restores the carried item. Rest has no timer.
+- Reduced prompts to actions that reveal something, change the surroundings, help operate the car, or move cargo. Former touch-only controls such as till keys, the bench vise, pump cranks, and mail slot now read as scenery. Kept the parts drawer and service records, office light and blinds, selected evidence of past repairs, and practical coupe controls.
+- Syntax and resource checks passed. Offline Chrome opened the delivered file and acquired pointer lock. An instrumented copy verified the blanket pickup, seated view, unfolding, standing, refolding, and return to the trunk through normal interaction inputs. The existing cargo loop also passed. Captured and reviewed seated views at preset dusk, blue hour, and night. The static open-trunk night sample measured 16.7 ms median and 16.9 ms p95 over 120 intervals on Intel Iris Xe at 960 × 540 and DPR 1. The continuous dusk-to-night and longer performance checks remain open.
 
 ### 2026-11-04 — Coupe trunk and cargo
 

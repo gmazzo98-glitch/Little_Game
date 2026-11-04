@@ -4378,10 +4378,9 @@ for (const role in pumpParts0) {
   addRoleMesh(Nt, 'pump_' + role, pumpParts1[role].map(p => ({ ...p, matrix: matMul(pumpMats1, p.matrix || matIdentity()) })));
 }
 
-const pumpMeterFaces=[];
 for (const matrix of [pumpMats0, pumpMats1]) {
-  pumpMeterFaces.push(paintedSurface(.425,.265,pumpMeterPaint,matMul(matrix,matTranslate(0,.99,.341)),
-    {width:384,height:224,emissive:0x403a29,intensity:.16,name:'Vintage gallon meter'}));
+  paintedSurface(.425,.265,pumpMeterPaint,matMul(matrix,matTranslate(0,.99,.341)),
+    {width:384,height:224,emissive:0x403a29,intensity:.16,name:'Vintage gallon meter'});
   paintedSurface(.295,.205,(ctx,w,h)=>{
     ctx.fillStyle='#c5bea6';ctx.fillRect(0,0,w,h);ctx.fillStyle='#42443a';ctx.textAlign='center';
     ctx.font='bold 58px Courier New,monospace';ctx.fillText('0.00',w/2,h*.56);
@@ -5565,6 +5564,9 @@ const interactionMaterials={
 let officeLampOn=true, ventOpen=false, parkingBrake=false, ignitionOn=true, panelDim=1;
 let inspection=null, inspectionTime=0;
 const inspectionOffset=new P(), inspectionForward=new P();
+const sillLight=new Pn(0xffb878,.72,1.38,2);
+sillLight.position.set(-4.19,1.02,-13.28);
+Nt.add(sillLight);
 const interactionPlate=(parent,position,size,material)=>{
   const piece=new dt(new Cn(...size),interactionMaterials[material]);
   piece.position.set(...position);
@@ -5597,14 +5599,14 @@ function playInteractionSound(name) {
 function installGesture(parent,label,position,options={}) {
   const {
     size, material='steel', axis='x', motion=.14, travel=false, toggle=false,
-    sound='metal', radius=.12, duration=.55, effect, onMotion, view, aim
+    sound='metal', radius=.12, duration=.55, effect, view, aim
   }=options;
   const hinge=new xi();
   hinge.position.set(...position);
   parent.add(hinge);
   if(size)interactionPlate(hinge,[0,0,0],size,material);
   const item={parent,hinge,label,position:aim||position,radius,amount:0,elapsed:0,engaged:false,origin:position['xyz'.indexOf(axis)],
-    axis,motion,travel,toggle,duration,onMotion,action(){
+    axis,motion,travel,toggle,duration,action(){
       if(view) {
         inspection=inspection===view?null:view;
         inspectionTime=inspection?duration:0;
@@ -5625,13 +5627,10 @@ function animateGestures(dt) {
     item.amount+=(goal-item.amount)*Math.min(1,dt*16);
     if(item.travel)item.hinge.position[item.axis]=item.origin+item.amount*item.motion;
     else item.hinge.rotation[item.axis]=item.amount*item.motion;
-    if(item.onMotion)item.onMotion(item.amount);
   }
-  officeDoor.rotation.y=Math.PI/2+doorGesture.amount*.065;
-  doorCollider.minX=-.70-doorGesture.amount*.075;
   if(inspection) {
     inspectionTime-=dt;
-    if(inspectionTime<=0 || fn.KeyW || fn.KeyA || fn.KeyS || fn.KeyD || fn.Space)inspection=null;
+    if((inspection!=='rest' && inspectionTime<=0) || fn.KeyW || fn.KeyA || fn.KeyS || fn.KeyD || fn.Space)inspection=null;
   }
 }
 
@@ -5649,6 +5648,13 @@ function detailText(parent,position,size,lines,colors=['#baa98a','#4d3f35']) {
 
 function buildStationGestures() {
   const add=(...args)=>installGesture(Nt,...args);
+  function prop(position,{size,material='steel'}={}) {
+    const group=new xi();
+    group.position.set(...position);
+    Nt.add(group);
+    if(size)interactionPlate(group,[0,0,0],size,material);
+    return group;
+  }
   // The three storage fixtures keep their contents attached to the moving piece.
   const drawer=add('Parts drawer',[-3.66,.59,-19.427],
     {size:[.94,.49,.035],material:'wood',axis:'z',travel:true,motion:.19,toggle:true,sound:'wood',radius:.21});
@@ -5664,111 +5670,87 @@ function buildStationGestures() {
   const blinds=add('Tilt blinds',[3.9,2.05,-12.91],{motion:-.81,toggle:true,radius:.23,sound:'latch'});
   for(const y of [-.07,0,.07])interactionPlate(blinds,[0,y,0],[1.17,.039,.022],'enamel');
   add('Read service board',[1.65,1.77,-20.36],{radius:.36,view:'read',duration:7,sound:null});
-  add('Rest by the sill',[-3.59,1.06,-13.03],{radius:.23,view:'rest',duration:30,sound:null});
-  const bell=add('Ring counter bell',[2.60,1.16,-15.23],
-    {size:[.12,.074,.12],material:'brass',axis:'y',travel:true,motion:-.018,sound:'bell',duration:.23});
+  const seat=prop([-3.59,.53,-13.26],{size:[1.36,.14,.48],material:'wood'});
+  interactionPlate(seat,[0,.105,0],[1.31,.072,.44],'rubber');
+  for(const x of [-.53,.53])interactionPlate(seat,[x,-.29,0],[.081,.45,.36],'wood');
+  interactionPlate(Nt,[-4.19,1.115,-13.28],[.19,.075,.16],'enamel');
+  Dt(-4.27,-13.50,-2.91,-13.01,0,.67);
+  add('Sit by the window',[-3.59,.68,-13.42],{radius:.26,sound:null,effect:()=>{
+    inspection='rest';
+    Nn.lookAt(Nn.position.x-.14,Nn.position.y+.018,Nn.position.z+1);
+    playInteractionSound('wood');
+  }});
+  const bell=prop([2.60,1.16,-15.23],{size:[.12,.074,.12],material:'brass'});
   interactionPlate(bell,[0,.043,0],[.035,.024,.035],'steel');
-  add('Press till key',[4.00,1.26,-15.48],
-    {size:[.054,.024,.048],material:'enamel',axis:'y',travel:true,motion:-.011,sound:'latch',duration:.25});
-  add('Rock change tray',[2.15,1.124,-15.39],{size:[.31,.012,.19],motion:.34,sound:'metal',radius:.14});
-  const stamp=add('Turn date stamp wheel',[3.42,1.19,-15.51],
-    {size:[.09,.055,.07],material:'rubber',motion:.68,toggle:true,sound:'latch'});
+  prop([4.00,1.26,-15.48],{size:[.054,.024,.048],material:'enamel'});
+  prop([2.15,1.124,-15.39],{size:[.31,.012,.19]});
+  const stamp=prop([3.42,1.19,-15.51],{size:[.09,.055,.07],material:'rubber'});
   detailText(stamp,[0,0,.039],[.078,.038],['1966']);
   const ledger=add('Open counter ledger',[1.61,1.136,-15.65],
     {size:[.31,.026,.27],material:'wood',motion:-1.82,toggle:true,sound:'paper'});
   detailText(Nt,[1.61,1.118,-15.65],[.29,.25],['CASH     CREDIT','0.85       H.','1.24       V.']).rotation.x=-Math.PI/2;
-  add('Lift counter gate',[4.91,1.04,-15.54],{size:[.36,.08,.20],material:'wood',axis:'z',motion:1.3,toggle:true,sound:'wood'});
-  const drum=add('Turn price drum',[3.04,1.18,-15.54],{size:[.17,.11,.075],material:'steel',motion:.79,toggle:true,sound:'latch'});
+  prop([4.91,1.04,-15.54],{size:[.36,.08,.20],material:'wood'});
+  const drum=prop([3.04,1.18,-15.54],{size:[.17,.11,.075],material:'steel'});
   detailText(drum,[0,0,.040],[.15,.08],['29  9/10']);
-  add('Try window latch',[4.68,1.19,-12.90],
-    {size:[.15,.034,.038],axis:'x',travel:true,motion:.045,sound:'latch'});
-  add('Turn hours clip',[-2.72,1.37,-12.89],{size:[.075,.065,.024],axis:'z',motion:2.9,toggle:true,sound:'metal'});
-  const stool=add('Turn counter stool',[3.7,.62,-16.58],
-    {size:[.31,.078,.32],material:'rubber',axis:'y',motion:1.52,sound:'grit',radius:.18});
+  prop([4.68,1.19,-12.90],{size:[.15,.034,.038]});
+  prop([-2.72,1.37,-12.89],{size:[.075,.065,.024]});
+  const stool=prop([3.7,.62,-16.58],{size:[.31,.078,.32],material:'rubber'});
   interactionPlate(Nt,[3.7,.32,-16.58],[.06,.59,.06],'steel');
   interactionPlate(stool,[.025,.041,0],[.028,.007,.25],'enamel');
   const mileage=add('Tip mileage strip',[2.84,1.14,-15.31],{motion:-.85,toggle:true,sound:'paper'});
   detailText(mileage,[0,.03,0],[.30,.13],['WEST   18 MI','CINDER COURT']).rotation.x=-Math.PI/2;
 
-  const vise=add('Crank bench vise',[-4.91,1.03,-19.61],
-    {size:[.14,.035,.04],axis:'z',motion:2.1,sound:'metal'});
+  const vise=prop([-4.91,1.03,-19.61],{size:[.14,.035,.04]});
   interactionPlate(vise,[0,0,-.06],[.055,.051,.13],'steel');
   interactionPlate(Nt,[-4.91,.96,-19.69],[.19,.08,.20],'steel');
-  add('Raise bench stop',[-4.13,.95,-19.54],
-    {size:[.10,.018,.092],motion:1.47,toggle:true,sound:'latch'});
-  const carousel=add('Turn parts carousel',[-2.56,1.10,-19.75],
-    {size:[.30,.11,.28],material:'wood',axis:'y',motion:1.57,toggle:true,sound:'wood',radius:.15});
+  prop([-4.13,.95,-19.54],{size:[.10,.018,.092]});
+  const carousel=prop([-2.56,1.10,-19.75],{size:[.30,.11,.28],material:'wood'});
   for(const x of [-.10,0,.10])interactionPlate(carousel,[x,.067,0],[.015,.08,.26],'steel');
-  add('Fold shelf bracket',[-5.25,1.57,-20.13],
-    {size:[.038,.18,.11],motion:1.25,toggle:true,sound:'metal'});
+  prop([-5.25,1.57,-20.13],{size:[.038,.18,.11]});
   const mirror=add('Tilt inspection mirror',[-3.34,1.06,-19.78],{motion:-.68,toggle:true,view:'mirror',duration:4,sound:'latch'});
   interactionPlate(mirror,[0,0,0],[.11,.086,.014],'steel');
-  add('Slide shop ruler',[-3.52,.947,-19.48],{size:[.38,.012,.032],material:'brass',axis:'x',travel:true,motion:.17,toggle:true});
-  add('Press bench treadle',[-3.13,.18,-19.43],{size:[.25,.033,.17],motion:-.31,sound:'wood',radius:.19});
-  const funnel=add('Swing oil funnel',[-5.24,1.20,-19.72],{axis:'z',motion:.9,sound:'metal'});
+  prop([-3.52,.947,-19.48],{size:[.38,.012,.032],material:'brass'});
+  prop([-3.13,.18,-19.43],{size:[.25,.033,.17]});
+  const funnel=prop([-5.24,1.20,-19.72]);
   interactionPlate(funnel,[0,-.052,0],[.10,.09,.075],'steel');
   interactionPlate(funnel,[0,-.13,0],[.023,.10,.022],'steel');
   const makersPlate=detailText(Nt,[-2.07,.76,-19.459],[.24,.10],['SUNSET BENCH','NO. 04']);
   const dustCover=interactionPlate(Nt,[-2.07,.76,-19.455],[.24,.10,.004],'paper');
   add('Brush maker’s plate',[-2.07,.76,-19.445],{sound:'grit',effect:()=>{dustCover.visible=false;makersPlate.visible=true;}});
-  const mat=add('Lift rubber mat',[-3.10,.956,-19.98],
-    {size:[.36,.018,.31],material:'rubber',motion:-.85,toggle:true,sound:'rubber'});
+  const mat=prop([-3.10,.956,-19.98],{size:[.36,.018,.31],material:'rubber'});
   interactionPlate(mat,[.13,.009,.10],[.04,.004,.04],'steel');
 
-  const hose=add('Try the air hose',[-2.34,.80,-12.21],
-    {size:[.045,.065,.09],motion:-.60,sound:'latch',radius:.12});
+  const hose=prop([-2.34,.80,-12.21],{size:[.045,.065,.09]});
   interactionPlate(hose,[0,-.11,-.025],[.025,.22,.023],'rubber');
-  for(const [index,x] of [-3,3].entries()) {
-    const nozzle=add('Lift fuel nozzle',[x+.43,.73,-9.34],
-      {size:[.07,.16,.056],axis:'y',travel:true,motion:.095,sound:'latch'});
+  for(const x of [-3,3]) {
+    const nozzle=prop([x+.43,.73,-9.34],{size:[.07,.16,.056]});
     interactionPlate(nozzle,[.015,-.09,0],[.025,.10,.028],'rubber');
-    const face=pumpMeterFaces[index], initial=face.matrix.clone(), rotation=initial.clone();
-    add('Turn pump reset crank',[x-.38,.99,-9.11],
-      {size:[.095,.035,.04],axis:'z',motion:1.18,sound:'latch',onMotion:amount=>{
-        face.matrix.copy(initial).multiply(rotation.makeRotationZ(.04*amount));
-        face.matrixWorldNeedsUpdate=true;
-      }});
-    add('Rattle pump service flap',[x,.48,-9.137],
-      {size:[.25,.16,.018],material:'enamel',motion:-.075,sound:x<0?'metal':'latch',radius:.13});
+    prop([x,.48,-9.137],{size:[.25,.16,.018],material:'enamel'});
   }
-  add('Press pump island rubber edge',[.47,.27,-7.97],
-    {size:[.44,.073,.035],material:'rubber',axis:'z',travel:true,motion:-.014,sound:'rubber',radius:.23});
+  prop([.47,.27,-7.97],{size:[.44,.073,.035],material:'rubber'});
   add('Lift water fitting cover',[-2,.79,-12.215],
     {size:[.09,.073,.05],motion:-1.5,toggle:true,sound:'metal',radius:.095});
-  add('Turn water valve',[-2,.56,-12.39],{size:[.105,.034,.054],axis:'z',motion:1.6,sound:'grit'});
+  prop([-2,.56,-12.39],{size:[.105,.034,.054]});
   const oil=add('Lift oil grade frame',[-5.04,1.15,-11.64],
     {size:[.28,.10,.027],motion:-1.45,toggle:true,sound:'latch'});
   detailText(oil,[0,0,-.016],[.25,.08],['SAE 30']).rotation.x=Math.PI;
   const tag=add('Turn GAS maintenance tag',[11.15,1.31,-10.21],{axis:'y',motion:2.4,toggle:true,sound:'metal'});
   detailText(tag,[0,0,0],[.17,.10],['GAS','S-2']);
-  add('Press service button',[7.5,1.11,-5.416],
-    {size:[.058,.068,.045],material:'enamel',axis:'z',travel:true,motion:-.022,sound:'latch'});
-  add('Inspect driveway seam',[.82,.08,-5.22],{radius:.28,view:'seam',duration:5,sound:'grit'});
+  prop([7.5,1.11,-5.416],{size:[.058,.068,.045],material:'enamel'});
 
-  add('Ease the office door',[-.58,1.04,-13.88],{radius:.15,view:'door',duration:1.1,sound:'wood'});
-  add('Flex door sweep',[-.56,.14,-13.39],
-    {size:[.04,.10,.29],material:'rubber',axis:'z',motion:.32,sound:'rubber',radius:.18});
+  prop([-.56,.14,-13.39],{size:[.04,.10,.29],material:'rubber'});
   interactionPlate(Nt,[1.50,1.09,-12.548],[.27,.048,.018],'brass');
-  add('Push mail slot',[1.50,1.09,-12.53],
-    {size:[.26,.052,.038],motion:1.16,sound:'metal'});
-  for(const [x,label] of [[-3.6,'Tap center of glass'],[-4.77,'Tap glass by frame']])
-    add(label,[x,1.63,-12.56],{radius:.22,sound:x===-3.6?'glass':'latch'});
+  prop([1.50,1.09,-12.53],{size:[.26,.052,.038]});
   add('Listen at wall grille',[6.23,1.65,-18.75],{radius:.26,view:'grille',duration:6,sound:null});
-  add('Nudge rear vent louvre',[-6.25,2.47,-18.69],
-    {size:[.034,.034,.46],motion:.35,sound:'metal',radius:.23});
-  add('Knock on repaired panel',[6.17,1.25,-16.22],
-    {size:[.025,.43,.31],material:'enamel',sound:'wood',radius:.19});
-  add('Knock beside the repair',[6.17,1.25,-15.75],{sound:'metal',radius:.18});
-  add('Shade eyes from neon',[11,3.50,-10.18],{radius:.38,view:'shade',duration:6,sound:null});
-  const bracket=add('Sight through old bracket',[-1.40,1.72,-12.42],
-    {radius:.16,view:'bracket',duration:5,sound:null});
+  prop([-6.25,2.47,-18.69],{size:[.034,.034,.46]});
+  prop([6.17,1.25,-16.22],{size:[.025,.43,.31],material:'enamel'});
+  const bracket=prop([-1.40,1.72,-12.42]);
   for(const x of [-.09,.09])interactionPlate(bracket,[x,0,0],[.022,.18,.13],'steel');
   interactionPlate(bracket,[0,.09,0],[.19,.022,.13],'steel');
   const seam=interactionPlate(Nt,[.82,.003,-5.22],[1.9,.004,.035],'rubber');
   seam.rotation.y=.27;
 }
 buildStationGestures();
-const doorGesture=stationActions.find(item=>item.label==='Ease the office door');
 
 const rearMirrorTarget=new wt(192,72), benchMirrorTarget=new wt(128,72);
 for(const target of [rearMirrorTarget,benchMirrorTarget]){
@@ -5813,7 +5795,7 @@ function buildCabinGestures() {
   interactionPlate(glove,[0,.076,-.026],[.35,.145,.035],'wood');
   const crease=detailText(coupe,[-.57,.895,.495],[.28,.106],['—    —'],['#564636','#796956']);
   crease.rotation.y=Math.PI;
-  add('Check ashtray',[.02,.791,.497],{size:[.13,.058,.12],axis:'z',travel:true,motion:-.067,toggle:true,sound:'metal'});
+  interactionPlate(coupe,[.02,.791,.497],[.13,.058,.12],'steel');
   add('Passenger cabin lamp',[-.34,1.45,-.20],{size:[.04,.042,.04],axis:'y',travel:true,motion:.014,sound:'latch',
     effect:()=>toggleCarSwitch(controls.find(control=>control.kind==='dome'))});
   add('Ease door shut',[.83,.805,-.67],{size:[.05,.039,.13],axis:'x',motion:.22,sound:null,
@@ -5827,6 +5809,14 @@ const cargoSlots=[[-.44,.53,-2.04],[0,.53,-2.06],[.44,.53,-2.04]];
 const cargoItems=[];
 let carriedCargo=null;
 const cargoPoint=new P(), cargoDirection=new P();
+const lapBlanket=new xi();
+lapBlanket.position.set(-3.83,.696,-13.23);
+Nt.add(lapBlanket);
+carMesh(lapBlanket,'carpet',[boxPart(0,0,0,.70,.031,.46),boxPart(0,-.106,-.221,.70,.21,.026)]);
+carMesh(lapBlanket,'piping',[-.27,-.21,.21,.27].flatMap(x=>[
+  boxPart(x,.018,0,.025,.008,.46),boxPart(x,-.105,-.237,.025,.21,.008)
+]));
+lapBlanket.visible=false;
 function addCargo(label,parts,x,z,slot=-1) {
   const mesh=new xi();
   for(const [role,shapes] of Object.entries(parts))carMesh(mesh,role,shapes);
@@ -5874,7 +5864,7 @@ function stowCargo() {
   playInteractionSound('wood');
 }
 function setCargoDown() {
-  if(!carriedCargo || seated)return;
+  if(!carriedCargo || seated || inspection==='rest')return;
   Nn.getWorldDirection(cargoDirection);
   cargoDirection.y=0;
   if(cargoDirection.lengthSq()<.01)return;
@@ -5900,8 +5890,17 @@ function toggleTrunk() {
   playInteractionSound('latch');
 }
 function updateCarriedCargo() {
+  const resting=inspection==='rest';
+  lapBlanket.visible=resting && carriedCargo?.label==='folded blanket';
   if(!carriedCargo)return;
   const mesh=carriedCargo.mesh;
+  const useRoll=resting && carriedCargo.label==='canvas roll';
+  mesh.visible=!lapBlanket.visible;
+  if(useRoll) {
+    mesh.position.set(-3.90,.667,-13.22);
+    mesh.quaternion.identity();
+    return;
+  }
   mesh.position.set(.33,-.43,-.70).applyQuaternion(Nn.quaternion).add(Nn.position);
   mesh.quaternion.copy(Nn.quaternion);
 }
@@ -5939,25 +5938,22 @@ function renderInteractionMirror(dt) {
   }
 }
 
-const inspectionAmounts={read:.28,rest:-.43,seam:-.62,grille:.08,shade:0,bracket:.19,door:.025,mirror:.10,cabin:.16};
-const shadeVisor=document.createElement('div');
-shadeVisor.style.cssText='position:fixed;right:0;top:0;width:38vw;height:26vh;background:linear-gradient(153deg,#221b17dd,transparent 65%);pointer-events:none;display:none';
-document.body.appendChild(shadeVisor);
+const inspectionAmounts={read:.28,grille:.08,mirror:.10,cabin:.16};
 function renderWithInspection() {
-  shadeVisor.style.display=inspection==='shade'?'block':'none';
   if(!inspection){ls.render();return;}
   inspectionOffset.copy(Nn.position);
-  const amount=inspectionAmounts[inspection];
-  if(amount<0)Nn.position.y+=amount;
-  else Nn.position.addScaledVector(Nn.getWorldDirection(inspectionForward),amount);
-  const [x,z]=vc(Nn.position.x,Nn.position.y,Nn.position.z);
-  Nn.position.x=x;Nn.position.z=z;
-  ls.render();
-  Nn.position.copy(inspectionOffset);
+  if(inspection==='rest')Nn.position.set(-3.83,1.285,-13.58);
+  else {
+    Nn.position.addScaledVector(Nn.getWorldDirection(inspectionForward),inspectionAmounts[inspection]);
+    const [x,z]=vc(Nn.position.x,Nn.position.y,Nn.position.z);
+    Nn.position.x=x;Nn.position.z=z;
+  }
+  try {ls.render();} finally {Nn.position.copy(inspectionOffset);}
 }
 
 let cursorMode=false, cursorX=innerWidth/2, cursorY=innerHeight/2;
 function findInteractionTarget() {
+  if(inspection==='rest')return {label:'Stand up',action:()=>{inspection=null;}};
   const nearCar=seated || Nn.position.distanceTo(coupe.position)<6;
   const nearStation=Math.abs(Nn.position.x)<16 && Nn.position.z>-25 && Nn.position.z<-2;
   const nearCargo=!seated && !carriedCargo && cargoItems.some(item=>item.slot<0 &&
@@ -6009,8 +6005,11 @@ function findInteractionTarget() {
   }
   if(nearCargo)for(const item of cargoItems)if(item.slot<0)
     target(item.mesh,0,.085,0,.21,'Pick up '+item.label,()=>takeCargo(item),true);
-  if(!seated && nearStation)for(const item of stationActions)
-    target(item.parent,...item.position,item.radius,item.label,item.action,true);
+  if(!seated && nearStation)for(const item of stationActions) {
+    const label=item.label==='Sit by the window' && carriedCargo?.label==='folded blanket'
+      ?'Sit and unfold blanket':item.label;
+    target(item.parent,...item.position,item.radius,label,item.action,true);
+  }
   return best;
 }
 
@@ -6123,10 +6122,11 @@ function updateCarHud() {
   mn.domElement.style.cursor=cursorMode && hovered?'pointer':'';
   const hint=hovered?'E / CLICK  '+hovered.label+'  ·  ':'';
   const mode=cursorMode?'RMB look':'MOUSE look';
-  const text=seated
+  const text=inspection==='rest' ? hint+mode+'  ·  Move to stand' : seated
     ? hint + Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake  ·  C door  ·  F get out'
     : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  Coupe by the station';
-  const cargoStatus=carriedCargo?'  ·  Carrying '+carriedCargo.label+'  ·  G set down':
+  const cargoStatus=inspection==='rest'?(lapBlanket.visible?'  ·  Blanket across your lap':''):
+    carriedCargo?'  ·  Carrying '+carriedCargo.label+'  ·  G set down':
     seated && trunkOpen?'  ·  TRUNK OPEN':'';
   const status=cargoStatus+(audio.muted?'  ·  SOUND OFF (M)':'');
   if(text+status!==hudText){hud.textContent=text+status;hudText=text+status;}
@@ -6162,7 +6162,7 @@ if(audio.windPan){
   const threshold=Math.abs(x)<.68?Math.max(0,1-Math.abs(z+12.76)/.72):0;
   audio.windPan.pan.setTargetAtTime(threshold*Ni.x*.6+(seated&&ventOpen?.24:0),now,.12);
 }let L=audio.ctx.listener;Nn.getWorldDirection(Ni);if(L.positionX){L.positionX.value=Nn.position.x;L.positionY.value=Nn.position.y;L.positionZ.value=Nn.position.z;L.forwardX.value=Ni.x;L.forwardY.value=Ni.y;L.forwardZ.value=Ni.z;L.upX.value=0;L.upY.value=1;L.upZ.value=0}else{L.setPosition(Nn.position.x,Nn.position.y,Nn.position.z);L.setOrientation(Ni.x,Ni.y,Ni.z,0,1,0)}const blocked=officeWallInWay(inspectionForward.copy($n.position).sub(Nn.position));
-audio.humGain.gain.setTargetAtTime(.16*(.3+.7*gfl)*(blocked?.23:1)*(1-cabin*.70),now,.045);if(k>.85&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectChirp(audio.ctx.currentTime+Dn(.1,.9))}}let wfk=1+.008*Math.sin(t*.8);Ec.intensity=officeLampOn?10*wfk:0;Vsp.intensity=officeLampOn?1.1*wfk:.16;if(ROLE_MATS.windowGlow){ROLE_MATS.windowGlow.emissiveIntensity=officeLampOn?.55*wfk:0}if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57)}for(let di=0;di<DUST_N;di++){dustPos[di*3]+=dustSeed[di].x*i;dustPos[di*3+1]+=dustSeed[di].y*i;dustPos[di*3+2]+=dustSeed[di].z*i;if(dustPos[di*3+1]<.5)dustPos[di*3+1]=3.9;if(dustPos[di*3]>4.2)dustPos[di*3]=-4.2;if(dustPos[di*3]<-4.2)dustPos[di*3]=4.2;if(dustPos[di*3+2]>-7.4)dustPos[di*3+2]=-11.2;if(dustPos[di*3+2]<-11.2)dustPos[di*3+2]=-7.4}dustGeo.attributes.position.needsUpdate=!0;dust.material.opacity=(.04+.14*sk)*wfk;for(let mi=0;mi<MOTH_N;mi++){let s=mothSeed[mi],a=t*s.s+s.p;let strike=Math.pow(Math.abs(Math.sin(a*.43)),12),r=s.r*(1-.85*strike);mothPos[mi*3]=$n.position.x+Math.cos(a)*r+.12*Math.sin(a*13.1);mothPos[mi*3+1]=$n.position.y+s.h+strike*.15+.08*Math.sin(a*17.3);mothPos[mi*3+2]=$n.position.z+1.1+Math.sin(a)*r*.5+.1*Math.sin(a*11.7)}mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);renderInteractionMirror(i);renderWithInspection()}Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
+audio.humGain.gain.setTargetAtTime(.16*(.3+.7*gfl)*(blocked?.23:1)*(1-cabin*.70),now,.045);if(k>.85&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectChirp(audio.ctx.currentTime+Dn(.1,.9))}}let wfk=1+.008*Math.sin(t*.8);Ec.intensity=officeLampOn?10*wfk:0;Vsp.intensity=officeLampOn?1.1*wfk:.16;sillLight.intensity=officeLampOn?.72:0;if(ROLE_MATS.windowGlow){ROLE_MATS.windowGlow.emissiveIntensity=officeLampOn?.55*wfk:0}if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57)}for(let di=0;di<DUST_N;di++){dustPos[di*3]+=dustSeed[di].x*i;dustPos[di*3+1]+=dustSeed[di].y*i;dustPos[di*3+2]+=dustSeed[di].z*i;if(dustPos[di*3+1]<.5)dustPos[di*3+1]=3.9;if(dustPos[di*3]>4.2)dustPos[di*3]=-4.2;if(dustPos[di*3]<-4.2)dustPos[di*3]=4.2;if(dustPos[di*3+2]>-7.4)dustPos[di*3+2]=-11.2;if(dustPos[di*3+2]<-11.2)dustPos[di*3+2]=-7.4}dustGeo.attributes.position.needsUpdate=!0;dust.material.opacity=(.04+.14*sk)*wfk;for(let mi=0;mi<MOTH_N;mi++){let s=mothSeed[mi],a=t*s.s+s.p;let strike=Math.pow(Math.abs(Math.sin(a*.43)),12),r=s.r*(1-.85*strike);mothPos[mi*3]=$n.position.x+Math.cos(a)*r+.12*Math.sin(a*13.1);mothPos[mi*3+1]=$n.position.y+s.h+strike*.15+.08*Math.sin(a*17.3);mothPos[mi*3+2]=$n.position.z+1.1+Math.sin(a)*r*.5+.1*Math.sin(a*11.7)}mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);renderInteractionMirror(i);renderWithInspection()}Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
 /*! Bundled license information:
 
 three/build/three.module.js:
