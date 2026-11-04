@@ -5467,7 +5467,7 @@ function updateDriverCamera() {
   Nn.position.copy(coupe.localToWorld(eyeWorld.copy(driverEye)));
 }
 function sitInCar() {
-  if(seated || !driverDoor.open || carriedCargo) return;
+  if(seated || !driverDoor.open || (carriedCargo && !carryingBlanket())) return;
   seated=true;carSpeed=0;
   inspection=null;
   startEngineAudio();
@@ -5489,7 +5489,7 @@ function leaveCar() {
     const clear=vc(aimPoint.x,y,aimPoint.z);
     if(Math.hypot(clear[0]-aimPoint.x,clear[1]-aimPoint.z)>.05) continue;
     door.open=true;
-    seated=false;carSpeed=0;br=0;oo=true;inspection=null;
+    seated=false;carSpeed=0;br=0;oo=true;inspection=null;cabinBlanketOpen=false;
     Nn.position.set(aimPoint.x,y,aimPoint.z);
     Nn.lookAt(coupe.localToWorld(aimPoint.set(0,1.0,-.3)));
     Nn.fov=65;Nn.updateProjectionMatrix();
@@ -5516,7 +5516,7 @@ function carClearAt(x,z,yaw) {
   return true;
 }
 function driveCar(dt) {
-  const ready=!trunkOpen && Math.abs(trunkLid.rotation.x)<.08 &&
+  const ready=!cabinBlanketOpen && !trunkOpen && Math.abs(trunkLid.rotation.x)<.08 &&
     doors.every(door=>!door.open && Math.abs(door.hinge.rotation.y)<.08);
   const throttle=ready && ignitionOn && !parkingBrake?(Number(!!fn.KeyW)-Number(!!fn.KeyS)):0;
   if(engine)engine.load=!fn.Space && carSpeed*throttle>=0?Math.abs(throttle):0;
@@ -5808,6 +5808,7 @@ buildCabinGestures();
 const cargoSlots=[[-.44,.53,-2.04],[0,.53,-2.06],[.44,.53,-2.04]];
 const cargoItems=[];
 let carriedCargo=null;
+let cabinBlanketOpen=false;
 const cargoPoint=new P(), cargoDirection=new P();
 const lapBlanket=new xi();
 lapBlanket.position.set(-3.83,.696,-13.23);
@@ -5817,6 +5818,34 @@ carMesh(lapBlanket,'piping',[-.27,-.21,.21,.27].flatMap(x=>[
   boxPart(x,.018,0,.025,.008,.46),boxPart(x,-.105,-.237,.025,.21,.008)
 ]));
 lapBlanket.visible=false;
+const cabinBlanket=lapBlanket.clone();
+cabinBlanket.rotation.y=Math.PI;
+cabinBlanket.scale.set(.73,.70,.75);
+coupe.add(cabinBlanket);
+// The blanket returns over the knees and crosses the chest in two overlapping folds.
+const blanketWrap=carMesh(cabinBlanket,'carpet',[
+  carQuad([-.32,.018,.09],[-.29,.31,.30],[.07,.35,.27],[.17,.018,.09]),
+  carQuad([-.10,.019,.065],[.075,.357,.25],[.29,.31,.30],[.32,.019,.065]),
+  ...[-1,1].map(side=>boxPart(side*.30,.158,.25,.038,.29,.15))
+]);
+blanketWrap.material=blanketWrap.material.clone();
+blanketWrap.material.side=2;
+const blanketTrim=carMesh(cabinBlanket,'piping',[
+  carQuad([-.098,.023,.058],[.076,.358,.243],[.102,.353,.249],[-.072,.023,.058]),
+  carQuad([.245,.023,.058],[.245,.322,.284],[.270,.317,.29],[.270,.023,.058])
+]);
+blanketTrim.material=blanketTrim.material.clone();
+blanketTrim.material.side=2;
+const foldedCabinPosition=new P(-.47,.81,-.54);
+
+function carryingBlanket() {
+  return carriedCargo?.label==='folded blanket';
+}
+function toggleCabinBlanket() {
+  if(!seated || !carryingBlanket() || carSpeed!==0)return;
+  cabinBlanketOpen=!cabinBlanketOpen;
+  playInteractionSound('rubber');
+}
 function addCargo(label,parts,x,z,slot=-1) {
   const mesh=new xi();
   for(const [role,shapes] of Object.entries(parts))carMesh(mesh,role,shapes);
@@ -5891,9 +5920,17 @@ function toggleTrunk() {
 }
 function updateCarriedCargo() {
   const resting=inspection==='rest';
-  lapBlanket.visible=resting && carriedCargo?.label==='folded blanket';
+  lapBlanket.visible=resting && carryingBlanket();
+  cabinBlanket.visible=seated && cabinBlanketOpen;
   if(!carriedCargo)return;
   const mesh=carriedCargo.mesh;
+  if(seated) {
+    cabinBlanket.position.set(driverEye.x,.93,driverEye.z+.25);
+    mesh.visible=!cabinBlanketOpen;
+    mesh.position.copy(coupe.localToWorld(cargoPoint.copy(foldedCabinPosition)));
+    coupe.getWorldQuaternion(mesh.quaternion);
+    return;
+  }
   const useRoll=resting && carriedCargo.label==='canvas roll';
   mesh.visible=!lapBlanket.visible;
   if(useRoll) {
@@ -5976,6 +6013,11 @@ function findInteractionTarget() {
     best={label,action};distance=along;
   }
   if(seated) {
+    if(carryingBlanket() && carSpeed===0) {
+      if(cabinBlanketOpen)target(cabinBlanket,0,.14,.10,.24,'Unwrap and fold blanket',toggleCabinBlanket);
+      else target(coupe,foldedCabinPosition.x,foldedCabinPosition.y+.06,foldedCabinPosition.z,.21,
+        'Wrap yourself in blanket',toggleCabinBlanket);
+    }
     for(const item of controls)
       target(item.button,0,0,-.03,.074,item.label+' '+(item.on?'OFF':'ON'),()=>toggleCarSwitch(item));
     for(const door of doors)
@@ -5996,7 +6038,7 @@ function findInteractionTarget() {
     const door=doors.find(d=>d.side===side);
     if(door) {
       target(door.hinge,side*.077,.91,-1.26,.19,door.open?'Close door':'Open door',()=>toggleDoor(door));
-      if(door===driverDoor && door.open && !carriedCargo)
+      if(door===driverDoor && door.open && (!carriedCargo || carryingBlanket()))
         target(coupe,.51,.85,-.52,.32,'Sit in driver’s seat',sitInCar);
     }
     target(coupe,.71,1.19,-.58,.16,'Look into empty cabin',()=>{
@@ -6125,7 +6167,8 @@ function updateCarHud() {
   const text=inspection==='rest' ? hint+mode+'  ·  Move to stand' : seated
     ? hint + Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake  ·  C door  ·  F get out'
     : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  Coupe by the station';
-  const cargoStatus=inspection==='rest'?(lapBlanket.visible?'  ·  Blanket across your lap':''):
+  const cargoStatus=seated && carryingBlanket()?(cabinBlanketOpen?'  ·  Wrapped in blanket  ·  Unwrap to drive':'  ·  Blanket on passenger seat'):
+    inspection==='rest'?(lapBlanket.visible?'  ·  Blanket across your lap':''):
     carriedCargo?'  ·  Carrying '+carriedCargo.label+'  ·  G set down':
     seated && trunkOpen?'  ·  TRUNK OPEN':'';
   const status=cargoStatus+(audio.muted?'  ·  SOUND OFF (M)':'');

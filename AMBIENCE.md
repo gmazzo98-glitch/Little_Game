@@ -228,6 +228,8 @@ At the rear of the coupe, use **E** or click on the trunk latch. A small amber l
 
 Carry the blanket to the padded bench below the **OFFICE** window. Use **Sit and unfold blanket** to settle with it across your lap. A small amber lamp warms the seat while the low window slit frames the cold road. Sit as long as you like. Press **E**, click, or move to stand and fold the blanket back up. The canvas roll can rest beside you on the bench.
 
+You can also get into the coupe while carrying the blanket. While parked, aim at the folded blanket on the passenger seat and press **E** or click to wrap it around yourself. The fabric crosses your chest and covers your knees. Look down and interact to unwrap it before driving. If you get out, you carry it with you.
+
 The current prompts focus on actions that expose a detail, change the space, move cargo, or help operate the coupe. The lists below also preserve earlier design ideas. Fixtures such as the till keys, vise, and mail slot now read as scenery.
 
 The current build exposes the station and coupe actions through **E** or a click when a fixture is within reach and under the aim point. The HUD names the fixture. Walk away to end a close view or a rest. The headlight, doorway wind, and sound behind the station respond to position or existing controls. The proposals below describe the intended feel of each action. See the roadmap for what the build and verification cover.

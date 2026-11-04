@@ -30,7 +30,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Window rest, usable blanket, and focused prompts | Browser and performance acceptance in progress |
+| Phase 6 — Stillness and interaction polish | Window rest, blanket use in the office and coupe, and focused prompts | Browser and performance acceptance in progress |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -211,6 +211,11 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Blanket in the parked coupe
+
+- The player can enter with the blanket and wrap it around themselves while stopped. The folded item stays on the passenger seat until used. Overlapping folds cover the torso, shoulders, and knees. Unwrap it to drive. Exiting folds it back into the player's hands.
+- Offline Chrome verified entry while carrying the blanket, wrapping and unwrapping, the driving interlock, and exit with the blanket. The office seat and trunk cargo checks passed again. Reviewed the cabin wrap and preset dusk, blue hour, and night reference views. The static night sample at 960 × 540 and DPR 1 on Intel Iris Xe was 16.7 ms median and 16.9 ms p95 over 120 intervals. Continuous dusk-to-night and sustained driving measurements remain open.
 
 ### 2026-11-04 — Window seat, blanket, and purposeful actions
 
