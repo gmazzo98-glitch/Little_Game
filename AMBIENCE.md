@@ -224,6 +224,8 @@ If a camper becomes the main vehicle in a future version, give its interior a be
 
 ## Things the player can do
 
+The current build exposes the station and coupe actions through **E** or a click when a fixture is within reach and under the aim point. The HUD names the fixture. Walk away to end a close view or a rest. The headlight, doorway wind, and sound behind the station respond to position or existing controls. The proposals below describe the intended feel of each action. See the roadmap for what the build and verification cover.
+
 The office now has a counter, parts bench, and service board. A few interactions could make those places feel different after the player has spent time with them. Each proposal gives the player a local, immediate consequence. The dusk clock keeps its own pace, and the room can be understood on a walk through it.
 
 | Interaction | What the player experiences | Why it belongs here |

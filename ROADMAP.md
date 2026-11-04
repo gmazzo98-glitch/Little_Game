@@ -30,7 +30,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Planned | Earlier phases accepted or explicitly deferred |
+| Phase 6 — Stillness and interaction polish | Station and coupe actions implemented at user request | Browser and performance acceptance in progress |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -211,6 +211,15 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Optional station and coupe interactions
+
+- The 62 ambience proposals now have first implementations. There are 63 registered fixtures across the station and coupe, including the duplicated pump and comparison targets. Headlight inspection, wind at the threshold, and attenuation behind the office use existing controls or position. The player can use E or click when the HUD names a nearby fixture. The timeline proceeds independently.
+- The office includes movable hardware, the parts drawer, the service board and sill views, a separate counter light switch, and mechanical sounds. Outside, pump and water hardware move and the office door has limited travel. The coupe adds ignition, vent, mirror, visor, seat position, glovebox, ashtray, passenger lamp, a softer door close, and a parking brake alongside the existing lights and driving controls.
+- The smallest mechanisms use short rotations or translations and procedural sound. Close views use a temporary camera offset. The pump reset briefly shifts the face rather than simulating individual number drums. The two mirrors use small render targets updated at a reduced rate. All fixtures, textures and new sounds are made inline.
+- Syntax and source resource scans passed. A Node harness exercised all 63 fixture instances, checked that the target resolver rejects a switch behind the front wall, and verified the clear central aisle and the lamp, ignition, vent, and brake state changes.
+- Chrome opened the merged `index.html` directly with networking set offline, acquired pointer lock, and requested only the file itself. The browser run found no page or shader errors. A temporary instrumented copy tested aiming and E on representative station fixtures, walking through the doorway, jump input, resize, the mirror, vent, parking brake, and exiting the coupe. Matching approach, canopy, office, and highway views were captured at forced dusk, blue hour, and night.
+- Static night samples on Intel Iris Xe / ANGLE Direct3D11 at 960 × 540, DPR 1, used 60 frame intervals per view. Median was 16.6 to 16.7 ms and p95 was 16.8 ms across the four sampled views. Full G3 remains open for the uninterrupted five-minute run, longer driving and mirror timing, and an audible review of the new effects.
 
 ### 2026-11-04 — Sunset Service office and exterior neon
 

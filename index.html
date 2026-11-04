@@ -3981,7 +3981,7 @@ var MOTH_N=2,mothPos=new Float32Array(MOTH_N*3),mothSeed=[];for(var mi=0;mi<MOTH
 var mothGeo=new It;mothGeo.setAttribute("position",new Et(mothPos,3));var moths=new or(mothGeo,new Qi({color:0xcfc2a4,size:.07,sizeAttenuation:!0,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.add(moths);
 // Procedural WebAudio ambience: wind bed, localized neon hum, electrical ticks, rare night insects.
 var audio={ctx:null,master:null,windGain:null,windFilter:null,humGain:null,tickGain:null,insectGain:null,muted:!1,nextChirp:0,stepSide:0};
-function initAudio(){if(audio.ctx)return;var A=window.AudioContext||window.webkitAudioContext;if(!A)return;var c;try{c=new A()}catch(e){return}audio.ctx=c;var m=c.createGain();m.gain.value=.9;m.connect(c.destination);audio.master=m;var gp=c.createPanner();gp.panningModel="equalpower";gp.distanceModel="inverse";gp.refDistance=6;gp.maxDistance=60;gp.rolloffFactor=1.4;if(gp.positionX){gp.positionX.value=$n.position.x;gp.positionY.value=$n.position.y;gp.positionZ.value=$n.position.z}else gp.setPosition($n.position.x,$n.position.y,$n.position.z);gp.connect(m);audio.gasPanner=gp;var len=2*c.sampleRate|0,b=c.createBuffer(1,len,c.sampleRate),d=b.getChannelData(0);for(var i=0;i<len;i++)d[i]=Math.random()*2-1;var w=c.createBufferSource();audio.noiseBuf=b;w.buffer=b;w.loop=!0;var wf=c.createBiquadFilter();wf.type="lowpass";wf.frequency.value=420;wf.Q.value=.4;var wg=c.createGain();wg.gain.value=.032;w.connect(wf);wf.connect(wg);wg.connect(m);w.start();audio.windGain=wg;audio.windFilter=wf;var o1=c.createOscillator();o1.type="sine";o1.frequency.value=60;var o2=c.createOscillator();o2.type="sine";o2.frequency.value=120;var o2g=c.createGain();o2g.gain.value=.35;var hg=c.createGain();hg.gain.value=0;o1.connect(hg);o2.connect(o2g);o2g.connect(hg);hg.connect(audio.gasPanner);o1.start();o2.start();audio.humGain=hg;var tk=c.createBufferSource();tk.buffer=b;tk.loop=!0;var tf=c.createBiquadFilter();tf.type="highpass";tf.frequency.value=2800;var tg=c.createGain();tg.gain.value=0;tk.connect(tf);tf.connect(tg);tg.connect(audio.gasPanner);tk.start();audio.tickGain=tg;var ig=c.createGain();ig.gain.value=.5;ig.connect(m);audio.insectGain=ig}
+function initAudio(){if(audio.ctx)return;var A=window.AudioContext||window.webkitAudioContext;if(!A)return;var c;try{c=new A()}catch(e){return}audio.ctx=c;var m=c.createGain();m.gain.value=.9;m.connect(c.destination);audio.master=m;var gp=c.createPanner();gp.panningModel="equalpower";gp.distanceModel="inverse";gp.refDistance=6;gp.maxDistance=60;gp.rolloffFactor=1.4;if(gp.positionX){gp.positionX.value=$n.position.x;gp.positionY.value=$n.position.y;gp.positionZ.value=$n.position.z}else gp.setPosition($n.position.x,$n.position.y,$n.position.z);gp.connect(m);audio.gasPanner=gp;var len=2*c.sampleRate|0,b=c.createBuffer(1,len,c.sampleRate),d=b.getChannelData(0);for(var i=0;i<len;i++)d[i]=Math.random()*2-1;var w=c.createBufferSource();audio.noiseBuf=b;w.buffer=b;w.loop=!0;var wf=c.createBiquadFilter();wf.type="lowpass";wf.frequency.value=420;wf.Q.value=.4;var wg=c.createGain();wg.gain.value=.032;w.connect(wf);wf.connect(wg);if(c.createStereoPanner){audio.windPan=c.createStereoPanner();wg.connect(audio.windPan);audio.windPan.connect(m)}else wg.connect(m);w.start();audio.windGain=wg;audio.windFilter=wf;var o1=c.createOscillator();o1.type="sine";o1.frequency.value=60;var o2=c.createOscillator();o2.type="sine";o2.frequency.value=120;var o2g=c.createGain();o2g.gain.value=.35;var hg=c.createGain();hg.gain.value=0;o1.connect(hg);o2.connect(o2g);o2g.connect(hg);hg.connect(audio.gasPanner);o1.start();o2.start();audio.humGain=hg;var tk=c.createBufferSource();tk.buffer=b;tk.loop=!0;var tf=c.createBiquadFilter();tf.type="highpass";tf.frequency.value=2800;var tg=c.createGain();tg.gain.value=0;tk.connect(tf);tf.connect(tg);tg.connect(audio.gasPanner);tk.start();audio.tickGain=tg;var ig=c.createGain();ig.gain.value=.5;ig.connect(m);audio.insectGain=ig}
 function toggleMute(){if(!audio.ctx)return;audio.muted=!audio.muted;audio.master.gain.setTargetAtTime(audio.muted?0:.9,audio.ctx.currentTime,.06)}
 function gasTick(){if(!audio.tickGain||audio.ctx.state!=="running")return;var dx=Nn.position.x-$n.position.x,dy=Nn.position.y-$n.position.y,dz=Nn.position.z-$n.position.z;if(dx*dx+dy*dy+dz*dz>28*28)return;var t=audio.ctx.currentTime,g=audio.tickGain.gain;g.cancelScheduledValues(t);g.setValueAtTime(.09,t);g.exponentialRampToValueAtTime(1e-4,t+.05);g.setValueAtTime(.06,t+.11);g.exponentialRampToValueAtTime(1e-4,t+.18)}
 function insectChirp(at){if(!audio.ctx||audio.ctx.state!=="running")return;var c=audio.ctx,o=c.createOscillator();o.type="triangle";o.frequency.value=3900+Math.random()*700;var g=c.createGain();g.gain.value=0;o.connect(g);g.connect(audio.insectGain);var t=at;for(var p=0;p<3;p++){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.012,t+.012);g.gain.linearRampToValueAtTime(0,t+.05);t+=.09}o.start(at);o.stop(t+.1)}
@@ -4362,8 +4362,6 @@ function buildVintagePumpParts(variant) {
               .17 + Math.sin(t * 2.4 + variant * 1.7) * .06 + t * .12]);
   }
   add('rubber', { ...tubeGeom(hose, .026, 6), matrix: matIdentity() });
-  // nozzle body
-  add('metal', { ...tubeGeom([[.44, .72, .15], [.40, .64, .12], [.37, .60, .06]], .024, 6), matrix: matIdentity() });
   // grime skirt
   add('grime', boxPart(0, .22, 0, .77, .09, .63));
   return parts;
@@ -4380,9 +4378,10 @@ for (const role in pumpParts0) {
   addRoleMesh(Nt, 'pump_' + role, pumpParts1[role].map(p => ({ ...p, matrix: matMul(pumpMats1, p.matrix || matIdentity()) })));
 }
 
+const pumpMeterFaces=[];
 for (const matrix of [pumpMats0, pumpMats1]) {
-  paintedSurface(.425,.265,pumpMeterPaint,matMul(matrix,matTranslate(0,.99,.341)),
-    {width:384,height:224,emissive:0x403a29,intensity:.16,name:'Vintage gallon meter'});
+  pumpMeterFaces.push(paintedSurface(.425,.265,pumpMeterPaint,matMul(matrix,matTranslate(0,.99,.341)),
+    {width:384,height:224,emissive:0x403a29,intensity:.16,name:'Vintage gallon meter'}));
   paintedSurface(.295,.205,(ctx,w,h)=>{
     ctx.fillStyle='#c5bea6';ctx.fillRect(0,0,w,h);ctx.fillStyle='#42443a';ctx.textAlign='center';
     ctx.font='bold 58px Courier New,monospace';ctx.fillText('0.00',w/2,h*.56);
@@ -4395,6 +4394,8 @@ Dt(2.5, -9.95, 3.5, -9.05);
 
 
 // ---- SUNSET SERVICE: a quiet, weathered mid-century roadside station. ----------
+const officeDoor=new xi();
+const doorCollider={minX:-.70,minZ:-13.95,maxX:-.58,maxZ:-12.78,minY:0,maxY:2.3};
 (function buildStationShell() {
   const parts = {}, add = (role,p) => (parts[role] || (parts[role]=[])).push(p);
   const H=3.6, f=-12.7, back=-20.7;
@@ -4423,18 +4424,22 @@ Dt(2.5, -9.95, 3.5, -9.05);
       ctx.textAlign='center';ctx.fillStyle='rgba(205,193,152,.43)';ctx.font='bold 45px Georgia,serif';
       ctx.fillText(wx<0?'OFFICE':'OIL & PARTS',w/2,h*.66);
       agePaint(ctx,w,h,wx<0?1960:1963,.8);
-    },matTranslate(wx,1.65,-12.61),{width:640,height:384,emissive:0x302f20,intensity:.28,name:'Dusty recessed station window'});
+      const top=wx>0?.235:.70;
+      ctx.clearRect(w*.25,h*top,w*.5,h*.085);
+    },matTranslate(wx,1.65,-12.61),{width:640,height:384,emissive:0x302f20,intensity:.28,transparent:true,name:'Dusty recessed station window'});
   }
   // Deep doorway; the old door is fixed open against its jamb, not a phantom barrier.
   add('wallCream',boxPart(0,2.975,f,1.44,1.25,.3));
   for(const x of [-.70,.70]) add('trimBand',boxPart(x,1.17,-12.51,.10,2.34,.35));
   add('trimBand',boxPart(0,2.36,-12.51,1.5,.10,.35));
   add('wornMetal',boxPart(0,.045,-12.35,1.5,.09,.65));
-  const door=matMul(matTranslate(-.64,0,-12.78),matRotY(Math.PI/2));
-  add('fadedTeal',{...boxPart(.57,1.12,0,1.14,2.24,.055),matrix:door});
-  add('darkGlass',{...boxPart(.57,1.40,.035,.88,1.24,.018),matrix:door});
-  add('metal',{...boxPart(1.03,.92,.075,.055,.22,.045),matrix:door});
-  Dt(-.70,-13.95,-.58,-12.78,0,2.3);
+  officeDoor.position.set(-.64,0,-12.78);
+  officeDoor.rotation.y=Math.PI/2;
+  Nt.add(officeDoor);
+  addRoleMesh(officeDoor,'fadedTeal',[boxPart(.57,1.12,0,1.14,2.24,.055)]);
+  addRoleMesh(officeDoor,'darkGlass',[boxPart(.57,1.40,.035,.88,1.24,.018)]);
+  addRoleMesh(officeDoor,'metal',[boxPart(1.03,.92,.075,.055,.22,.045)]);
+  Mc.push(doorCollider);
   for(const side of [-1,1]) {
     add('wallCream',boxPart(side*6,1.8,-16.7,.3,3.6,8));
     add('tileTeal',boxPart(side*6,.25,-16.7,.36,.40,8));
@@ -4499,8 +4504,10 @@ function buildOffice(add) {
   add('fadedRed',boxPart(-3.66,.44,-19.89,3.28,.79,.78));
   add('interiorShelf',boxPart(-3.66,.89,-19.89,3.43,.12,.86));
   for (const x of [-4.69,-3.66,-2.63]) {
-    add('interiorCounter',boxPart(x,.51,-19.482,.96,.62,.039));
-    add('wornMetal',boxPart(x,.70,-19.44,.24,.034,.056));
+    if(x!==-3.66) {
+      add('interiorCounter',boxPart(x,.51,-19.482,.96,.62,.039));
+      add('wornMetal',boxPart(x,.70,-19.44,.24,.034,.056));
+    }
   }
   for (const y of [1.39,1.98]) {
     add('interiorShelf',boxPart(-3.68,y,-20.14,3.2,.065,.46));
@@ -4514,11 +4521,14 @@ function buildOffice(add) {
 
   // Sills and blinds give the opaque exterior panes a finished room side.
   for (const x of [-3.6,3.9]) {
-    add('darkGlass',boxPart(x,1.65,-12.68,2.61,1.40,.085));
+    const top=1.65+1.36*(.5-(x>0?.235:.70)), bottom=top-.116;
+    add('darkGlass',boxPart(x,(.95+bottom)/2,-12.68,2.61,bottom-.95,.085));
+    add('darkGlass',boxPart(x,(2.35+top)/2,-12.68,2.61,2.35-top,.085));
+    for(const dx of [-.98,.98])add('darkGlass',boxPart(x+dx,(top+bottom)/2,-12.68,.65,top-bottom,.085));
     add('interiorShelf',boxPart(x,.915,-12.86,2.77,.075,.31));
     for (const y of [1.00,2.32]) add('fadedTeal',boxPart(x,y,-12.78,2.63,.055,.11));
     for (const dx of [-1.29,0,1.29]) add('fadedTeal',boxPart(x+dx,1.65,-12.78,.047,1.33,.10));
-    for (const y of [2.02,2.11,2.20]) add('wornMetal',boxPart(x,y,-12.84,2.51,.020,.045));
+    if(x<0)for (const y of [2.02,2.11,2.20]) add('wornMetal',boxPart(x,y,-12.84,2.51,.020,.045));
   }
   add('trimBand',boxPart(2.72,3.26,-15.22,.08,.40,.08));
   add('interiorCeil',boxPart(2.72,3.045,-15.22,1.29,.14,.33));
@@ -5074,9 +5084,9 @@ for (const side of [-1,1]) {
     boxPart(-side*.111,.89,-.79,.038,.040,.18),
     boxPart(side*.056,.975,-.865,.023,.019,1.71)]);
   carMesh(hinge,'wood',[boxPart(-side*.11,.78,-.83,.10,.064,.42)]);
-  carMesh(hinge,'glass',[carQuad([0,.99,-1.67],[0,.99,-.015],
+  const glass=carMesh(hinge,'glass',[carQuad([0,.99,-1.67],[0,.99,-.015],
     [-side*.137,1.54,-.45],[-side*.137,1.54,-1.60])]);
-  doors.push({side,hinge,open:false});
+  doors.push({side,hinge,glass,open:false});
 }
 const driverDoor=doors.find(door=>door.side===1);
 const domeFixture=carMesh(coupe,'bulb',[boxPart(0,1.513,-.54,.23,.022,.12)]);
@@ -5131,8 +5141,8 @@ function toggleCarSwitch(control) {
     domeFixture.material.emissive.setHex(0xffc183);
     domeFixture.material.emissiveIntensity=on?1.7:0;
   } else if(control.kind==='panel') {
-    gaugeMaterial.emissiveIntensity=on?.85:.04;
-    for(const item of controls)item.labelMaterial.emissiveIntensity=on?.50:.04;
+    gaugeMaterial.emissiveIntensity=on?.85*panelDim:.04;
+    for(const item of controls)item.labelMaterial.emissiveIntensity=on?.50*panelDim:.04;
   } else {
     for(const light of roadLights)light.intensity=on?420:0;
     for(const lens of headlights) {
@@ -5415,7 +5425,7 @@ function updateEngineAudio() {
   engine.exhaust.playbackRate.setTargetAtTime(rate,now,.22);
   engine.tone.frequency.setTargetAtTime(255-85*road,now,.22);
   // Cabin gain tapers with speed so sustained throttle stays comfortable.
-  engine.level.gain.setTargetAtTime(seated?.44+.05*load-.15*road:0,now,.14);
+  engine.level.gain.setTargetAtTime(seated && ignitionOn?.44+.05*load-.15*road:0,now,.14);
 }
 const upAxis=new P(0,1,0);
 const driverEye=new P(.49,1.322,-.36);
@@ -5427,6 +5437,7 @@ function updateDriverCamera() {
 function sitInCar() {
   if(seated || !driverDoor.open) return;
   seated=true;carSpeed=0;
+  inspection=null;
   startEngineAudio();
   updateDriverCamera();
   aimPoint.set(.49,1.28,3);
@@ -5446,7 +5457,7 @@ function leaveCar() {
     const clear=vc(aimPoint.x,y,aimPoint.z);
     if(Math.hypot(clear[0]-aimPoint.x,clear[1]-aimPoint.z)>.05) continue;
     door.open=true;
-    seated=false;carSpeed=0;br=0;oo=true;
+    seated=false;carSpeed=0;br=0;oo=true;inspection=null;
     Nn.position.set(aimPoint.x,y,aimPoint.z);
     Nn.lookAt(coupe.localToWorld(aimPoint.set(0,1.0,-.3)));
     Nn.fov=65;Nn.updateProjectionMatrix();
@@ -5474,9 +5485,9 @@ function carClearAt(x,z,yaw) {
 }
 function driveCar(dt) {
   const ready=doors.every(door=>!door.open && Math.abs(door.hinge.rotation.y)<.08);
-  const throttle=ready?(Number(!!fn.KeyW)-Number(!!fn.KeyS)):0;
+  const throttle=ready && ignitionOn && !parkingBrake?(Number(!!fn.KeyW)-Number(!!fn.KeyS)):0;
   if(engine)engine.load=!fn.Space && carSpeed*throttle>=0?Math.abs(throttle):0;
-  if(fn.Space || !ready) carSpeed*=Math.exp(-8*dt);
+  if(fn.Space || !ready || parkingBrake) carSpeed*=Math.exp(-8*dt);
   else if(throttle) {
     const braking=carSpeed*throttle<0;
     carSpeed+=throttle*(braking?15:5.1)*dt;
@@ -5510,9 +5521,329 @@ function keepWalkerOutsideCar(previousX,previousZ) {
   }
 }
 
+// Optional interactions share the coupe's aiming and input path.
+const stationActions=[], cabinActions=[];
+const interactionMaterials={
+  steel:new Lm({color:0x77736b}), brass:new Lm({color:0x9c8057}),
+  wood:new Lm({color:0x7c5d45}), rubber:new Lm({color:0x393632}),
+  enamel:new Lm({color:0x8b9c8e}), paper:new Lm({color:0xb9a787})
+};
+let officeLampOn=true, ventOpen=false, parkingBrake=false, ignitionOn=true, panelDim=1;
+let inspection=null, inspectionTime=0;
+const inspectionOffset=new P(), inspectionForward=new P();
+const interactionPlate=(parent,position,size,material)=>{
+  const piece=new dt(new Cn(...size),interactionMaterials[material]);
+  piece.position.set(...position);
+  parent.add(piece);
+  return piece;
+};
+const interactionSounds={
+  metal:[490,.09,.035], wood:[135,.13,.065], bell:[1120,.62,.038],
+  paper:[930,.11,.018], rubber:[85,.09,.034], glass:[1830,.15,.022],
+  latch:[270,.07,.055], grit:[240,.24,.028]
+};
+function playInteractionSound(name) {
+  const ctx=audio.ctx;
+  if(!ctx || ctx.state!=='running')return;
+  const [pitch,duration,level]=interactionSounds[name];
+  const at=ctx.currentTime, gain=ctx.createGain(), tone=ctx.createOscillator();
+  tone.type=name==='bell'?'sine':'triangle';
+  tone.frequency.setValueAtTime(pitch,at);
+  tone.frequency.exponentialRampToValueAtTime(pitch*(name==='bell'?.99:.65),at+duration);
+  gain.gain.setValueAtTime(level,at);
+  gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
+  tone.connect(gain);gain.connect(audio.master);
+  tone.start(at);tone.stop(at+duration+.01);
+  if(name==='bell')return;
+  const noise=ctx.createBufferSource(), filter=ctx.createBiquadFilter();
+  noise.buffer=audio.noiseBuf;filter.type='bandpass';filter.frequency.value=pitch*3.5;filter.Q.value=.6;
+  noise.connect(filter);filter.connect(gain);
+  noise.start(at,Math.random(),duration);noise.stop(at+duration);
+}
+function installGesture(parent,label,position,options={}) {
+  const {
+    size, material='steel', axis='x', motion=.14, travel=false, toggle=false,
+    sound='metal', radius=.12, duration=.55, effect, onMotion, view, aim
+  }=options;
+  const hinge=new xi();
+  hinge.position.set(...position);
+  parent.add(hinge);
+  if(size)interactionPlate(hinge,[0,0,0],size,material);
+  const item={parent,hinge,label,position:aim||position,radius,amount:0,elapsed:0,engaged:false,origin:position['xyz'.indexOf(axis)],
+    axis,motion,travel,toggle,duration,onMotion,action(){
+      if(view) {
+        inspection=inspection===view?null:view;
+        inspectionTime=inspection?duration:0;
+      }
+      if(toggle)item.engaged=!item.engaged;
+      item.elapsed=duration;
+      if(effect)effect(item);
+      if(sound)playInteractionSound(sound);
+    }};
+  (parent===coupe?cabinActions:stationActions).push(item);
+  return hinge;
+}
+function animateGestures(dt) {
+  for(const items of [stationActions,cabinActions])for(const item of items) {
+    if(!item.toggle && item.elapsed<=0 && Math.abs(item.amount)<.001)continue;
+    item.elapsed=Math.max(0,item.elapsed-dt);
+    const goal=item.toggle?Number(item.engaged):Math.sin(Math.PI*item.elapsed/item.duration);
+    item.amount+=(goal-item.amount)*Math.min(1,dt*16);
+    if(item.travel)item.hinge.position[item.axis]=item.origin+item.amount*item.motion;
+    else item.hinge.rotation[item.axis]=item.amount*item.motion;
+    if(item.onMotion)item.onMotion(item.amount);
+  }
+  officeDoor.rotation.y=Math.PI/2+doorGesture.amount*.065;
+  doorCollider.minX=-.70-doorGesture.amount*.075;
+  if(inspection) {
+    inspectionTime-=dt;
+    if(inspectionTime<=0 || fn.KeyW || fn.KeyA || fn.KeyS || fn.KeyD || fn.Space)inspection=null;
+  }
+}
+
+function detailText(parent,position,size,lines,colors=['#baa98a','#4d3f35']) {
+  const canvas=document.createElement('canvas');canvas.width=384;canvas.height=192;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle=colors[0];ctx.fillRect(0,0,384,192);
+  ctx.fillStyle=colors[1];ctx.font='bold 26px Georgia,serif';
+  for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],15,46+i*42,354);
+  agePaint(ctx,384,192,1963,.7);
+  const texture=new qt(canvas);texture.colorSpace='srgb';
+  const card=new dt(new ba(...size),new ji({map:texture,side:2,roughness:1,emissive:new Me(0x20170e),emissiveIntensity:.18}));
+  card.position.set(...position);parent.add(card);return card;
+}
+
+function buildStationGestures() {
+  const add=(...args)=>installGesture(Nt,...args);
+  // The three storage fixtures keep their contents attached to the moving piece.
+  const drawer=add('Parts drawer',[-3.66,.59,-19.427],
+    {size:[.94,.49,.035],material:'wood',axis:'z',travel:true,motion:.19,toggle:true,sound:'wood',radius:.21});
+  interactionPlate(drawer,[0,.11,.025],[.23,.032,.041],'steel');
+  interactionPlate(drawer,[0,-.046,-.085],[.8,.023,.20],'wood');
+  for(const x of [-.23,0,.23])interactionPlate(drawer,[x,-.032,-.076],[.14,.003,.10],'paper');
+  const stock=add('Turn stock card',[-2.63,.52,-19.42],{motion:-2.65,sound:'paper',toggle:true});
+  detailText(stock,[0,0,.006],[.26,.11],['B-12  BELTS']);
+  detailText(stock,[0,0,-.006],[.26,.11],['B-12  FAN BELTS']).rotation.x=Math.PI;
+  const lamp=add('Counter lamp switch',[.96,1.41,-13.02],
+    {size:[.065,.12,.04],material:'brass',toggle:true,effect:item=>officeLampOn=!item.engaged});
+  interactionPlate(lamp,[0,0,-.025],[.11,.16,.014],'enamel');
+  const blinds=add('Tilt blinds',[3.9,2.05,-12.91],{motion:-.81,toggle:true,radius:.23,sound:'latch'});
+  for(const y of [-.07,0,.07])interactionPlate(blinds,[0,y,0],[1.17,.039,.022],'enamel');
+  add('Read service board',[1.65,1.77,-20.36],{radius:.36,view:'read',duration:7,sound:null});
+  add('Rest by the sill',[-3.59,1.06,-13.03],{radius:.23,view:'rest',duration:30,sound:null});
+  const bell=add('Ring counter bell',[2.60,1.16,-15.23],
+    {size:[.12,.074,.12],material:'brass',axis:'y',travel:true,motion:-.018,sound:'bell',duration:.23});
+  interactionPlate(bell,[0,.043,0],[.035,.024,.035],'steel');
+  add('Press till key',[4.00,1.26,-15.48],
+    {size:[.054,.024,.048],material:'enamel',axis:'y',travel:true,motion:-.011,sound:'latch',duration:.25});
+  add('Rock change tray',[2.15,1.124,-15.39],{size:[.31,.012,.19],motion:.34,sound:'metal',radius:.14});
+  const stamp=add('Turn date stamp wheel',[3.42,1.19,-15.51],
+    {size:[.09,.055,.07],material:'rubber',motion:.68,toggle:true,sound:'latch'});
+  detailText(stamp,[0,0,.039],[.078,.038],['1966']);
+  const ledger=add('Open counter ledger',[1.61,1.136,-15.65],
+    {size:[.31,.026,.27],material:'wood',motion:-1.82,toggle:true,sound:'paper'});
+  detailText(Nt,[1.61,1.118,-15.65],[.29,.25],['CASH     CREDIT','0.85       H.','1.24       V.']).rotation.x=-Math.PI/2;
+  add('Lift counter gate',[4.91,1.04,-15.54],{size:[.36,.08,.20],material:'wood',axis:'z',motion:1.3,toggle:true,sound:'wood'});
+  const drum=add('Turn price drum',[3.04,1.18,-15.54],{size:[.17,.11,.075],material:'steel',motion:.79,toggle:true,sound:'latch'});
+  detailText(drum,[0,0,.040],[.15,.08],['29  9/10']);
+  add('Try window latch',[4.68,1.19,-12.90],
+    {size:[.15,.034,.038],axis:'x',travel:true,motion:.045,sound:'latch'});
+  add('Turn hours clip',[-2.72,1.37,-12.89],{size:[.075,.065,.024],axis:'z',motion:2.9,toggle:true,sound:'metal'});
+  const stool=add('Turn counter stool',[3.7,.62,-16.58],
+    {size:[.31,.078,.32],material:'rubber',axis:'y',motion:1.52,sound:'grit',radius:.18});
+  interactionPlate(Nt,[3.7,.32,-16.58],[.06,.59,.06],'steel');
+  interactionPlate(stool,[.025,.041,0],[.028,.007,.25],'enamel');
+  const mileage=add('Tip mileage strip',[2.84,1.14,-15.31],{motion:-.85,toggle:true,sound:'paper'});
+  detailText(mileage,[0,.03,0],[.30,.13],['WEST   18 MI','CINDER COURT']).rotation.x=-Math.PI/2;
+
+  const vise=add('Crank bench vise',[-4.91,1.03,-19.61],
+    {size:[.14,.035,.04],axis:'z',motion:2.1,sound:'metal'});
+  interactionPlate(vise,[0,0,-.06],[.055,.051,.13],'steel');
+  interactionPlate(Nt,[-4.91,.96,-19.69],[.19,.08,.20],'steel');
+  add('Raise bench stop',[-4.13,.95,-19.54],
+    {size:[.10,.018,.092],motion:1.47,toggle:true,sound:'latch'});
+  const carousel=add('Turn parts carousel',[-2.56,1.10,-19.75],
+    {size:[.30,.11,.28],material:'wood',axis:'y',motion:1.57,toggle:true,sound:'wood',radius:.15});
+  for(const x of [-.10,0,.10])interactionPlate(carousel,[x,.067,0],[.015,.08,.26],'steel');
+  add('Fold shelf bracket',[-5.25,1.57,-20.13],
+    {size:[.038,.18,.11],motion:1.25,toggle:true,sound:'metal'});
+  const mirror=add('Tilt inspection mirror',[-3.34,1.06,-19.78],{motion:-.68,toggle:true,view:'mirror',duration:4,sound:'latch'});
+  interactionPlate(mirror,[0,0,0],[.11,.086,.014],'steel');
+  add('Slide shop ruler',[-3.52,.947,-19.48],{size:[.38,.012,.032],material:'brass',axis:'x',travel:true,motion:.17,toggle:true});
+  add('Press bench treadle',[-3.13,.18,-19.43],{size:[.25,.033,.17],motion:-.31,sound:'wood',radius:.19});
+  const funnel=add('Swing oil funnel',[-5.24,1.20,-19.72],{axis:'z',motion:.9,sound:'metal'});
+  interactionPlate(funnel,[0,-.052,0],[.10,.09,.075],'steel');
+  interactionPlate(funnel,[0,-.13,0],[.023,.10,.022],'steel');
+  const makersPlate=detailText(Nt,[-2.07,.76,-19.459],[.24,.10],['SUNSET BENCH','NO. 04']);
+  const dustCover=interactionPlate(Nt,[-2.07,.76,-19.455],[.24,.10,.004],'paper');
+  add('Brush maker’s plate',[-2.07,.76,-19.445],{sound:'grit',effect:()=>{dustCover.visible=false;makersPlate.visible=true;}});
+  const mat=add('Lift rubber mat',[-3.10,.956,-19.98],
+    {size:[.36,.018,.31],material:'rubber',motion:-.85,toggle:true,sound:'rubber'});
+  interactionPlate(mat,[.13,.009,.10],[.04,.004,.04],'steel');
+
+  const hose=add('Try the air hose',[-2.34,.80,-12.21],
+    {size:[.045,.065,.09],motion:-.60,sound:'latch',radius:.12});
+  interactionPlate(hose,[0,-.11,-.025],[.025,.22,.023],'rubber');
+  for(const [index,x] of [-3,3].entries()) {
+    const nozzle=add('Lift fuel nozzle',[x+.43,.73,-9.34],
+      {size:[.07,.16,.056],axis:'y',travel:true,motion:.095,sound:'latch'});
+    interactionPlate(nozzle,[.015,-.09,0],[.025,.10,.028],'rubber');
+    const face=pumpMeterFaces[index], initial=face.matrix.clone(), rotation=initial.clone();
+    add('Turn pump reset crank',[x-.38,.99,-9.11],
+      {size:[.095,.035,.04],axis:'z',motion:1.18,sound:'latch',onMotion:amount=>{
+        face.matrix.copy(initial).multiply(rotation.makeRotationZ(.04*amount));
+        face.matrixWorldNeedsUpdate=true;
+      }});
+    add('Rattle pump service flap',[x,.48,-9.137],
+      {size:[.25,.16,.018],material:'enamel',motion:-.075,sound:x<0?'metal':'latch',radius:.13});
+  }
+  add('Press pump island rubber edge',[.47,.27,-7.97],
+    {size:[.44,.073,.035],material:'rubber',axis:'z',travel:true,motion:-.014,sound:'rubber',radius:.23});
+  add('Lift water fitting cover',[-2,.79,-12.215],
+    {size:[.09,.073,.05],motion:-1.5,toggle:true,sound:'metal',radius:.095});
+  add('Turn water valve',[-2,.56,-12.39],{size:[.105,.034,.054],axis:'z',motion:1.6,sound:'grit'});
+  const oil=add('Lift oil grade frame',[-5.04,1.15,-11.64],
+    {size:[.28,.10,.027],motion:-1.45,toggle:true,sound:'latch'});
+  detailText(oil,[0,0,-.016],[.25,.08],['SAE 30']).rotation.x=Math.PI;
+  const tag=add('Turn GAS maintenance tag',[11.15,1.31,-10.21],{axis:'y',motion:2.4,toggle:true,sound:'metal'});
+  detailText(tag,[0,0,0],[.17,.10],['GAS','S-2']);
+  add('Press service button',[7.5,1.11,-5.416],
+    {size:[.058,.068,.045],material:'enamel',axis:'z',travel:true,motion:-.022,sound:'latch'});
+  add('Inspect driveway seam',[.82,.08,-5.22],{radius:.28,view:'seam',duration:5,sound:'grit'});
+
+  add('Ease the office door',[-.58,1.04,-13.88],{radius:.15,view:'door',duration:1.1,sound:'wood'});
+  add('Flex door sweep',[-.56,.14,-13.39],
+    {size:[.04,.10,.29],material:'rubber',axis:'z',motion:.32,sound:'rubber',radius:.18});
+  interactionPlate(Nt,[1.50,1.09,-12.548],[.27,.048,.018],'brass');
+  add('Push mail slot',[1.50,1.09,-12.53],
+    {size:[.26,.052,.038],motion:1.16,sound:'metal'});
+  for(const [x,label] of [[-3.6,'Tap center of glass'],[-4.77,'Tap glass by frame']])
+    add(label,[x,1.63,-12.56],{radius:.22,sound:x===-3.6?'glass':'latch'});
+  add('Listen at wall grille',[6.23,1.65,-18.75],{radius:.26,view:'grille',duration:6,sound:null});
+  add('Nudge rear vent louvre',[-6.25,2.47,-18.69],
+    {size:[.034,.034,.46],motion:.35,sound:'metal',radius:.23});
+  add('Knock on repaired panel',[6.17,1.25,-16.22],
+    {size:[.025,.43,.31],material:'enamel',sound:'wood',radius:.19});
+  add('Knock beside the repair',[6.17,1.25,-15.75],{sound:'metal',radius:.18});
+  add('Shade eyes from neon',[11,3.50,-10.18],{radius:.38,view:'shade',duration:6,sound:null});
+  const bracket=add('Sight through old bracket',[-1.40,1.72,-12.42],
+    {radius:.16,view:'bracket',duration:5,sound:null});
+  for(const x of [-.09,.09])interactionPlate(bracket,[x,0,0],[.022,.18,.13],'steel');
+  interactionPlate(bracket,[0,.09,0],[.19,.022,.13],'steel');
+  const seam=interactionPlate(Nt,[.82,.003,-5.22],[1.9,.004,.035],'rubber');
+  seam.rotation.y=.27;
+}
+buildStationGestures();
+const doorGesture=stationActions.find(item=>item.label==='Ease the office door');
+
+const rearMirrorTarget=new wt(192,72), benchMirrorTarget=new wt(128,72);
+for(const target of [rearMirrorTarget,benchMirrorTarget]){
+  target.texture.repeat.x=-1;target.texture.offset.x=1;
+}
+const mirrorCamera=new gt(47,192/72,.14,3500);
+const mirrorAnchor=new P(), mirrorLook=new P();
+let rearMirror, benchMirror, mirrorYaw=0, mirrorDelay=0;
+function reflectiveFace(hinge,size,position,backward) {
+  const target=backward?rearMirrorTarget:benchMirrorTarget;
+  const material=new wi({map:target.texture,color:0xaab6b5,side:2});
+  const face=new dt(new ba(...size),material);
+  face.position.set(...position);
+  if(backward)face.rotation.y=Math.PI;
+  hinge.add(face);
+  return face;
+}
+benchMirror=reflectiveFace(stationActions.find(item=>item.label==='Tilt inspection mirror').hinge,[.104,.073],[0,0,.009],false);
+function buildCabinGestures() {
+  const add=(...args)=>installGesture(coupe,...args);
+  add('Ignition',[.24,.815,.507],{size:[.041,.05,.04],material:'brass',axis:'z',motion:.9,toggle:true,
+    sound:'latch',effect:item=>{if(Math.abs(carSpeed)<.25)ignitionOn=!ignitionOn;item.engaged=!ignitionOn;}});
+  add('Crack vent window',[.79,1.10,.40],{size:[.055,.044,.036],axis:'y',motion:1.1,toggle:true,sound:'latch',
+    effect:item=>{ventOpen=item.engaged;driverDoor.glass.scale.y=ventOpen?.94:1;driverDoor.glass.position.y=ventOpen?-.015:0;}});
+  const dimmer=add('Dim instrument panel',[-.17,.842,.50],{size:[.064,.052,.034],axis:'z',motion:.75,toggle:true,
+    effect:item=>{
+      panelDim=item.engaged?.32:1;
+      if(controls.find(control=>control.kind==='panel').on) {
+        gaugeMaterial.emissiveIntensity=.85*panelDim;
+        for(const control of controls)control.labelMaterial.emissiveIntensity=.50*panelDim;
+      }
+    }});
+  interactionPlate(dimmer,[0,0,-.023],[.014,.036,.012],'brass');
+  const mount=add('Adjust rearview mirror',[0,1.439,.58],
+    {size:[.24,.084,.025],axis:'y',motion:.23,toggle:true,radius:.15,effect:item=>{mirrorYaw=item.engaged?.24:0;mirrorDelay=0;}});
+  rearMirror=reflectiveFace(mount,[.226,.071],[0,0,-.014],true);
+  const visor=add('Flip sun visor',[.46,1.511,.48],{motion:-1.68,toggle:true,radius:.20,sound:'rubber'});
+  interactionPlate(visor,[0,.013,-.12],[.53,.025,.24],'enamel');
+  add('Move seat one notch',[.68,.68,-.29],{size:[.087,.04,.11],motion:.73,toggle:true,radius:.13,sound:'latch',
+    effect:item=>{if(Math.abs(carSpeed)<.25)driverEye.z=item.engaged?-.27:-.36;else item.engaged=driverEye.z>-.3;}});
+  const glove=add('Open glovebox',[-.57,.83,.51],{motion:-1.22,toggle:true,radius:.19,sound:'latch'});
+  interactionPlate(glove,[0,.076,-.026],[.35,.145,.035],'wood');
+  const crease=detailText(coupe,[-.57,.895,.495],[.28,.106],['—    —'],['#564636','#796956']);
+  crease.rotation.y=Math.PI;
+  add('Check ashtray',[.02,.791,.497],{size:[.13,.058,.12],axis:'z',travel:true,motion:-.067,toggle:true,sound:'metal'});
+  add('Passenger cabin lamp',[-.34,1.45,-.20],{size:[.04,.042,.04],axis:'y',travel:true,motion:.014,sound:'latch',
+    effect:()=>toggleCarSwitch(controls.find(control=>control.kind==='dome'))});
+  add('Ease door shut',[.83,.805,-.67],{size:[.05,.039,.13],axis:'x',motion:.22,sound:null,
+    effect:()=>{if(driverDoor.open && Math.abs(carSpeed)<.25){toggleDoor(driverDoor);playInteractionSound('rubber');}}});
+  add('Parking brake',[.16,.718,-.15],{size:[.042,.047,.24],material:'rubber',motion:-.42,toggle:true,sound:'latch',
+    effect:item=>{parkingBrake=item.engaged;}});
+}
+buildCabinGestures();
+
+function renderInteractionMirror(dt) {
+  if(!seated && inspection!=='mirror')return;
+  mirrorDelay-=dt;
+  if(mirrorDelay>0)return;
+  mirrorDelay=.22;
+  if(seated) {
+    rearMirror.getWorldPosition(mirrorAnchor).sub(Nn.position).normalize();
+    if(Nn.getWorldDirection(mirrorLook).dot(mirrorAnchor)<.58)return;
+    mirrorCamera.position.copy(coupe.localToWorld(mirrorAnchor.set(0,1.29,-1.28)));
+    mirrorCamera.lookAt(coupe.localToWorld(mirrorLook.set(mirrorYaw*14,1.44,-15)));
+  } else {
+    mirrorCamera.position.set(-3.34,1.25,-19.73);
+    mirrorCamera.lookAt(0,1.6,-12);
+  }
+  mirrorCamera.aspect=seated?192/72:128/72;
+  mirrorCamera.updateProjectionMatrix();
+  const target=mn.getRenderTarget(), shadowUpdates=mn.shadowMap.autoUpdate;
+  mn.shadowMap.autoUpdate=false;
+  benchMirror.visible=rearMirror.visible=false;
+  Xm.position.copy(mirrorCamera.position);
+  Nt.userData.stars.position.copy(mirrorCamera.position);
+  try {
+    mn.setRenderTarget(seated?rearMirrorTarget:benchMirrorTarget);
+    mn.render(Nt,mirrorCamera);
+  } finally {
+    mn.setRenderTarget(target);
+    Xm.position.copy(Nn.position);
+    Nt.userData.stars.position.copy(Nn.position);
+    benchMirror.visible=rearMirror.visible=true;
+    mn.shadowMap.autoUpdate=shadowUpdates;
+  }
+}
+
+const inspectionAmounts={read:.28,rest:-.43,seam:-.62,grille:.08,shade:0,bracket:.19,door:.025,mirror:.10,cabin:.16};
+const shadeVisor=document.createElement('div');
+shadeVisor.style.cssText='position:fixed;right:0;top:0;width:38vw;height:26vh;background:linear-gradient(153deg,#221b17dd,transparent 65%);pointer-events:none;display:none';
+document.body.appendChild(shadeVisor);
+function renderWithInspection() {
+  shadeVisor.style.display=inspection==='shade'?'block':'none';
+  if(!inspection){ls.render();return;}
+  inspectionOffset.copy(Nn.position);
+  const amount=inspectionAmounts[inspection];
+  if(amount<0)Nn.position.y+=amount;
+  else Nn.position.addScaledVector(Nn.getWorldDirection(inspectionForward),amount);
+  const [x,z]=vc(Nn.position.x,Nn.position.y,Nn.position.z);
+  Nn.position.x=x;Nn.position.z=z;
+  ls.render();
+  Nn.position.copy(inspectionOffset);
+}
+
 let cursorMode=false, cursorX=innerWidth/2, cursorY=innerHeight/2;
-function findCarTarget() {
-  if(!seated && Nn.position.distanceTo(coupe.position)>6)return null;
+function findInteractionTarget() {
+  const nearCar=seated || Nn.position.distanceTo(coupe.position)<6;
+  const nearStation=Math.abs(Nn.position.x)<16 && Nn.position.z>-25 && Nn.position.z<-2;
+  if(!nearCar && !nearStation)return null;
   Nn.updateMatrixWorld(true);
   coupe.updateMatrixWorld(true);
   if(cursorMode) {
@@ -5520,12 +5851,13 @@ function findCarTarget() {
       .unproject(Nn).sub(Nn.position).normalize();
   } else Nn.getWorldDirection(aimRay);
   let best=null, distance=seated?1.7:3.3;
-  function target(parent,x,y,z,radius,label,action) {
+  function target(parent,x,y,z,radius,label,action,stationFixture=false) {
     parent.localToWorld(aimPoint.set(x,y,z));
     aimPoint.sub(Nn.position);
     const along=aimRay.dot(aimPoint);
     if(along<=0 || along>=distance)return;
     if(aimPoint.lengthSq()-along*along>radius*radius)return;
+    if(stationFixture && officeWallInWay(aimPoint))return;
     best={label,action};distance=along;
   }
   if(seated) {
@@ -5533,7 +5865,8 @@ function findCarTarget() {
       target(item.button,0,0,-.03,.074,item.label+' '+(item.on?'OFF':'ON'),()=>toggleCarSwitch(item));
     for(const door of doors)
       target(door.hinge,-door.side*.14,.89,-.79,.105,door.open?'Close door':'Open door',()=>toggleDoor(door));
-  } else {
+    for(const item of cabinActions)target(item.parent,...item.position,item.radius,item.label,item.action);
+  } else if(nearCar) {
     coupe.worldToLocal(aimPoint.copy(Nn.position));
     const side=Math.sign(aimPoint.x);
     const door=doors.find(d=>d.side===side);
@@ -5542,8 +5875,28 @@ function findCarTarget() {
       if(door===driverDoor && door.open)
         target(coupe,.51,.85,-.52,.32,'Sit in driver’s seat',sitInCar);
     }
+    target(coupe,.71,1.19,-.58,.16,'Look into empty cabin',()=>{
+      inspection='cabin';inspectionTime=5;
+    });
   }
+  if(!seated && nearStation)for(const item of stationActions)
+    target(item.parent,...item.position,item.radius,item.label,item.action,true);
   return best;
+}
+
+// The office fixtures are reachable only through the doorway or from inside.
+function officeWallInWay(delta) {
+  const {x,z}=Nn.position;
+  for(const wall of [-12.7,-20.55]) {
+    const t=(wall-z)/delta.z;
+    if(t>0 && t<.98 && Math.abs(x+delta.x*t)<6 &&
+       (wall<-20 || Math.abs(x+delta.x*t)>.65))return true;
+  }
+  for(const wall of [-5.9,5.9]) {
+    const t=(wall-x)/delta.x, depth=z+delta.z*t;
+    if(t>0 && t<.98 && depth<-12.75 && depth>-20.55)return true;
+  }
+  return false;
 }
 function animateCar(dt) {
   for(const door of doors) {
@@ -5574,6 +5927,7 @@ function setActive(mode, enabled) {
   if(enabled)initAudio();
   cursorMode = mode;
   active = enabled;
+  if(!active)inspection=null;
   syncAudioPlayback();
   drag = null;
   for(const key in fn) delete fn[key];
@@ -5597,7 +5951,7 @@ addEventListener('keydown',event=>{
   fn[key]=true;
   if(key==='Space')event.preventDefault();
   if(event.repeat)return;
-  if(key==='KeyE')findCarTarget()?.action();
+  if(key==='KeyE')findInteractionTarget()?.action();
   if(key==='KeyC' && seated)toggleDoor(driverDoor);
   if(key==='KeyF')leaveCar();
   if(key==='KeyM')toggleMute();
@@ -5620,19 +5974,19 @@ addEventListener('mousemove',event=>{
 mn.domElement.addEventListener('click',event=>{
   if(!active || event.button!==0)return;
   if(cursorMode){cursorX=event.clientX;cursorY=event.clientY;}
-  findCarTarget()?.action();
+  findInteractionTarget()?.action();
 });
 // Pointer lock targets the body, while cursor mode targets the canvas.
 document.body.addEventListener('click',event=>{
   if(active && wr.isLocked && event.target!==mn.domElement && !overlay.contains(event.target))
-    findCarTarget()?.action();
+    findInteractionTarget()?.action();
 });
 function updateCarHud() {
   if(!active)return;
-  hovered=findCarTarget();
+  hovered=findInteractionTarget();
   crosshair.classList.toggle('action',!!hovered);
   mn.domElement.style.cursor=cursorMode && hovered?'pointer':'';
-  const hint=hovered?'CLICK  '+hovered.label+'  ·  ':'';
+  const hint=hovered?'E / CLICK  '+hovered.label+'  ·  ':'';
   const mode=cursorMode?'RMB look':'MOUSE look';
   const text=seated
     ? hint + Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake  ·  C door  ·  F get out'
@@ -5641,7 +5995,7 @@ function updateCarHud() {
   if(text+status!==hudText){hud.textContent=text+status;hudText=text+status;}
 }
 
-var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;let gasDipEnd=-1,gasNextDip=9+Dn(0,22),stepAcc=0;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0),fn.KeyW&&dn.add(Ni),fn.KeyS&&dn.sub(Ni),fn.KeyD&&dn.add(lo),fn.KeyA&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);let i=Math.min(eg.getDelta(),.05);animateCar(i);
+var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;let gasDipEnd=-1,gasNextDip=9+Dn(0,22),stepAcc=0;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0),fn.KeyW&&dn.add(Ni),fn.KeyS&&dn.sub(Ni),fn.KeyD&&dn.add(lo),fn.KeyA&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);let i=Math.min(eg.getDelta(),.05);animateCar(i);animateGestures(i);
 if(active){
   if(seated){driveCar(i);stepAcc=0;}
   else{
@@ -5657,7 +6011,20 @@ if(active){
 }
 updateEngineAudio();
 updateCarHud();
-Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}if(audio.ctx&&audio.ctx.state==="running"){audio.windFilter.frequency.value=280+260*Hm(t*.02,7.7);audio.windGain.gain.value=.026+.014*Hm(t*.013,3.1);let L=audio.ctx.listener;Nn.getWorldDirection(Ni);if(L.positionX){L.positionX.value=Nn.position.x;L.positionY.value=Nn.position.y;L.positionZ.value=Nn.position.z;L.forwardX.value=Ni.x;L.forwardY.value=Ni.y;L.forwardZ.value=Ni.z;L.upX.value=0;L.upY.value=1;L.upZ.value=0}else{L.setPosition(Nn.position.x,Nn.position.y,Nn.position.z);L.setOrientation(Ni.x,Ni.y,Ni.z,0,1,0)}audio.humGain.gain.value=.16*(.3+.7*gfl);if(k>.85&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectChirp(audio.ctx.currentTime+Dn(.1,.9))}}let wfk=1+.008*Math.sin(t*.8);Ec.intensity=10*wfk;Vsp.intensity=1.1*wfk;if(ROLE_MATS.windowGlow){ROLE_MATS.windowGlow.emissiveIntensity=.55*wfk}if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57)}for(let di=0;di<DUST_N;di++){dustPos[di*3]+=dustSeed[di].x*i;dustPos[di*3+1]+=dustSeed[di].y*i;dustPos[di*3+2]+=dustSeed[di].z*i;if(dustPos[di*3+1]<.5)dustPos[di*3+1]=3.9;if(dustPos[di*3]>4.2)dustPos[di*3]=-4.2;if(dustPos[di*3]<-4.2)dustPos[di*3]=4.2;if(dustPos[di*3+2]>-7.4)dustPos[di*3+2]=-11.2;if(dustPos[di*3+2]<-11.2)dustPos[di*3+2]=-7.4}dustGeo.attributes.position.needsUpdate=!0;dust.material.opacity=(.04+.14*sk)*wfk;for(let mi=0;mi<MOTH_N;mi++){let s=mothSeed[mi],a=t*s.s+s.p;let strike=Math.pow(Math.abs(Math.sin(a*.43)),12),r=s.r*(1-.85*strike);mothPos[mi*3]=$n.position.x+Math.cos(a)*r+.12*Math.sin(a*13.1);mothPos[mi*3+1]=$n.position.y+s.h+strike*.15+.08*Math.sin(a*17.3);mothPos[mi*3+2]=$n.position.z+1.1+Math.sin(a)*r*.5+.1*Math.sin(a*11.7)}mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);ls.render()}Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
+Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
+const depth=Math.min(5.84-Math.abs(x),z+20.52,-12.72-z);
+const shelter=xc(Math.max(0,Math.min(1,depth/.9)));
+const cabin=seated?(ventOpen?.26:.68):0;
+const muffled=Math.max(shelter*.72,cabin);
+const now=audio.ctx.currentTime;
+audio.windFilter.frequency.setTargetAtTime(inspection==='grille'?160:(280+260*Hm(t*.02,7.7))*(1-muffled*.69),now,.13);
+audio.windGain.gain.setTargetAtTime((.026+.014*Hm(t*.013,3.1))*(1-muffled),now,.13);
+if(audio.windPan){
+  Nn.getWorldDirection(Ni);
+  const threshold=Math.abs(x)<.68?Math.max(0,1-Math.abs(z+12.76)/.72):0;
+  audio.windPan.pan.setTargetAtTime(threshold*Ni.x*.6+(seated&&ventOpen?.24:0),now,.12);
+}let L=audio.ctx.listener;Nn.getWorldDirection(Ni);if(L.positionX){L.positionX.value=Nn.position.x;L.positionY.value=Nn.position.y;L.positionZ.value=Nn.position.z;L.forwardX.value=Ni.x;L.forwardY.value=Ni.y;L.forwardZ.value=Ni.z;L.upX.value=0;L.upY.value=1;L.upZ.value=0}else{L.setPosition(Nn.position.x,Nn.position.y,Nn.position.z);L.setOrientation(Ni.x,Ni.y,Ni.z,0,1,0)}const blocked=officeWallInWay(inspectionForward.copy($n.position).sub(Nn.position));
+audio.humGain.gain.setTargetAtTime(.16*(.3+.7*gfl)*(blocked?.23:1)*(1-cabin*.70),now,.045);if(k>.85&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectChirp(audio.ctx.currentTime+Dn(.1,.9))}}let wfk=1+.008*Math.sin(t*.8);Ec.intensity=officeLampOn?10*wfk:0;Vsp.intensity=officeLampOn?1.1*wfk:.16;if(ROLE_MATS.windowGlow){ROLE_MATS.windowGlow.emissiveIntensity=officeLampOn?.55*wfk:0}if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57)}for(let di=0;di<DUST_N;di++){dustPos[di*3]+=dustSeed[di].x*i;dustPos[di*3+1]+=dustSeed[di].y*i;dustPos[di*3+2]+=dustSeed[di].z*i;if(dustPos[di*3+1]<.5)dustPos[di*3+1]=3.9;if(dustPos[di*3]>4.2)dustPos[di*3]=-4.2;if(dustPos[di*3]<-4.2)dustPos[di*3]=4.2;if(dustPos[di*3+2]>-7.4)dustPos[di*3+2]=-11.2;if(dustPos[di*3+2]<-11.2)dustPos[di*3+2]=-7.4}dustGeo.attributes.position.needsUpdate=!0;dust.material.opacity=(.04+.14*sk)*wfk;for(let mi=0;mi<MOTH_N;mi++){let s=mothSeed[mi],a=t*s.s+s.p;let strike=Math.pow(Math.abs(Math.sin(a*.43)),12),r=s.r*(1-.85*strike);mothPos[mi*3]=$n.position.x+Math.cos(a)*r+.12*Math.sin(a*13.1);mothPos[mi*3+1]=$n.position.y+s.h+strike*.15+.08*Math.sin(a*17.3);mothPos[mi*3+2]=$n.position.z+1.1+Math.sin(a)*r*.5+.1*Math.sin(a*11.7)}mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);renderInteractionMirror(i);renderWithInspection()}Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
 /*! Bundled license information:
 
 three/build/three.module.js:
