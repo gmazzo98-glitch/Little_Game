@@ -3931,11 +3931,12 @@ function os(x, z) {
   const dunes = .45 + 2.3 * Hm(x * .008, z * .008) + .28 * ao(x * .023 + 17, z * .023 + 43);
   return dunes * blend;
 }
-var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(s.carOnly||e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.55,.055,-.83).normalize()},uNight:{value:0}},vertexShader:`
+var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(s.carOnly||e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.985,.062,-.15).normalize()},moonDir:{value:new P(52,26,20).normalize()},uNight:{value:0}},vertexShader:`
       varying vec3 vDir;
       void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,fragmentShader:`
       varying vec3 vDir;
       uniform vec3 sunDir;
+      uniform vec3 moonDir;
       uniform float uNight;
 
       // Periodic angular ridges close seamlessly around the entire sky.
@@ -3958,8 +3959,12 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
         vec3 col = mix(horizon, mid, smoothstep(.00, .28, h));
         col = mix(col, zenith, smoothstep(.22, .75, h));
         float s = max(dot(direction, sunDir), 0.0);
-        col += vec3(1.0, .60, .28) * pow(s, 500.0) * 1.6 * (1.0 - uNight);
-        col += vec3(1.0, .45, .18) * pow(s, 10.0) * .38 * (1.0 - uNight);
+        float sunDisc = smoothstep(.99920, .99962, s);
+        col += (vec3(1.0, .78, .46) * sunDisc * 1.45 + vec3(1.0, .60, .28) * pow(s, 500.0) * 1.6 + vec3(1.0, .45, .18) * pow(s, 10.0) * .38) * (1.0 - uNight);
+        float m = max(dot(direction, moonDir), 0.0);
+        float moonVis = smoothstep(.08, .82, uNight);
+        float moonDisc = smoothstep(.99938, .99964, m);
+        col += (vec3(.84, .90, .98) * moonDisc * 1.55 + vec3(.22, .28, .42) * pow(m, 95.0) * .28 + vec3(.09, .13, .22) * pow(m, 12.0) * .08) * moonVis;
         col = mix(haze, col, smoothstep(-.025, .16, h));
 
         float a = atan(direction.z, direction.x);
@@ -3975,7 +3980,7 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
         // A shallow haze band joins the distant silhouettes to the ground fog.
         col = mix(col, haze, 1.0 - smoothstep(-.018, .009, direction.y));
         gl_FragColor = vec4(col, 1.0);
-      }`}));Xm.renderOrder=-1000;Xm.material.depthTest=false;Nt.add(Xm);{let e=new Float32Array(7800);for(let s=0;s<2600;s++){let r=pn()*Math.PI*2,o=Math.acos(Dn(.105,1)),a=850;e[s*3]=a*Math.sin(o)*Math.cos(r),e[s*3+1]=a*Math.cos(o),e[s*3+2]=a*Math.sin(o)*Math.sin(r)}let t=new It;t.setAttribute("position",new Et(e,3));let n=new or(t,new Qi({color:13621503,size:2,sizeAttenuation:!1,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.userData.stars=n,Nt.add(n)}var hhem=new hr(4864875,3811866,.45);Nt.userData.hemi=hhem,Nt.add(hhem);var Qt=new dr(9413631,.55);Qt.position.set(40,55,30);Qt.castShadow=!0;Qt.shadow.mapSize.set(2048,2048);Qt.shadow.camera.left=-55;Qt.shadow.camera.right=55;Qt.shadow.camera.top=55;Qt.shadow.camera.bottom=-55;Qt.shadow.camera.far=160;Qt.shadow.bias=-6e-4;Nt.add(Qt);Nt.add(Qt.target);var $n=new Pn(16723285,10,35,2);$n.position.set(11,5.6,-8.4);$n.castShadow=!1;$n.shadow.camera.near=.5;$n.shadow.camera.far=60;$n.shadow.bias=-.002;Nt.add($n);var Sc=new Pn(16767392,6,18,2);Sc.position.set(-4.5,4.2,-9);Nt.add(Sc);var bc=new Pn(16767392,6,18,2);bc.position.set(4.5,4.2,-9);Nt.add(bc);var Ec=new Pn(16763274,4,10,2);Ec.position.set(0,3,-17);Nt.add(Ec);var Tc=new Pn(6747903,2.5,8,2);Tc.position.set(0,1.4,-9);Nt.add(Tc);
+      }`}));Xm.renderOrder=-1000;Xm.material.depthTest=false;Nt.add(Xm);{let e=new Float32Array(7800);for(let s=0;s<2600;s++){let r=pn()*Math.PI*2,o=Math.acos(Dn(.105,1)),a=850;e[s*3]=a*Math.sin(o)*Math.cos(r),e[s*3+1]=a*Math.cos(o),e[s*3+2]=a*Math.sin(o)*Math.sin(r)}let t=new It;t.setAttribute("position",new Et(e,3));let n=new or(t,new Qi({color:13621503,size:2,sizeAttenuation:!1,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.userData.stars=n,Nt.add(n)}var hhem=new hr(4864875,3811866,.45);Nt.userData.hemi=hhem,Nt.add(hhem);var Qt=new dr(9413631,.55);Qt.position.set(52,26,20);Qt.castShadow=!0;Qt.shadow.mapSize.set(2048,2048);Qt.shadow.camera.left=-55;Qt.shadow.camera.right=55;Qt.shadow.camera.top=55;Qt.shadow.camera.bottom=-55;Qt.shadow.camera.far=160;Qt.shadow.bias=-6e-4;Nt.add(Qt);Nt.add(Qt.target);var $n=new Pn(16723285,10,35,2);$n.position.set(11,5.6,-8.4);$n.castShadow=!1;$n.shadow.camera.near=.5;$n.shadow.camera.far=60;$n.shadow.bias=-.002;Nt.add($n);var Sc=new Pn(16767392,6,18,2);Sc.position.set(-4.5,4.2,-9);Nt.add(Sc);var bc=new Pn(16767392,6,18,2);bc.position.set(4.5,4.2,-9);Nt.add(bc);var Ec=new Pn(16763274,4,10,2);Ec.position.set(0,3,-17);Nt.add(Ec);var Tc=new Pn(6747903,2.5,8,2);Tc.position.set(0,1.4,-9);Nt.add(Tc);
 // Warm spill at the office threshold, linked to the counter light.
 var Vsp=new Pn(0xffb46a,1.25,7,2);Vsp.position.set(0,.9,-11.2);Vsp.castShadow=!1;Nt.add(Vsp);
 // Sparse dust motes drifting under the canopy, readable only once the lamps dominate.
@@ -4975,26 +4980,53 @@ const gasMothPoint=new P();
   for (const role in parts) addRoleMesh(Nt, role, parts[role]);
   Dt(sx - .2, sz - .2, sx + .2, sz + .2);
 
-  // Route 66 shield at (-22, ~os+2.4, 5.4)
+  // Route 66 shield + directional auxiliary plate at Sunset Service (-22, 5.4, WEST) and Cinder Court (motelX+20, 5.4, EAST)
   const shield = [[-.5, .40], [-.26, .5], [0, .54], [.26, .5], [.5, .40], [.55, .22], [.48, .02], [0, -.55], [-.48, .02], [-.55, .22]];
-  const sx2 = -22, sz2 = 5.4, gy2 = os(sx2, sz2);
-  const parts2 = {};
-  const add2 = (role, part) => { (parts2[role] = parts2[role] || []).push(part); };
-  add2('wornMetal', boxPart(sx2, gy2 + 1.3, sz2, .09, 2.6, .09));
-  add2('signWhite', { ...extrudeGeom(shield.map(p => [p[0] * .9, p[1]]), .05), matrix: matMul(matTranslate(sx2, gy2 + 2.4, sz2), matRotY(Math.PI)) });
   const c3 = document.createElement('canvas'); c3.width = 256; c3.height = 256;
   const g3 = c3.getContext('2d');
   g3.clearRect(0, 0, 256, 256);
-  g3.fillStyle = '#3a3a40'; g3.textAlign = 'center';
+  g3.fillStyle = '#323438'; g3.textAlign = 'center';
   g3.font = 'bold 64px Georgia, serif'; g3.fillText('ROUTE', 128, 78);
   g3.font = 'bold 118px Georgia, serif'; g3.fillText('66', 128, 168);
   const t3 = new qt(c3); t3.needsUpdate = true;
   const p3 = new ba(.95, .95);
   const m3 = new ji({ map: t3, transparent: true, roughness: .8, metalness: 0 });
-  const f3 = new dt(p3, m3); f3.position.set(sx2, gy2 + 2.4, sz2 + .032);
-  Nt.add(f3);
-  for (const role in parts2) addRoleMesh(Nt, role, parts2[role]);
-  Dt(sx2 - .2, sz2 - .2, sx2 + .2, sz2 + .2);
+
+  for (const [sx2, sz2, dirLabel, yaw] of [[-22, 5.4, 'WEST', Math.PI * .68], [motelX + 20, 5.4, 'EAST', -Math.PI * .68]]) {
+    const gy2 = os(sx2, sz2);
+    const rGroup = new xi();
+    rGroup.position.set(sx2, gy2, sz2);
+    rGroup.rotation.y = yaw;
+    Nt.add(rGroup);
+    const parts2 = {};
+    const add2 = (role, part) => { (parts2[role] = parts2[role] || []).push(part); };
+    add2('wornMetal', boxPart(0, 1.50, 0, .07, 3.0, .032));
+    add2('signWhite', { ...extrudeGeom(shield.map(p => [p[0] * .9, p[1]]), .06), matrix: matMul(matTranslate(0, 2.25, .030), matRotY(Math.PI)) });
+    add2('signWhite', boxPart(0, 2.96, 0, .74, .28, .052));
+    for (const side of [-1, 1]) {
+      const f3 = new dt(p3, m3);
+      f3.position.set(0, 2.25, side * .038);
+      if (side < 0) f3.rotation.y = Math.PI;
+      rGroup.add(f3);
+    }
+    const dc = document.createElement('canvas'); dc.width = 256; dc.height = 96;
+    const dg = dc.getContext('2d');
+    dg.fillStyle = '#e8dec8'; dg.fillRect(0, 0, 256, 96);
+    dg.strokeStyle = '#323438'; dg.lineWidth = 6; dg.strokeRect(8, 8, 240, 80);
+    dg.fillStyle = '#323438'; dg.textAlign = 'center'; dg.textBaseline = 'middle';
+    dg.font = 'bold 54px Georgia, serif'; dg.fillText(dirLabel, 128, 50);
+    const dtTex = new qt(dc); dtTex.colorSpace = 'srgb'; dtTex.needsUpdate = true;
+    const dm = new ji({ map: dtTex, emissiveMap: dtTex, emissive: new Me(0x3a362e), emissiveIntensity: .35, roughness: .82, metalness: 0 });
+    const dp = new ba(.70, .25);
+    for (const side of [-1, 1]) {
+      const df = new dt(dp, dm);
+      df.position.set(0, 2.96, side * .032);
+      if (side < 0) df.rotation.y = Math.PI;
+      rGroup.add(df);
+    }
+    for (const role in parts2) addRoleMesh(rGroup, role, parts2[role]);
+    Dt(sx2 - .2, sz2 - .2, sx2 + .2, sz2 + .2);
+  }
 })();
 
 
@@ -7121,7 +7153,7 @@ updatePumpHoses(i);
 updateCarriedCargo();
 updateEngineAudio();
 updateCarHud();
-Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);Qt.position.set(Nn.position.x+40,55,Nn.position.z+30);Qt.target.position.set(Nn.position.x,0,Nn.position.z);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}let mfl=.95+.05*Math.sin(t*31),mwfk=1+.007*Math.sin(t*1.1);motelSignLight.intensity=12*mfl;motelTurqLight.intensity=4.2*(.96+.04*Math.sin(t*43));motelPorchLight.intensity=3.8*mwfk;motelRoomLamp.intensity=motelLampOn?7.5*mwfk:0;motelDoorSpill.intensity=(motelLampOn?1.15:.18)*(motelDoorOpen?1:.22)*mwfk;if(ROLE_MATS.motelShade){ROLE_MATS.motelShade.emissiveIntensity=motelLampOn?.95*mwfk:.05}if(Nt.userData.motelSignMat){Nt.userData.motelSignMat.emissiveIntensity=1.05+.35*mfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
+Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);Qt.position.set(Nn.position.x+52,26,Nn.position.z+20);Qt.target.position.set(Nn.position.x,0,Nn.position.z);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}let mfl=.95+.05*Math.sin(t*31),mwfk=1+.007*Math.sin(t*1.1);motelSignLight.intensity=12*mfl;motelTurqLight.intensity=4.2*(.96+.04*Math.sin(t*43));motelPorchLight.intensity=3.8*mwfk;motelRoomLamp.intensity=motelLampOn?7.5*mwfk:0;motelDoorSpill.intensity=(motelLampOn?1.15:.18)*(motelDoorOpen?1:.22)*mwfk;if(ROLE_MATS.motelShade){ROLE_MATS.motelShade.emissiveIntensity=motelLampOn?.95*mwfk:.05}if(Nt.userData.motelSignMat){Nt.userData.motelSignMat.emissiveIntensity=1.05+.35*mfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
 const depthStation=Math.min(5.84-Math.abs(x),z+20.52,-12.72-z);
 const depthMotel=Math.min(2.35-Math.abs(x-(motelX+1.15)),z+21.2,-14.58-z);
 const shelter=xc(Math.max(0,Math.min(1,Math.max(depthStation,depthMotel)/.9)));
