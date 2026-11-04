@@ -4856,7 +4856,8 @@ const gasSign=(function buildGasSign2() {
   const parts = {};
   const add = (role, part) => { (parts[role] = parts[role] || []).push(part); };
   const x=9.5,z=-3.86,ground=os(x,z);
-  const cy=5.83,cw=3.2,ch=2.1,ct=.34;
+  const cy=6.96,cw=3.2,ch=2.1,ct=.34;
+  const cabinetBottom=cy-ch/2, poleBase=.28, poleTop=cabinetBottom+.06;
   const sign=new xi();
   sign.name='GAS/OIL roadside sign';
   sign.position.set(x,ground,z);
@@ -4866,8 +4867,8 @@ const gasSign=(function buildGasSign2() {
   add('trimBand',boxPart(0,.29,0,.61,.075,.61));
   for(const dx of [-.24,.24])for(const dz of [-.24,.24])
     add('rust',boxPart(dx,.355,dz,.06,.06,.06));
-  add('metal',boxPart(0,2.56,0,.29,4.56,.29));
-  add('wornMetal',boxPart(0,4.72,0,1.12,.17,.33));
+  add('metal',boxPart(0,(poleBase+poleTop)/2,0,.29,poleTop-poleBase,.29));
+  add('wornMetal',boxPart(0,cabinetBottom-.06,0,1.12,.17,.33));
   add('fadedRed',boxPart(0,cy,0,cw,ch,ct));
   for(const dy of [-1,1])
     add('metal',boxPart(0,cy+dy*(ch/2+.035),0,cw+.14,.11,ct+.06));
@@ -4929,7 +4930,7 @@ const gasSign=(function buildGasSign2() {
   // One quiet spill source under the cabinet serves both faces and the hum.
   $n.position.copy(sign.localToWorld(new P(0,cy-1.19,.46)));
   Dt(x-.80,z-.80,x+.80,z+.80,ground,ground+.39);
-  Dt(x-.21,z-.21,x+.21,z+.21,ground+.26,ground+cy-ch/2);
+  Dt(x-.21,z-.21,x+.21,z+.21,ground+.26,ground+cabinetBottom);
   Nt.userData.gasFaceMat = mat; // for flicker sync later
   sign.userData.tubeCenter=cy+.37;
   return sign;

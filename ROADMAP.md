@@ -22,7 +22,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
-| G1 — Composition and period silhouettes | Office furnished, pole sign raised, and drive-through forecourt built | The sign addresses both highway approaches. The office has clear sightlines through the storefront. |
+| G1 — Composition and period silhouettes | Office furnished, 8.1 m pole sign, and drive-through forecourt built | The sign clears the canopy silhouette from the highway approaches. The office has clear sightlines through the storefront. |
 | G2 — Palette, surfaces, and light hierarchy | Glazing, bench light, and two neon faces implemented | The canopy, glazed office, and higher red sign each have a distinct role. |
 | G3 — Graphics acceptance and performance | Offline run and sustained drive verified | Remaining graphics review includes matched G0 views and shadow checks. The 60-second driving sample measured 16.7 ms median and 16.9 ms p95 on Intel Iris Xe at 960 × 540 and DPR 1. |
 | Phase 1 — Dusk-to-night cycle | Visually revalidated on the delivered offline file | Full night held at the 304- and 321-second captures. |
@@ -211,6 +211,12 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Final GAS/OIL sign height
+
+- Compared the 7.0, 8.1, and 9.2 m versions at matched camera positions from the starting view and both highway approaches. Selected 8.1 m for the extra clearance above the canopy, especially from the west, while keeping the station prominent. The cabinet and its support rose by 1.13 m. The existing position, orientation, and lettering carry over from the study.
+- All inline scripts passed `node --check`. Offline Chrome opened the playable file and acquired pointer lock without errors or external requests. Reviewed the updated sign from the starting view and both approaches at preset dusk, blue hour, and night. The coupe footprint cleared the pump lane in both directions, the pole base blocked the coupe, and both pump nozzles lifted and returned to their cradles.
+- At 960 × 540 and DPR 1 on the Samsung Galaxy Book (Core i7-1165G7, Intel Iris Xe, ANGLE Direct3D11), 120 static night frame intervals per view measured 16.7 ms median in both views, with 50.3 ms p95 at arrival and 16.9 ms p95 in the office. The arrival sample missed the steady 60 fps target. Sustained timing on this revision and full G3 acceptance remain open.
 
 ### 2026-11-04 — Roadside sign, office glazing, and fuel hoses
 

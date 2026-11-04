@@ -35,7 +35,7 @@ Triangle counts below are **starting authoring budgets per asset**, not a reason
 | Station shell | 1; about 12m wide × 8m deep; roof around 4m high | Wall thickness at openings, roof fascia/overhang, recessed door and large window frames, restrained seams and wear | 8k–15k triangles including near interior surfaces |
 | Canopy and island | 1; about 17m × 8m, underside around 4.4m | Thin 0.25–0.45m roof assembly, readable fascia and soffit, 4 grounded slender columns, raised/beveled island | 3k–6k triangles |
 | Vintage pump | 2; roughly 0.8m wide × 0.65m deep × 1.8m high | Rounded/stepped crown, plinth, enamel body, recessed meter, trim band, nozzle, hanging hose | 2k–4k triangles each |
-| GAS/OIL sign | 1. Cabinet about 3.2 m × 2.1 m. Top about 7 m. | Braced pole and base, inset faces turned toward both highway approaches, painted OIL and separate thin GAS tubes | 1k–3k triangles |
+| GAS/OIL sign | 1. Cabinet about 3.2 m × 2.1 m. Top about 8.1 m. | Braced pole and base, inset faces turned toward both highway approaches, painted OIL and separate thin GAS tubes | 1k–3k triangles |
 | Road signs | 1 STOP + 1 Route 66 | True octagon and shield outlines, thin thickness, rear/edge treatment, readable contained lettering | 200–800 triangles each |
 | Telephone poles | Repeated line; around 6–8m high | Tapered shaft, cross-arm, a few insulators, sagging wires grounded at actual pole tops | 300–700 triangles per pole; low-segment wires |
 | Cacti and scrub | Sparse; 3–4 cactus variants, 1–4.5m high | Tapered segmented trunks/arms, rounded ends, muted colors, terrain contact; no spine geometry carpet | 200–700 triangles per cactus; cheaper scrub |
@@ -72,7 +72,7 @@ Use the glazed frontage and enamel cladding of the period as references. Keep th
 
 ### 3. GAS/OIL and road signs
 
-The early-1960s Phillips Harlequin photo is a reference for the vertical separation between the sign and canopy. For Sunset Service, put the cabinet bottom just above the canopy and turn its two faces toward the approaching lanes. The Last Frontier Texaco photo from 1963 is a reference for exposed red tubing. [Wisconsin DOT historic station report](https://wisconsindot.gov/Documents/projects/by-region/se/43n-s-corridor/appendix-g-eis.pdf), [The Neon Museum’s Last Frontier Texaco](https://neonmuseum.org/news/lost-signs-of-las-vegas-part-2/)
+The early-1960s Phillips Harlequin photo is a reference for the vertical separation between the sign and canopy. At Sunset Service, the cabinet's lower rim sits about 1.25 m above the canopy roof, and its two faces address the approaching lanes. The Last Frontier Texaco photo from 1963 is a reference for exposed red tubing. [Wisconsin DOT historic station report](https://wisconsindot.gov/Documents/projects/by-region/se/43n-s-corridor/appendix-g-eis.pdf), [The Neon Museum’s Last Frontier Texaco](https://neonmuseum.org/news/lost-signs-of-las-vegas-part-2/)
 
 Make the GAS/OIL cabinet a shallow solid with a rim, inset face, rear surface, and a believable pole/base. Paint lettering onto its face or build it from simple outlines; fit every letter inside the panel. Lay narrow emissive tube paths over the relevant lettering/trim rather than making the whole cabinet glow. Keep a reference to those emissive materials for later synchronized flicker.
 
