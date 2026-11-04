@@ -224,6 +224,8 @@ If a camper becomes the main vehicle in a future version, give its interior a be
 
 ## Things the player can do
 
+At the rear of the coupe, use **E** or click on the trunk latch. A small amber lamp lights the luggage well as the lid rises. Pick up the tool case or canvas roll beside the parked coupe, then aim into the open well to stow it. The folded blanket and any stowed item can be taken back out. Press **G** to set a carried item on clear ground. The trunk needs to be latched before driving.
+
 The current build exposes the station and coupe actions through **E** or a click when a fixture is within reach and under the aim point. The HUD names the fixture. Walk away to end a close view or a rest. The headlight, doorway wind, and sound behind the station respond to position or existing controls. The proposals below describe the intended feel of each action. See the roadmap for what the build and verification cover.
 
 The office now has a counter, parts bench, and service board. A few interactions could make those places feel different after the player has spent time with them. Each proposal gives the player a local, immediate consequence. The dusk clock keeps its own pace, and the room can be understood on a walk through it.

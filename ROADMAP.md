@@ -30,7 +30,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Station and coupe actions implemented at user request | Browser and performance acceptance in progress |
+| Phase 6 — Stillness and interaction polish | Station and coupe actions, including trunk cargo | Browser and performance acceptance in progress |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -211,6 +211,12 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Coupe trunk and cargo
+
+- Replaced the solid rear deck with a hinged lid, shallow lined luggage well, latch and short-range amber courtesy light. The light follows lid travel and extinguishes when shut.
+- The player can pick up the folded blanket, tool case, or canvas roll, stow one carried item in a free trunk slot, take it out, and set it down on clear ground. Cargo moves with the car while stowed. Closing the lid protects access to the contents, and driving requires a latched lid.
+- The inline script passed syntax and resource checks. Chrome opened the delivered file offline and acquired pointer lock. An instrumented copy exercised open, pickup, stow, retrieve, set down, and close through normal input, checking lamp state and slot occupancy. The browser reported no application or shader errors and no external requests. Captured matching dusk, blue hour, and night trunk views using preset times. The open-trunk night sample on Intel Iris Xe / ANGLE Direct3D11 at 960 × 540 and DPR 1 measured 16.7 ms median and 16.8 ms p95 over 120 frames. The uninterrupted dusk-to-night run and longer G3 performance checks remain open.
 
 ### 2026-11-04 — Optional station and coupe interactions
 

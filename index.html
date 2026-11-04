@@ -4899,9 +4899,42 @@ function deck(z0,z1,y0,y1,width) {
     carQuad(f,h,d,b),carQuad(e,f,b,a),carQuad(d,h,g,c)];
 }
 carMesh(coupe,'paint',[...deck(.72,2.47,1.01,.81,.91),
-  ...deck(-2.43,-1.61,.81,.98,.91),
   ...[-1,1].map(side=>boxPart(side*.87,.73,-1.33,.10,.49,.60)),
   boxPart(0,.48,-.18,1.75,.20,1.9)],true);
+// Fixed quarter panels and sill surround a separate, shallow luggage well.
+for(const side of [-1,1]) {
+  const outside=.91*side, inside=.72*side;
+  const panel=(...corners)=>carQuad(...(side<0?corners.reverse():corners));
+  carMesh(coupe,'paint',[
+    panel([outside,.48,-2.43],[outside,.81,-2.43],[outside,.98,-1.61],[outside,.48,-1.61]),
+    panel([outside,.81,-2.43],[inside,.825,-2.43],[inside,.995,-1.61],[outside,.98,-1.61]),
+    boxPart(side*.82,.65,-2.415,.19,.32,.05)
+  ],true);
+}
+carMesh(coupe,'paint',[boxPart(0,.625,-2.414,1.44,.27,.047)]);
+carMesh(coupe,'black',[boxPart(0,.754,-2.391,1.45,.025,.063)]);
+carMesh(coupe,'carpet',[boxPart(0,.49,-2.01,1.46,.08,.79),
+  boxPart(0,.74,-1.625,1.46,.49,.052),
+  ...[-1,1].map(side=>boxPart(side*.709,.683,-2.01,.056,.31,.79))]);
+const trunkLid=new xi();
+trunkLid.position.set(0,.995,-1.616);
+coupe.add(trunkLid);
+carMesh(trunkLid,'paint',[
+  carQuad([-.714,0,0],[0,.025,0],[0,-.144,-.825],[-.714,-.17,-.825]),
+  carQuad([0,.025,0],[.714,0,0],[.714,-.17,-.825],[0,-.144,-.825]),
+  boxPart(0,-.181,-.807,1.43,.055,.044)
+],true);
+carMesh(trunkLid,'carpet',[
+  carQuad([.679,-.183,-.792],[.679,-.019,-.034],[-.679,-.019,-.034],[-.679,-.183,-.792]),
+  ...[-1,1].map(side=>({...carTube([[side*.61,-.035,-.095],[side*.61,-.17,-.70]],.016),matrix:matIdentity()}))
+]);
+carMesh(trunkLid,'chrome',[boxPart(0,-.20,-.838,.155,.027,.023)]);
+const trunkLampFixture=carMesh(coupe,'bulb',[boxPart(-.53,.804,-1.668,.115,.04,.035)]);
+trunkLampFixture.material=new Lm({color:0xb88b54,emissive:0xffb266,emissiveIntensity:0});
+const trunkLamp=new Pn(0xffb46e,0,.83,2);
+trunkLamp.position.set(-.51,.80,-1.75);
+coupe.add(trunkLamp);
+let trunkOpen=false;
 carMesh(coupe,'chrome',[
   boxPart(0,.53,2.50,1.94,.13,.15),boxPart(0,.53,-2.47,1.94,.13,.15),
   boxPart(0,.70,2.48,1.46,.17,.065),
@@ -5435,7 +5468,7 @@ function updateDriverCamera() {
   Nn.position.copy(coupe.localToWorld(eyeWorld.copy(driverEye)));
 }
 function sitInCar() {
-  if(seated || !driverDoor.open) return;
+  if(seated || !driverDoor.open || carriedCargo) return;
   seated=true;carSpeed=0;
   inspection=null;
   startEngineAudio();
@@ -5484,7 +5517,8 @@ function carClearAt(x,z,yaw) {
   return true;
 }
 function driveCar(dt) {
-  const ready=doors.every(door=>!door.open && Math.abs(door.hinge.rotation.y)<.08);
+  const ready=!trunkOpen && Math.abs(trunkLid.rotation.x)<.08 &&
+    doors.every(door=>!door.open && Math.abs(door.hinge.rotation.y)<.08);
   const throttle=ready && ignitionOn && !parkingBrake?(Number(!!fn.KeyW)-Number(!!fn.KeyS)):0;
   if(engine)engine.load=!fn.Space && carSpeed*throttle>=0?Math.abs(throttle):0;
   if(fn.Space || !ready || parkingBrake) carSpeed*=Math.exp(-8*dt);
@@ -5789,6 +5823,89 @@ function buildCabinGestures() {
 }
 buildCabinGestures();
 
+const cargoSlots=[[-.44,.53,-2.04],[0,.53,-2.06],[.44,.53,-2.04]];
+const cargoItems=[];
+let carriedCargo=null;
+const cargoPoint=new P(), cargoDirection=new P();
+function addCargo(label,parts,x,z,slot=-1) {
+  const mesh=new xi();
+  for(const [role,shapes] of Object.entries(parts))carMesh(mesh,role,shapes);
+  const item={label,mesh,slot};
+  cargoItems.push(item);
+  if(slot>=0) {
+    coupe.add(mesh);
+    mesh.position.set(...cargoSlots[slot]);
+  } else {
+    Nt.add(mesh);
+    mesh.position.set(x,os(x,z),z);
+  }
+}
+addCargo('folded blanket',{
+  carpet:[boxPart(0,.053,0,.31,.106,.24)],
+  piping:[boxPart(-.088,.063,0,.024,.11,.244),boxPart(.088,.063,0,.024,.11,.244)]
+},0,0,0);
+addCargo('tool case',{
+  wood:[boxPart(0,.085,0,.34,.17,.24)],
+  chrome:[boxPart(0,.174,0,.115,.028,.034),boxPart(-.10,.123,-.123,.034,.044,.014),
+    boxPart(.10,.123,-.123,.034,.044,.014)]
+},-16.15,-5.17);
+addCargo('canvas roll',{
+  ivory:[boxPart(0,.068,0,.31,.136,.20)],
+  leather:[boxPart(-.094,.07,0,.025,.14,.206),boxPart(.094,.07,0,.025,.14,.206)]
+},-16.65,-5.02);
+
+function takeCargo(item) {
+  if(carriedCargo || seated || (item.slot>=0 && !trunkAccessible()))return;
+  carriedCargo=item;
+  item.slot=-1;
+  Nt.add(item.mesh);
+  playInteractionSound('rubber');
+}
+function stowCargo() {
+  if(!carriedCargo || !trunkAccessible())return;
+  const slot=cargoSlots.findIndex((_,index)=>!cargoItems.some(item=>item.slot===index));
+  if(slot<0)return;
+  const item=carriedCargo;
+  item.slot=slot;
+  coupe.add(item.mesh);
+  item.mesh.position.set(...cargoSlots[slot]);
+  item.mesh.quaternion.identity();
+  carriedCargo=null;
+  playInteractionSound('wood');
+}
+function setCargoDown() {
+  if(!carriedCargo || seated)return;
+  Nn.getWorldDirection(cargoDirection);
+  cargoDirection.y=0;
+  if(cargoDirection.lengthSq()<.01)return;
+  cargoPoint.copy(Nn.position).addScaledVector(cargoDirection.normalize(),1.0);
+  const {x,z}=cargoPoint, y=os(x,z);
+  const [safeX,safeZ]=vc(x,y+1.7,z);
+  if(Math.hypot(safeX-x,safeZ-z)>.025)return;
+  coupe.worldToLocal(cargoPoint);
+  if(Math.abs(cargoPoint.x)<1.16 && Math.abs(cargoPoint.z)<2.76)return;
+  if(cargoItems.some(item=>item!==carriedCargo && item.slot<0 &&
+    Math.hypot(item.mesh.position.x-x,item.mesh.position.z-z)<.36))return;
+  carriedCargo.mesh.position.set(x,y,z);
+  carriedCargo.mesh.quaternion.identity();
+  carriedCargo=null;
+  playInteractionSound('wood');
+}
+function trunkAccessible() {
+  return trunkOpen && trunkLid.rotation.x>.42;
+}
+function toggleTrunk() {
+  if(seated || Math.abs(carSpeed)>.25)return;
+  trunkOpen=!trunkOpen;
+  playInteractionSound('latch');
+}
+function updateCarriedCargo() {
+  if(!carriedCargo)return;
+  const mesh=carriedCargo.mesh;
+  mesh.position.set(.33,-.43,-.70).applyQuaternion(Nn.quaternion).add(Nn.position);
+  mesh.quaternion.copy(Nn.quaternion);
+}
+
 function renderInteractionMirror(dt) {
   if(!seated && inspection!=='mirror')return;
   mirrorDelay-=dt;
@@ -5843,7 +5960,9 @@ let cursorMode=false, cursorX=innerWidth/2, cursorY=innerHeight/2;
 function findInteractionTarget() {
   const nearCar=seated || Nn.position.distanceTo(coupe.position)<6;
   const nearStation=Math.abs(Nn.position.x)<16 && Nn.position.z>-25 && Nn.position.z<-2;
-  if(!nearCar && !nearStation)return null;
+  const nearCargo=!seated && !carriedCargo && cargoItems.some(item=>item.slot<0 &&
+    item.mesh.position.distanceToSquared(Nn.position)<11);
+  if(!nearCar && !nearStation && !nearCargo)return null;
   Nn.updateMatrixWorld(true);
   coupe.updateMatrixWorld(true);
   if(cursorMode) {
@@ -5869,16 +5988,27 @@ function findInteractionTarget() {
   } else if(nearCar) {
     coupe.worldToLocal(aimPoint.copy(Nn.position));
     const side=Math.sign(aimPoint.x);
+    if(aimPoint.z<-2.36 && Math.abs(aimPoint.x)<1.48) {
+      if(!trunkOpen)target(coupe,0,.795,-2.462,.19,'Open trunk',toggleTrunk,true);
+      if(trunkAccessible()) {
+        target(trunkLid,0,-.17,-.81,.21,'Close trunk',toggleTrunk,true);
+        if(carriedCargo)target(coupe,0,.63,-2.06,.50,'Stow '+carriedCargo.label,stowCargo,true);
+        else for(const item of cargoItems)if(item.slot>=0)
+          target(item.mesh,0,.085,0,.17,'Take '+item.label,()=>takeCargo(item),true);
+      }
+    }
     const door=doors.find(d=>d.side===side);
     if(door) {
       target(door.hinge,side*.077,.91,-1.26,.19,door.open?'Close door':'Open door',()=>toggleDoor(door));
-      if(door===driverDoor && door.open)
+      if(door===driverDoor && door.open && !carriedCargo)
         target(coupe,.51,.85,-.52,.32,'Sit in driver’s seat',sitInCar);
     }
     target(coupe,.71,1.19,-.58,.16,'Look into empty cabin',()=>{
       inspection='cabin';inspectionTime=5;
     });
   }
+  if(nearCargo)for(const item of cargoItems)if(item.slot<0)
+    target(item.mesh,0,.085,0,.21,'Pick up '+item.label,()=>takeCargo(item),true);
   if(!seated && nearStation)for(const item of stationActions)
     target(item.parent,...item.position,item.radius,item.label,item.action,true);
   return best;
@@ -5899,6 +6029,10 @@ function officeWallInWay(delta) {
   return false;
 }
 function animateCar(dt) {
+  trunkLid.rotation.x+=((trunkOpen?1.22:0)-trunkLid.rotation.x)*Math.min(1,9*dt);
+  const lamp=xc(Math.max(0,Math.min(1,(trunkLid.rotation.x-.17)/.28)));
+  trunkLamp.intensity=.58*lamp;
+  trunkLampFixture.material.emissiveIntensity=1.55*lamp;
   for(const door of doors) {
     const angle=door.open?-door.side*1.13:0;
     door.hinge.rotation.y+=(angle-door.hinge.rotation.y)*Math.min(1,10*dt);
@@ -5954,6 +6088,7 @@ addEventListener('keydown',event=>{
   if(key==='KeyE')findInteractionTarget()?.action();
   if(key==='KeyC' && seated)toggleDoor(driverDoor);
   if(key==='KeyF')leaveCar();
+  if(key==='KeyG')setCargoDown();
   if(key==='KeyM')toggleMute();
 });
 addEventListener('keyup',event=>{delete fn[event.code];});
@@ -5991,7 +6126,9 @@ function updateCarHud() {
   const text=seated
     ? hint + Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake  ·  C door  ·  F get out'
     : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  Coupe by the station';
-  const status=audio.muted?'  ·  SOUND OFF (M)':'';
+  const cargoStatus=carriedCargo?'  ·  Carrying '+carriedCargo.label+'  ·  G set down':
+    seated && trunkOpen?'  ·  TRUNK OPEN':'';
+  const status=cargoStatus+(audio.muted?'  ·  SOUND OFF (M)':'');
   if(text+status!==hudText){hud.textContent=text+status;hudText=text+status;}
 }
 
@@ -6009,6 +6146,7 @@ if(active){
     }
   }
 }
+updateCarriedCargo();
 updateEngineAudio();
 updateCarHud();
 Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
