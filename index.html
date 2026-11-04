@@ -6113,7 +6113,7 @@ function buildRoadMap() {
   open.visible=false;
   coupe.add(open);
 
-  const panel=new ba(.115,.085);
+  const panel=new ba(.14,.095);
   const uv=panel.getAttribute('uv');
   for(let i=0;i<uv.count;i++)uv.setX(i,uv.getX(i)/3);
   return {open,folded:new dt(panel,material)};
@@ -6127,10 +6127,6 @@ function setRoadMapOpen(open) {
   if(open)Nn.lookAt(roadMap.getWorldPosition(aimPoint));
   else if(seated)Nn.lookAt(coupe.localToWorld(aimPoint.set(driverEye.x,1.28,3)));
   playInteractionSound('paper');
-}
-function useGlovebox() {
-  if(glovebox.engaged && carSpeed===0 && !roadMap.visible)setRoadMapOpen(true);
-  else glovebox.action();
 }
 function buildCabinGestures() {
   const add=(...args)=>installGesture(coupe,...args);
@@ -6158,9 +6154,9 @@ function buildCabinGestures() {
   add('Move seat one notch',[.68,.68,-.29],{size:[.087,.04,.11],motion:.73,toggle:true,radius:.13,sound:'latch',
     effect:item=>{if(Math.abs(carSpeed)<.25)driverEye.z=item.engaged?-.27:-.36;else item.engaged=driverEye.z>-.3;}});
   const glove=add('Glovebox',[-.57,.83,.51],{motion:-1.22,toggle:true,radius:.18,sound:'latch',
-    effect:item=>{if(!item.engaged || carSpeed===0)setRoadMapOpen(item.engaged);}});
+    effect:item=>{if(!item.engaged)setRoadMapOpen(false);}});
   interactionPlate(glove,[0,.076,-.026],[.35,.145,.035],'wood');
-  foldedRoadMap.position.set(0,.081,-.006);
+  foldedRoadMap.position.set(0,.09,.004);
   glove.add(foldedRoadMap);
   const crease=detailText(coupe,[-.57,.895,.495],[.28,.106],['—    —'],['#564636','#796956']);
   crease.rotation.y=Math.PI;
@@ -6376,7 +6372,7 @@ function findInteractionTarget() {
     best={label,action};distance=along;
   }
   if(seated) {
-    if(roadMap.visible)target(roadMap,0,0,0,.15,'Fold and stow map',useGlovebox);
+    if(roadMap.visible)target(roadMap,0,0,0,.15,'Fold map',()=>setRoadMapOpen(false));
     if(carryingBlanket() && carSpeed===0) {
       if(cabinBlanketOpen)target(cabinBlanket,0,.14,.10,.24,'Unwrap and fold blanket',toggleCabinBlanket);
       else target(coupe,foldedCabinPosition.x,foldedCabinPosition.y+.06,foldedCabinPosition.z,.21,
@@ -6391,9 +6387,13 @@ function findInteractionTarget() {
         target(item.parent,...item.position,item.radius,item.label,item.action);
         continue;
       }
-      const label=roadMap.visible?'Fold and stow map':carSpeed===0?'Read road map':
-        item.engaged?'Close glovebox':'Open glovebox';
-      target(item.parent,...item.position,item.radius,label,useGlovebox);
+      if(!item.engaged) {
+        target(item.parent,...item.position,item.radius,'Open glovebox',item.action);
+      } else {
+        target(item.hinge,.145,.09,0,.07,'Close glovebox',item.action);
+        if(carSpeed===0 && foldedRoadMap.visible)
+          target(foldedRoadMap,0,0,0,.115,'Unfold road map',()=>setRoadMapOpen(true));
+      }
     }
   } else if(nearCar) {
     coupe.worldToLocal(aimPoint.copy(Nn.position));
@@ -6506,7 +6506,7 @@ addEventListener('keydown',event=>{
   if(key==='KeyE')findInteractionTarget()?.action();
   if(key==='KeyC' && seated)toggleDoor(driverDoor);
   if(key==='KeyF')leaveCar();
-  if(key==='KeyR' && seated && carSpeed===0)useGlovebox();
+  if(key==='KeyR' && seated && carSpeed===0 && glovebox.engaged)setRoadMapOpen(!roadMap.visible);
   if(key==='KeyG'){
     if(heldPump)putDownNozzle();
     else setCargoDown();
@@ -6546,7 +6546,7 @@ function updateCarHud() {
   const hint=hovered?'E / CLICK  '+hovered.label+'  ·  ':'';
   const mode=cursorMode?'RMB look':'MOUSE look';
   const text=inspection==='rest' ? hint+mode+'  ·  Move to stand' : seated
-    ? hint + (roadMap.visible?'Parked  ·  R fold map to drive':Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake')+(carSpeed===0 && !roadMap.visible?'  ·  R read map':'')+'  ·  C door  ·  F get out'
+    ? hint + (roadMap.visible?'Parked  ·  R fold map to drive':Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake')+(carSpeed===0 && glovebox.engaged && !roadMap.visible?'  ·  R unfold map':'')+'  ·  C door  ·  F get out'
     : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  Coupe by the station';
   const cargoStatus=heldPump?'  ·  Holding nozzle  ·  G let go':
     seated && carryingBlanket()?(cabinBlanketOpen?'  ·  Wrapped in blanket  ·  Unwrap to drive':'  ·  Blanket on passenger seat'):

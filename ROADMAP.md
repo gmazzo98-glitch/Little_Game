@@ -30,7 +30,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, and physical nozzle handling | One-action map opening verified by keyboard and cursor. Full stillness acceptance remains open. |
+| Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, and physical nozzle handling | Separate glovebox and map actions verified offline. Full stillness acceptance remains open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -211,6 +211,12 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Restore separate glovebox and map actions
+
+- Phase 6, painterly direction. Opening the glovebox reveals the folded paper on the lid. The paper has its own unfold action, folding returns it to the lid, and the lid edge closes the compartment. **R** operates the paper while stopped with the lid open. Cinder Court is a fictional place on the map and mileage strip.
+- Inline syntax and resource checks passed. Offline Chrome verified pointer lock, opening the lid, unfolding by aiming at the paper, the driving interlock, folding, closing the lid, and the **R** shortcut. The browser requested only the game file and reported zero app or shader errors.
+- Reviewed the unfolded map in matched cabin views at preset dusk, blue hour, and night. The 120-interval night sample measured 16.7 ms median and 16.9 ms p95 at 960 × 540 and DPR 1 on the Intel Iris Xe test laptop. The continuous cycle and wider G3 review are tracked separately.
 
 ### 2026-11-04 — Bring the road map into view
 

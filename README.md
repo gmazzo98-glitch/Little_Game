@@ -27,12 +27,12 @@ The sea-green coupe is parked on the shoulder to the left of Sunset Service. App
 | Space | Brake |
 | Click DOME / PANEL / LIGHTS | Toggle the cabin lamp, instrument lighting, or headlights |
 | F | Get out once stopped |
-| R | Read or stow the road map while stopped |
+| R | Unfold or fold the road map while stopped with the glovebox open |
 | E | Activate the part you are aiming at |
 
 The normal mouse-look mode uses the center reticle for clicks. **Play with cursor and right-drag to look** lets you aim clicks with the visible mouse cursor.
 
-While stopped, press **R** or use **Read road map** at the passenger-side glovebox. The map opens in view under the cabin lamp. Press **R** again or use **Fold and stow map** before driving.
+While stopped, use **Open glovebox** on the passenger side. Aim at the folded paper on the inside of the lid and use **Unfold road map**. The cabin lamp lights the map. Use **Fold map** to return it to the open lid, then aim at the edge of the lid to close the compartment. Cinder Court is a place named on the paper map and office mileage strip.
 
 [See the coupe's cabin at night](captures/coupe-cabin.jpg).
 
