@@ -12,6 +12,8 @@ The playable branch is [`vibe/neon-gas-voxel-f660eb`](https://github.com/gmazzo9
 
 ## Scope
 
+[WORLD_LORE.md](WORLD_LORE.md) defines the world and the approved expansion brief. For tasks implementing that brief, build Cinder Court first and follow its limits. The single-station scope below describes the existing build.
+
 - Build one first-person, walkable 1960s gas station on an empty desert highway. Preserve melancholy, isolation, and stillness.
 - Ship one self-contained `index.html`: inline Three.js, CSS, shaders, game code, and any selected model/texture data; zero runtime network requests; double-click `file://` support. Playing the committed game must require no build, package install, or asset preparation.
 - Keep the repository small: the playable file, project documentation, this contributor guide, and the existing concept illustration. Selected authoring sources, license records, or a reproducible preparation script are allowed only when genuinely needed for an implemented asset; see `ASSET_GUIDE.md`. Verification can use temporary files outside the repository.
