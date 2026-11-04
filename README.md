@@ -32,7 +32,7 @@ The sea-green coupe is parked on the shoulder to the left of Sunset Service. App
 
 The normal mouse-look mode uses the center reticle for clicks. **Play with cursor and right-drag to look** lets you aim clicks with the visible mouse cursor.
 
-While stopped, use **Open glovebox** on the passenger side. Aim at the folded paper on the inside of the lid and use **Unfold road map**. The cabin lamp lights the map. Use **Fold map** to return it to the open lid, then aim at the edge of the lid to close the compartment. Cinder Court is a place named on the paper map and office mileage strip.
+While stopped, use **Open glovebox** on the passenger side. Aim at the folded paper on the inside of the lid and use **Unfold road map**. The cabin lamp lights the map. Use **Fold map** to return it to the open lid, then aim at the edge of the lid to close the compartment. Cinder Court Motor Lodge — named on the paper map and office mileage strip — stands 4.6 km west along the highway (`x = -4600`), with a turnoff, grounded neon sign, and one furnished show room you can open and explore.
 
 [See the coupe's cabin at night](captures/coupe-cabin.jpg).
 

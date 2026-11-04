@@ -4,7 +4,7 @@
 
 Neon Gas is a first-person road vignette set on a fictional stretch of Route 66 in 1966. The desert should feel larger than the places people built in it. The pleasure is in finding a warm pool of light after a long dark drive, touching something someone once used, and deciding whether to stay a little longer. Keep the horizon quiet, the colors weathered, and the player alone. The existing one-way descent from dusk to night continues throughout travel, visits, and the return.
 
-This brief authorizes a future expansion beyond Sunset Service. Start with one visitable destination, Cinder Court. It supersedes the single-building rule in the existing art and scope documents only for the motel described here. Keep using [AESTHETIC.md](AESTHETIC.md) for mood and lighting, [ASSET_GUIDE.md](ASSET_GUIDE.md) for modeling and integration, and [ROADMAP.md](ROADMAP.md) for implementation and verification. Cinder Court currently exists in print only. The antenna below is a separate later proposal.
+This brief authorizes a future expansion beyond Sunset Service. Start with one visitable destination, Cinder Court. It supersedes the single-building rule in the existing art and scope documents only for the motel described here. Keep using [AESTHETIC.md](AESTHETIC.md) for mood and lighting, [ASSET_GUIDE.md](ASSET_GUIDE.md) for modeling and integration, and [ROADMAP.md](ROADMAP.md) for implementation and verification. Cinder Court is now implemented 4.6 km west along the highway (`x = -4600`). The antenna below is a separate later proposal.
 
 ## The story behind the road
 

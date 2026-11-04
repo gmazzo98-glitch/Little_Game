@@ -3920,7 +3920,9 @@ void main() {
 		}`};var Sr=class extends Ut{constructor(){super();let e=_c;this.uniforms=Ln.clone(e.uniforms),this.material=new cr({name:e.name,uniforms:this.uniforms,vertexShader:e.vertexShader,fragmentShader:e.fragmentShader}),this.fsQuad=new In(this.material),this._outputColorSpace=null,this._toneMapping=null}render(e,t,n){this.uniforms.tDiffuse.value=n.texture,this.uniforms.toneMappingExposure.value=e.toneMappingExposure,(this._outputColorSpace!==e.outputColorSpace||this._toneMapping!==e.toneMapping)&&(this._outputColorSpace=e.outputColorSpace,this._toneMapping=e.toneMapping,this.material.defines={},Ge.getTransfer(this._outputColorSpace)===qe&&(this.material.defines.SRGB_TRANSFER=""),this._toneMapping===$a?this.material.defines.LINEAR_TONE_MAPPING="":this._toneMapping===Ka?this.material.defines.REINHARD_TONE_MAPPING="":this._toneMapping===Qa?this.material.defines.CINEON_TONE_MAPPING="":this._toneMapping===ns?this.material.defines.ACES_FILMIC_TONE_MAPPING="":this._toneMapping===ja&&(this.material.defines.AGX_TONE_MAPPING=""),this.material.needsUpdate=!0),this.renderToScreen===!0?(e.setRenderTarget(null),this.fsQuad.render(e)):(e.setRenderTarget(t),this.clear&&e.clear(e.autoClearColor,e.autoClearDepth,e.autoClearStencil),this.fsQuad.render(e))}dispose(){this.material.dispose(),this.fsQuad.dispose()}};function Vm(i){return function(){i|=0,i=i+1831565813|0;let e=Math.imul(i^i>>>15,1|i);return e=e+Math.imul(e^e>>>7,61|e)^e,((e^e>>>14)>>>0)/4294967296}}var pn=Vm(1966),Dn=(i,e)=>i+pn()*(e-i);function Un(i,e){let t=Math.sin(i*127.1+e*311.7)*43758.5453;return t-Math.floor(t)}function xc(i){return i*i*(3-2*i)}function ao(i,e){let t=Math.floor(i),n=Math.floor(e),s=i-t,r=e-n,o=Un(t,n),a=Un(t+1,n),l=Un(t,n+1),c=Un(t+1,n+1),h=xc(s),d=xc(r);return o+(a-o)*h+(l-o)*d+(o-a-l+c)*h*d}function Hm(i,e){return ao(i,e)*.55+ao(i*2.1,e*2.1)*.3+ao(i*4.3,e*4.3)*.15}// Continuous world-space height, shared by the surface and player/prop placement.
 // The road is flat for its entire length; the apron blends into broad, low dunes.
 // Shared extents for the apron and its two road connections.
-const forecourt=[[-24,-10,-9,-3.15],[-12.5,-22,13.5,-4.45],[9,-10,24,-3.15]];
+const motelX=-4600;
+const forecourt=[[-24,-10,-9,-3.15],[-12.5,-22,13.5,-4.45],[9,-10,24,-3.15],
+  [motelX-28,-10.5,motelX-9.5,-3.15],[motelX-16,-24,motelX+16,-4.45],[motelX+9.5,-10.5,motelX+28,-3.15]];
 function os(x, z) {
   const rectDistance = (x0, z0, x1, z1) => Math.hypot(Math.max(x0 - x, x - x1, 0), Math.max(z0 - z, z - z1, 0));
   let distance=Math.max(Math.abs(z)-3.5,0);
@@ -3973,7 +3975,7 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
         // A shallow haze band joins the distant silhouettes to the ground fog.
         col = mix(col, haze, 1.0 - smoothstep(-.018, .009, direction.y));
         gl_FragColor = vec4(col, 1.0);
-      }`}));Xm.renderOrder=-1000;Xm.material.depthTest=false;Nt.add(Xm);{let e=new Float32Array(7800);for(let s=0;s<2600;s++){let r=pn()*Math.PI*2,o=Math.acos(Dn(.105,1)),a=850;e[s*3]=a*Math.sin(o)*Math.cos(r),e[s*3+1]=a*Math.cos(o),e[s*3+2]=a*Math.sin(o)*Math.sin(r)}let t=new It;t.setAttribute("position",new Et(e,3));let n=new or(t,new Qi({color:13621503,size:2,sizeAttenuation:!1,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.userData.stars=n,Nt.add(n)}var hhem=new hr(4864875,3811866,.45);Nt.userData.hemi=hhem,Nt.add(hhem);var Qt=new dr(9413631,.55);Qt.position.set(40,55,30);Qt.castShadow=!0;Qt.shadow.mapSize.set(2048,2048);Qt.shadow.camera.left=-55;Qt.shadow.camera.right=55;Qt.shadow.camera.top=55;Qt.shadow.camera.bottom=-55;Qt.shadow.camera.far=160;Qt.shadow.bias=-6e-4;Nt.add(Qt);var $n=new Pn(16723285,10,35,2);$n.position.set(11,5.6,-8.4);$n.castShadow=!1;$n.shadow.camera.near=.5;$n.shadow.camera.far=60;$n.shadow.bias=-.002;Nt.add($n);var Sc=new Pn(16767392,6,18,2);Sc.position.set(-4.5,4.2,-9);Nt.add(Sc);var bc=new Pn(16767392,6,18,2);bc.position.set(4.5,4.2,-9);Nt.add(bc);var Ec=new Pn(16763274,4,10,2);Ec.position.set(0,3,-17);Nt.add(Ec);var Tc=new Pn(6747903,2.5,8,2);Tc.position.set(0,1.4,-9);Nt.add(Tc);
+      }`}));Xm.renderOrder=-1000;Xm.material.depthTest=false;Nt.add(Xm);{let e=new Float32Array(7800);for(let s=0;s<2600;s++){let r=pn()*Math.PI*2,o=Math.acos(Dn(.105,1)),a=850;e[s*3]=a*Math.sin(o)*Math.cos(r),e[s*3+1]=a*Math.cos(o),e[s*3+2]=a*Math.sin(o)*Math.sin(r)}let t=new It;t.setAttribute("position",new Et(e,3));let n=new or(t,new Qi({color:13621503,size:2,sizeAttenuation:!1,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.userData.stars=n,Nt.add(n)}var hhem=new hr(4864875,3811866,.45);Nt.userData.hemi=hhem,Nt.add(hhem);var Qt=new dr(9413631,.55);Qt.position.set(40,55,30);Qt.castShadow=!0;Qt.shadow.mapSize.set(2048,2048);Qt.shadow.camera.left=-55;Qt.shadow.camera.right=55;Qt.shadow.camera.top=55;Qt.shadow.camera.bottom=-55;Qt.shadow.camera.far=160;Qt.shadow.bias=-6e-4;Nt.add(Qt);Nt.add(Qt.target);var $n=new Pn(16723285,10,35,2);$n.position.set(11,5.6,-8.4);$n.castShadow=!1;$n.shadow.camera.near=.5;$n.shadow.camera.far=60;$n.shadow.bias=-.002;Nt.add($n);var Sc=new Pn(16767392,6,18,2);Sc.position.set(-4.5,4.2,-9);Nt.add(Sc);var bc=new Pn(16767392,6,18,2);bc.position.set(4.5,4.2,-9);Nt.add(bc);var Ec=new Pn(16763274,4,10,2);Ec.position.set(0,3,-17);Nt.add(Ec);var Tc=new Pn(6747903,2.5,8,2);Tc.position.set(0,1.4,-9);Nt.add(Tc);
 // Warm spill at the office threshold, linked to the counter light.
 var Vsp=new Pn(0xffb46a,1.25,7,2);Vsp.position.set(0,.9,-11.2);Vsp.castShadow=!1;Nt.add(Vsp);
 // Sparse dust motes drifting under the canopy, readable only once the lamps dominate.
@@ -4044,16 +4046,23 @@ desertMaterial.onBeforeCompile = shader => {
       vec3 sand = mix(vec3(.29,.23,.17), vec3(.42,.34,.25), n);
       float road = 1.0 - smoothstep(3.20, 3.48, abs(p.y));
       float shoulder = 1.0 - smoothstep(3.45, 5.7, abs(p.y));
-      float west = desertRect(p, vec2(${forecourt[0][0]}, ${forecourt[0][1]}), vec2(${forecourt[0][2]}, ${forecourt[0][3]}), .40);
-      float east = desertRect(p, vec2(${forecourt[2][0]}, ${forecourt[2][1]}), vec2(${forecourt[2][2]}, ${forecourt[2][3]}), .40);
+      float west = max(desertRect(p, vec2(${forecourt[0][0]}, ${forecourt[0][1]}), vec2(${forecourt[0][2]}, ${forecourt[0][3]}), .40),
+                       desertRect(p, vec2(${forecourt[3][0]}, ${forecourt[3][1]}), vec2(${forecourt[3][2]}, ${forecourt[3][3]}), .40));
+      float east = max(desertRect(p, vec2(${forecourt[2][0]}, ${forecourt[2][1]}), vec2(${forecourt[2][2]}, ${forecourt[2][3]}), .40),
+                       desertRect(p, vec2(${forecourt[5][0]}, ${forecourt[5][1]}), vec2(${forecourt[5][2]}, ${forecourt[5][3]}), .40));
       float apron = desertRect(p, vec2(${forecourt[1][0]}, ${forecourt[1][1]}), vec2(${forecourt[1][2]}, ${forecourt[1][3]}), .55);
+      float motelApron = desertRect(p, vec2(${forecourt[4][0]}, ${forecourt[4][1]}), vec2(${forecourt[4][2]}, ${forecourt[4][3]}), .55);
       vec3 asphalt = vec3(.025,.026,.032) * (.93 + .14 * n);
       vec3 ground = mix(sand, sand * .83, shoulder * .45);
       ground = mix(ground, vec3(.185,.174,.157), apron);
+      ground = mix(ground, vec3(.145,.138,.128), motelApron);
       ground = mix(ground, asphalt, max(road, max(west, east)));
       float serviceEdge = (1.0 - smoothstep(.027,.047,abs(p.y+7.76)))
                         * (1.0 - smoothstep(4.2,4.9,abs(p.x)));
-      ground = mix(ground,vec3(.34,.30,.22),serviceEdge*(.55+.30*n));
+      float motelBay = (1.0 - smoothstep(.025,.045,abs(mod(p.x - (${motelX}.0 - 7.1), 3.6) - 1.8)))
+                     * (1.0 - smoothstep(7.2,7.35,abs(p.x - (${motelX}.0 - 3.5))))
+                     * step(-12.2, p.y) * step(p.y, -9.2);
+      ground = mix(ground,vec3(.34,.30,.22),max(serviceEdge,motelBay*.65)*(.55+.30*n));
       float dash = 1.0 - smoothstep(2.7, 2.85, mod(p.x + 1.4, 7.5));
       float centerLine = (1.0 - smoothstep(.075, .105, abs(p.y))) * dash;
       float edgeLine = 1.0 - smoothstep(.025, .045, abs(abs(p.y) - 2.85));
@@ -4137,6 +4146,8 @@ var PAL = {
   signRed: 0x9c3a32, signWhite: 0xe8e0cc, signBlack: 0x3a3a40,
   wire: 0x242127, insulator: 0xabb7ae, rust: 0x765244, dust: 0x958b72,
   tileCream: 0xc4bea8, tileTeal: 0x497a76, darkWood: 0x463a30,
+  motelCoral: 0xff6e58, motelTurquoise: 0x3ad8c8, motelAmber: 0xffbe73,
+  motelBlanket: 0x7a5c43, motelSheet: 0xd8ceb8, motelShade: 0xdcc59a,
 };
 
 // vector/matrix helpers
@@ -4288,6 +4299,9 @@ function roleMat(role, opts) {
     const m = new Lm({ color: PAL[base] !== undefined ? PAL[base] : (PAL[role] !== undefined ? PAL[role] : 0x888888) });
     if (base === 'neonGasRed') { m.emissive = new Me(PAL.neonGasRed); m.emissiveIntensity = 1.6; }
     if (base === 'neonTrim') { m.emissive = new Me(PAL.neonCyan); m.emissiveIntensity = 1.2; }
+    if (base === 'motelCoral') { m.emissive = new Me(PAL.motelCoral); m.emissiveIntensity = 1.55; }
+    if (base === 'motelTurquoise') { m.emissive = new Me(PAL.motelTurquoise); m.emissiveIntensity = 1.15; }
+    if (base === 'motelShade') { m.emissive = new Me(PAL.motelAmber); m.emissiveIntensity = .95; }
     if (base === 'canopyLamp') { m.emissive = new Me(PAL.warmGlow); m.emissiveIntensity = 1.0; }
     if (base === 'windowGlow') { m.emissive = new Me(PAL.windowGlow); m.emissiveIntensity = .55; }
     if (base === 'wallCream') { m.emissive = new Me(0x30291e); m.emissiveIntensity = .13; }
@@ -5094,28 +5108,30 @@ Nt.userData.telephoneLine=telephoneLine;
   const CELL = 7, RADIUS = 150;
   const spotBlocked = (x, z) =>
     Math.abs(z) < 6.5 || forecourt.some(([x0,z0,x1,z1])=>
-      x>=x0-1.4 && x<=x1+1.4 && z>=z0-1.4 && z<=z1+1.4) || Math.hypot(x, z - 10) < 6;
+      x>=x0-1.4 && x<=x1+1.4 && z>=z0-1.4 && z<=z1+1.4) || Math.hypot(x, z - 10) < 6 || Math.hypot(x - motelX, z - 10) < 6;
   const cactusByRole = {}, rocksByRole = {}, scrubs = [];
-  for (let gx = -RADIUS; gx <= RADIUS; gx += CELL) {
-    for (let gz = -RADIUS; gz <= RADIUS; gz += CELL) {
-      const x = gx + (cellHash(gx, gz, 1) - .5) * CELL * .9;
-      const z = gz + (cellHash(gx, gz, 2) - .5) * CELL * .9;
-      const dStation = Math.hypot(x, z + 13);
-      if (dStation > RADIUS || spotBlocked(x, z)) continue;
-      const falloff = 1 - .72 * xc(Math.min(Math.max((dStation - 45) / 105, 0), 1));
-      const r = cellHash(gx, gz, 3);
-      if (r < .055 * falloff) {
-        const seed = 1 + Math.floor(cellHash(gx, gz, 4) * 999);
-        const { parts, gy, h } = cactusParts(x, z, seed, cellHash(gx, gz, 5) * Math.PI * 2);
-        for (const { role, part } of parts) (cactusByRole[role] = cactusByRole[role] || []).push(part);
-        // tall-prop collision only in the walkable core; distant cacti stay decorative
-        if (dStation < 48) Dt(x - .35, z - .35, x + .35, z + .35, 0, gy + h);
-      } else if (r < .175 * falloff) {
-        const s = .4 + cellHash(gx, gz, 6) * 1.2;
-        const role = ['rockA', 'rockB', 'rockC'][Math.floor(cellHash(gx, gz, 7) * 3)];
-        (rocksByRole[role] = rocksByRole[role] || []).push(rockParts(x, z, s));
-      } else if (r < .35 * falloff) {
-        scrubs.push(scrubParts(x, z, .6 + cellHash(gx, gz, 8) * .8, cellHash(gx, gz, 9) * Math.PI * 2));
+  for (const centerSiteX of [0, motelX]) {
+    for (let gx = centerSiteX - RADIUS; gx <= centerSiteX + RADIUS; gx += CELL) {
+      for (let gz = -RADIUS; gz <= RADIUS; gz += CELL) {
+        const x = gx + (cellHash(gx, gz, 1) - .5) * CELL * .9;
+        const z = gz + (cellHash(gx, gz, 2) - .5) * CELL * .9;
+        const dStation = Math.hypot(x - centerSiteX, z + 13);
+        if (dStation > RADIUS || spotBlocked(x, z)) continue;
+        const falloff = 1 - .72 * xc(Math.min(Math.max((dStation - 45) / 105, 0), 1));
+        const r = cellHash(gx, gz, 3);
+        if (r < .055 * falloff) {
+          const seed = 1 + Math.floor(cellHash(gx, gz, 4) * 999);
+          const { parts, gy, h } = cactusParts(x, z, seed, cellHash(gx, gz, 5) * Math.PI * 2);
+          for (const { role, part } of parts) (cactusByRole[role] = cactusByRole[role] || []).push(part);
+          // tall-prop collision only in the walkable core; distant cacti stay decorative
+          if (dStation < 48) Dt(x - .35, z - .35, x + .35, z + .35, 0, gy + h);
+        } else if (r < .175 * falloff) {
+          const s = .4 + cellHash(gx, gz, 6) * 1.2;
+          const role = ['rockA', 'rockB', 'rockC'][Math.floor(cellHash(gx, gz, 7) * 3)];
+          (rocksByRole[role] = rocksByRole[role] || []).push(rockParts(x, z, s));
+        } else if (r < .35 * falloff) {
+          scrubs.push(scrubParts(x, z, .6 + cellHash(gx, gz, 8) * .8, cellHash(gx, gz, 9) * Math.PI * 2));
+        }
       }
     }
   }
@@ -5953,6 +5969,489 @@ function detailText(parent,position,size,lines,colors=['#baa98a','#4d3f35']) {
   card.position.set(...position);parent.add(card);return card;
 }
 
+const motelGroup=new xi();
+motelGroup.name='Cinder Court Motor Lodge';
+motelGroup.position.set(motelX,0,0);
+Nt.add(motelGroup);
+const motelSignLight=new Pn(0xff7860,12,42,2);
+motelSignLight.position.set(motelX+4.6,5.1,-4.2);
+Nt.add(motelSignLight);
+const motelTurqLight=new Pn(0x3ad8c8,4.2,16,2);
+motelTurqLight.position.set(motelX+4.6,3.4,-4.2);
+Nt.add(motelTurqLight);
+const motelPorchLight=new Pn(0xffca8a,3.8,10,2);
+motelPorchLight.position.set(motelX+1.4,3.02,-13.4);
+Nt.add(motelPorchLight);
+const motelRoomLamp=new Pn(0xffb668,7.5,8.5,2);
+motelRoomLamp.position.set(motelX-.62,1.25,-18.55);
+Nt.add(motelRoomLamp);
+const motelDoorSpill=new Pn(0xffb46a,.85,5.5,2);
+motelDoorSpill.position.set(motelX+1.35,.72,-14.35);
+Nt.add(motelDoorSpill);
+let motelLampOn=true, motelDoorOpen=false, motelDrawerOpen=false;
+const motelDoorCollider={minX:motelX+.88,minZ:-14.70,maxX:motelX+1.88,maxZ:-14.48,minY:0,maxY:2.25};
+Mc.push(motelDoorCollider);
+let motelDoorHinge=null, motelLampSwitchHinge=null, motelDrawerTray=null, motelRateCard=null;
+
+(function buildCinderCourt() {
+  const parts={}, add=(role,p)=>(parts[role]||(parts[role]=[])).push(p);
+  const addLocal=(parent,role,list)=>addRoleMesh(parent,role,list);
+  const paintLocal=(w,h,painter,matrix,opts={})=>{
+    const m=paintedSurface(w,h,painter,matrix,opts);
+    motelGroup.add(m);
+    return m;
+  };
+
+  // --- 1. Grounded Neon Sign at local (4.6, 0, -4.2), angled toward highway & forecourt ---
+  const sx=4.6, sz=-4.2;
+  const signRoot=new xi();
+  signRoot.name='Cinder Court neon sign';
+  signRoot.position.set(sx,0,sz);
+  signRoot.rotation.y=Math.PI*.22;
+  motelGroup.add(signRoot);
+  const sp={}, sadd=(r,p)=>(sp[r]||(sp[r]=[])).push(p);
+  // Concrete & weathered steel plinth + older offset mounting plate
+  sadd('wornMetal',boxPart(0,.14,0,1.45,.28,1.18));
+  sadd('trimBand',boxPart(0,.30,0,1.12,.06,.88));
+  // Old offset mounting plate beneath newer pole flanges
+  sadd('rust',boxPart(.04,.345,.03,.86,.035,.64));
+  for(const dx of [-.36,.36])for(const dz of [-.24,.24])sadd('wornMetal',boxPart(dx,.37,dz,.055,.045,.055));
+  // Twin steel columns up to 6.8m
+  for(const dx of [-.95,.95]) {
+    sadd('metal',boxPart(dx,3.55,0,.18,6.42,.18));
+    sadd('trimBand',boxPart(dx,1.85,0,.22,.12,.22));
+    sadd('trimBand',boxPart(dx,3.95,0,.22,.12,.22));
+  }
+  sadd('wornMetal',boxPart(0,2.75,0,2.10,.11,.20));
+  // Older blank mounting plate remaining beneath the newer lower panel
+  sadd('ghostSign',boxPart(-.06,3.42,0,2.52,.78,.22));
+  sadd('rust',boxPart(-.06,3.42,0,2.58,.82,.18));
+  // Upper cabinet: CINDER COURT (y=4.45..6.25, w=3.35, h=1.80)
+  const ucy=5.35, ucw=3.35, uch=1.80, uct=.32;
+  sadd('fadedTeal',boxPart(0,ucy,0,ucw,uch,uct));
+  for(const dy of [-1,1])sadd('metal',boxPart(0,ucy+dy*(uch/2+.035),0,ucw+.12,.09,uct+.06));
+  for(const dx of [-1,1])sadd('wornMetal',boxPart(dx*(ucw/2-.04),ucy,0,.08,uch,.38));
+  // Lower cabinet: MOTOR LODGE (y=3.15..3.85, w=2.35, h=.68)
+  const lcy=3.50, lcw=2.35, lch=.68, lct=.26;
+  sadd('fadedRed',boxPart(0,lcy,0,lcw,lch,lct));
+  for(const dy of [-1,1])sadd('metal',boxPart(0,lcy+dy*(lch/2+.025),0,lcw+.08,.06,lct+.04));
+
+  // Upper sign face canvas
+  const uCnv=document.createElement('canvas');uCnv.width=640;uCnv.height=352;
+  const ug=uCnv.getContext('2d');
+  ug.fillStyle='#1b2c2b';ug.fillRect(0,0,640,352);
+  ug.strokeStyle='#63968f';ug.lineWidth=8;ug.strokeRect(14,14,612,324);
+  ug.fillStyle='#f8ded4';ug.textAlign='center';ug.textBaseline='middle';
+  ug.font='bold 96px Georgia,serif';ug.fillText('CINDER',320,112);
+  ug.font='bold 90px Georgia,serif';ug.fillText('COURT',320,244);
+  agePaint(ug,640,352,1957,1.05);
+  const uTex=new qt(uCnv);uTex.colorSpace='srgb';uTex.needsUpdate=true;
+  const uGlowCnv=document.createElement('canvas');uGlowCnv.width=640;uGlowCnv.height=352;
+  const ugg=uGlowCnv.getContext('2d');
+  ugg.fillStyle='#000';ugg.fillRect(0,0,640,352);
+  ugg.strokeStyle='#52e6d6';ugg.lineWidth=12;ugg.strokeRect(22,22,596,308);
+  ugg.shadowColor='#ff6d52';ugg.shadowBlur=18;
+  ugg.fillStyle='#ff8870';ugg.textAlign='center';ugg.textBaseline='middle';
+  ugg.font='bold 96px Georgia,serif';ugg.fillText('CINDER',320,112);
+  ugg.font='bold 90px Georgia,serif';ugg.fillText('COURT',320,244);
+  const uGlowTex=new qt(uGlowCnv);uGlowTex.colorSpace='srgb';uGlowTex.needsUpdate=true;
+  const uMat=new ji({map:uTex,emissiveMap:uGlowTex,roughness:.78,metalness:.06,emissive:new Me(0xffffff),emissiveIntensity:1.35});
+  Nt.userData.motelSignMat=uMat;
+
+  // Lower sign face canvas (MOTOR LODGE + OFFICE • SHOW ROOM)
+  const lCnv=document.createElement('canvas');lCnv.width=512;lCnv.height=160;
+  const lg=lCnv.getContext('2d');
+  lg.fillStyle='#4e2420';lg.fillRect(0,0,512,160);
+  lg.strokeStyle='#c9b89c';lg.lineWidth=5;lg.strokeRect(10,10,492,140);
+  lg.fillStyle='#f6ead6';lg.textAlign='center';lg.textBaseline='middle';
+  lg.font='bold 46px Arial,sans-serif';lg.fillText('MOTOR LODGE',256,56);
+  lg.fillStyle='#d2ba9c';lg.font='bold 24px Courier New,monospace';lg.fillText('OFFICE  •  SHOW ROOM',256,120);
+  agePaint(lg,512,160,1960,1.1);
+  const lTex=new qt(lCnv);lTex.colorSpace='srgb';lTex.needsUpdate=true;
+  const lGlowCnv=document.createElement('canvas');lGlowCnv.width=512;lGlowCnv.height=160;
+  const lgg=lGlowCnv.getContext('2d');
+  lgg.fillStyle='#000';lgg.fillRect(0,0,512,160);
+  lgg.strokeStyle='#ff8269';lgg.lineWidth=6;lgg.strokeRect(12,12,488,136);
+  lgg.fillStyle='#ff9a80';lgg.textAlign='center';lgg.textBaseline='middle';
+  lgg.font='bold 46px Arial,sans-serif';lgg.fillText('MOTOR LODGE',256,56);
+  lgg.fillStyle='#52dcd0';lgg.font='bold 24px Courier New,monospace';lgg.fillText('OFFICE  •  SHOW ROOM',256,120);
+  const lGlowTex=new qt(lGlowCnv);lGlowTex.colorSpace='srgb';lGlowTex.needsUpdate=true;
+  const lMat=new ji({map:lTex,emissiveMap:lGlowTex,roughness:.85,metalness:.04,emissive:new Me(0xffffff),emissiveIntensity:.85});
+
+  const uPlane=new ba(ucw-.24,uch-.22), lPlane=new ba(lcw-.18,lch-.14);
+  // Shaped coral crown/sill accent tubes & turquoise border tubes on both faces (framing text cleanly)
+  const borderPath=[[-1.48,ucy-.72],[1.48,ucy-.72],[1.48,ucy+.72],[-1.48,ucy+.72],[-1.48,ucy-.72]];
+  const lowerBorderPath=[[-1.04,lcy-.24],[1.04,lcy-.24],[1.04,lcy+.24],[-1.04,lcy+.24],[-1.04,lcy-.24]];
+  const coralBars=[
+    [[-1.18,ucy+.80],[1.18,ucy+.80]],
+    [[-1.18,ucy-.80],[1.18,ucy-.80]]
+  ];
+  for(const side of [-1,1]) {
+    sadd('meterRecess',boxPart(0,ucy,side*(uct/2+.004),ucw-.16,uch-.14,.022));
+    const uf=new dt(uPlane,uMat);uf.position.set(0,ucy,side*.182);uf.rotation.y=side>0?0:Math.PI;signRoot.add(uf);
+    sadd('meterRecess',boxPart(0,lcy,side*(lct/2+.004),lcw-.12,lch-.10,.020));
+    const lf=new dt(lPlane,lMat);lf.position.set(0,lcy,side*.148);lf.rotation.y=side>0?0:Math.PI;signRoot.add(lf);
+    sadd('motelTurquoise',{...tubeGeom(borderPath.map(([dx,y])=>[side*dx,y,side*.205]),.022,6,true,[0,0,1]),matrix:matIdentity()});
+    sadd('motelCoral',{...tubeGeom(lowerBorderPath.map(([dx,y])=>[side*dx,y,side*.168]),.020,6,true,[0,0,1]),matrix:matIdentity()});
+    for(const seg of coralBars) {
+      sadd('motelCoral',{...tubeGeom(seg.map(([dx,y])=>[side*dx,y,side*.205]),.024,6,true,[0,0,1]),matrix:matIdentity()});
+      for(const [dx,y] of seg)sadd('trimBand',boxPart(side*dx,y,side*.188,.038,.038,.04));
+    }
+  }
+  for(const r in sp){
+    const m=addLocal(signRoot,r,sp[r]);
+    if(r==='motelCoral'||r==='motelTurquoise')m.castShadow=false;
+  }
+  Dt(motelX+sx-.75,sz-1.15,motelX+sx+.75,sz+1.15,0,4.5);
+
+  // --- 2. Motel Building Massing: Office (x=3.5..7.5) + 3 Guest Units (x=-10.5..3.5) ---
+  // Continuous raised concrete walkway & porch overhang along front
+  add('interiorFloor',boxPart(-1.5,.04,-17.0,18.4,.08,9.2));
+  add('soffit',boxPart(-1.5,3.26,-16.7,18.8,.16,9.8));
+  add('fadedTeal',boxPart(-1.5,3.44,-16.7,19.1,.22,10.1));
+  add('wallCream',boxPart(-1.5,3.34,-11.72,19.1,.20,.18));
+  add('motelTurquoise',{...tubeGeom([[-10.8,3.20,-11.62],[7.8,3.20,-11.62]],.020,6),matrix:matIdentity()});
+  // Porch posts along z=-12.1
+  for(const px of [-10.2,-5.8,-1.4,3.2,7.2]) {
+    add('wallCream',boxPart(px,1.62,-12.1,.22,3.24,.22));
+    add('fadedTeal',boxPart(px,.45,-12.1,.25,.82,.25));
+    add('wornMetal',boxPart(px,.08,-12.1,.34,.16,.34));
+    Dt(motelX+px-.18,-12.28,motelX+px+.18,-11.92,0,3.3);
+  }
+  // Porch soffit lamps
+  for(const lx of [-8.0,-3.6,1.35,5.4]) {
+    add('wornMetal',boxPart(lx,3.16,-13.35,.36,.05,.24));
+    add(lx===1.35?'canopyLamp':'darkGlass',boxPart(lx,3.12,-13.35,.26,.03,.16));
+  }
+
+  // Outer back wall (z=-21.4) and end walls (x=-10.5, x=7.5)
+  add('wallCream',boxPart(-1.5,1.65,-21.4,18.3,3.3,.28));
+  add('wallCream',boxPart(-10.5,1.65,-17.6,.28,3.3,7.8));
+  add('wallCream',boxPart(7.5,1.65,-17.6,.28,3.3,7.8));
+  for(const sideX of [-10.5,7.5])add('tileTeal',boxPart(sideX,.24,-17.6,.34,.40,7.8));
+  Dt(motelX-10.75,-21.6,motelX+7.75,-21.2,0,3.5);
+  Dt(motelX-10.75,-21.6,motelX-10.3,-13.7,0,3.5);
+  Dt(motelX+7.3,-21.6,motelX+7.75,-13.7,0,3.5);
+
+  // Shuttered rooms (Unit 3: x=-10.5..-5.8, Unit 2: x=-5.8..-1.2) and Closed Office (x=3.5..7.5)
+  // Front wall segments for closed wings at z=-13.85
+  add('wallCream',boxPart(-5.85,1.65,-13.85,9.3,3.3,.28));
+  add('tileTeal',boxPart(-5.85,.24,-13.68,9.3,.40,.06));
+  add('fadedRed',boxPart(-5.85,.48,-13.68,9.3,.05,.06));
+  add('wallCream',boxPart(5.5,1.65,-13.85,4.0,3.3,.28));
+  add('tileTeal',boxPart(5.5,.24,-13.68,4.0,.40,.06));
+  add('fadedRed',boxPart(5.5,.48,-13.68,4.0,.05,.06));
+  Dt(motelX-10.5,-14.05,motelX-1.2,-13.65,0,3.5);
+  Dt(motelX+3.5,-14.05,motelX+7.5,-13.65,0,3.5);
+
+  // Closed doors & shuttered windows for Units 2 & 3, plus pale rectangles where room numbers were removed
+  for(const [ux,num] of [[-8.2,'3'],[-3.5,'2']]) {
+    // Closed recessed door
+    add('trimBand',boxPart(ux,1.12,-13.70,.98,2.24,.14));
+    add('fadedTeal',boxPart(ux,1.10,-13.66,.86,2.16,.06));
+    add('wornMetal',boxPart(ux+.34,.98,-13.61,.04,.14,.05));
+    // Shuttered window beside door
+    const wx=ux+1.45;
+    add('fadedTeal',boxPart(wx,1.62,-13.68,1.35,1.22,.12));
+    add('darkGlass',boxPart(wx,1.62,-13.65,1.18,1.06,.04));
+    for(let sy=1.18;sy<=2.04;sy+=.12)add('interiorShelf',boxPart(wx,sy,-13.62,1.16,.045,.03));
+    // Pale rectangle where room number plate was removed
+    paintLocal(.18,.24,(ctx,w,h)=>{
+      ctx.fillStyle='rgba(236,226,198,.32)';ctx.fillRect(10,10,w-20,h-20);
+      ctx.fillStyle='rgba(55,44,34,.75)';
+      ctx.beginPath();ctx.arc(w/2,20,3,0,Math.PI*2);ctx.arc(w/2,h-20,3,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(90,78,62,.22)';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font='bold 78px Georgia,serif';ctx.fillText(num,w/2,h/2+4);
+    },matTranslate(ux-.62,1.72,-13.69),{width:128,height:160,transparent:true,name:'Removed room number scar'});
+  }
+
+  // Closed Office front details (x=3.5..7.5)
+  add('trimBand',boxPart(4.55,1.12,-13.70,.98,2.24,.14));
+  add('fadedRed',boxPart(4.55,1.10,-13.66,.86,2.16,.06));
+  add('fadedTeal',boxPart(6.15,1.62,-13.68,1.55,1.26,.14));
+  add('darkGlass',boxPart(6.15,1.62,-13.64,1.38,1.10,.04));
+  paintLocal(1.34,1.06,(ctx,w,h)=>{
+    ctx.fillStyle='rgba(28,42,46,.55)';ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='rgba(228,214,182,.72)';ctx.textAlign='center';
+    ctx.font='bold 42px Georgia,serif';ctx.fillText('OFFICE',w/2,h*.38);
+    ctx.font='bold 24px Courier New,monospace';ctx.fillText('RING BELL  •  NIGHT DESK',w/2,h*.68);
+    agePaint(ctx,w,h,1961,.65);
+  },matTranslate(6.15,1.62,-13.60),{width:384,height:280,transparent:true,name:'Closed motel office window'});
+  // Sun-bleached exterior rate board with two prices under successive coats of paint
+  add('wornMetal',boxPart(3.82,1.58,-13.68,.52,.68,.04));
+  paintLocal(.46,.62,(ctx,w,h)=>{
+    ctx.fillStyle='#c8bc9e';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='#5d5243';ctx.lineWidth=6;ctx.strokeRect(8,8,w-16,h-16);
+    ctx.fillStyle='#4e4338';ctx.textAlign='center';
+    ctx.font='bold 26px Georgia,serif';ctx.fillText('CINDER COURT',w/2,42);
+    ctx.font='18px Georgia,serif';ctx.fillText('RATES  •  SINGLE',w/2,76);
+    // Older price showing through faded overpaint
+    ctx.fillStyle='rgba(122,64,52,.42)';ctx.font='bold 54px Georgia,serif';ctx.fillText('$4.50',w/2-10,148);
+    ctx.fillStyle='rgba(214,202,174,.58)';ctx.fillRect(44,108,w-88,58);
+    ctx.fillStyle='#3a352e';ctx.font='bold 52px Courier New,monospace';ctx.fillText('$6.00',w/2+8,152);
+    ctx.font='17px Courier New,monospace';ctx.fillText('SHOW ROOM  NO. 1',w/2,212);
+    agePaint(ctx,w,h,1959,1.35);
+  },matTranslate(3.82,1.58,-13.65),{width:256,height:320,emissive:0x4a3d2c,intensity:.15,name:'Sun-bleached motel rate sign'});
+
+  // --- 3. Walkable Furnished Show Room (Unit 1: x=-1.2..3.5, z=-13.85..-21.3) ---
+  // Interior partition walls (x=-1.2 and x=3.5)
+  add('interiorWall',boxPart(-1.2,1.60,-17.6,.22,3.2,7.6));
+  add('interiorWall',boxPart(3.5,1.60,-17.6,.22,3.2,7.6));
+  add('interiorWall',boxPart(1.15,1.60,-21.2,4.5,3.2,.14));
+  add('interiorCeil',boxPart(1.15,3.18,-17.6,4.6,.08,7.6));
+  // Baseboards inside room
+  add('fadedTeal',boxPart(-1.07,.10,-17.6,.04,.18,7.4));
+  add('fadedTeal',boxPart(3.37,.10,-17.6,.04,.18,7.4));
+  add('fadedTeal',boxPart(1.15,.10,-21.10,4.5,.18,.04));
+  Dt(motelX-1.35,-21.4,motelX-1.02,-13.8,0,3.3);
+  Dt(motelX+3.32,-21.4,motelX+3.65,-13.8,0,3.3);
+
+  // Recessed entry alcove at x=0.80..1.96, z=-13.85..-14.62
+  // Front wall left of alcove: x=-1.2..0.80 at z=-13.85 (with glazed window at x=-0.20)
+  add('wallCream',boxPart(-.20,.46,-13.85,2.0,.92,.26));
+  add('wallCream',boxPart(-.20,2.76,-13.85,2.0,1.08,.26));
+  add('wallCream',boxPart(-1.02,1.62,-13.85,.36,1.40,.26));
+  add('wallCream',boxPart(.62,1.62,-13.85,.36,1.40,.26));
+  add('tileTeal',boxPart(-.20,.24,-13.70,2.0,.40,.05));
+  add('fadedRed',boxPart(-.20,.48,-13.70,2.0,.05,.05));
+  // Front wall right of alcove: x=1.96..3.50 at z=-13.85
+  add('wallCream',boxPart(2.73,1.65,-13.85,1.54,3.3,.26));
+  add('tileTeal',boxPart(2.73,.24,-13.70,1.54,.40,.05));
+  add('fadedRed',boxPart(2.73,.48,-13.70,1.54,.05,.05));
+  // Alcove side cheeks (z=-13.85..-14.62) & overhead header
+  add('wallCream',boxPart(.80,1.65,-14.24,.18,3.3,.78));
+  add('wallCream',boxPart(1.96,1.65,-14.24,.18,3.3,.78));
+  add('wallCream',boxPart(1.38,2.78,-14.24,1.34,1.04,.78));
+  add('wallCream',boxPart(1.38,2.78,-14.58,1.34,1.04,.22));
+  // Door jambs, head casing, and weathered brass threshold sill at z=-14.58 (opening x=0.90..1.86, width 0.96m)
+  for(const jx of [.86,1.90])add('trimBand',boxPart(jx,1.14,-14.58,.09,2.28,.24));
+  add('trimBand',boxPart(1.38,2.28,-14.58,1.12,.09,.24));
+  add('wornMetal',boxPart(1.38,.045,-14.52,1.04,.04,.32));
+  add('brass',boxPart(1.38,.066,-14.58,.96,.016,.12));
+  // Room 1 number plate beside recessed entry + ghost mark of older plate
+  add('fadedTeal',boxPart(2.26,1.70,-13.70,.20,.26,.025));
+  paintLocal(.17,.23,(ctx,w,h)=>{
+    ctx.fillStyle='#e5dac0';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='#43635f';ctx.lineWidth=6;ctx.strokeRect(6,6,w-12,h-12);
+    ctx.fillStyle='#2b3836';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font='bold 84px Georgia,serif';ctx.fillText('1',w/2,h*.52);
+    ctx.font='bold 18px Arial,sans-serif';ctx.fillText('SHOW ROOM',w/2,h*.84);
+    agePaint(ctx,w,h,1962,.8);
+  },matTranslate(2.26,1.70,-13.68),{width:128,height:160,emissive:0x383226,intensity:.18,name:'Room 1 enamel plate'});
+
+  // Colliders for Room 1 front wall & alcove cheeks (leaving x=0.90..1.86 open when door is open)
+  Dt(motelX-1.25,-14.15,motelX+.88,-13.65,0,3.3);
+  Dt(motelX+1.88,-14.68,motelX+3.55,-13.65,0,3.3);
+  Dt(motelX+.70,-14.68,motelX+.88,-13.80,0,3.3);
+
+  // Glazed Window Frame & Sill at x=-0.20, y=0.92..2.22, z=-13.85 (frames the neon sign & highway from inside)
+  for(const wy of [.92,2.22])add('fadedTeal',boxPart(-.20,wy,-13.82,1.36,.08,.28));
+  for(const wx of [-.84,.44])add('fadedTeal',boxPart(wx,1.57,-13.82,.08,1.36,.28));
+  add('wornMetal',boxPart(-.20,.85,-13.68,1.46,.06,.34));
+  add('interiorShelf',boxPart(-.20,.90,-13.98,1.42,.06,.26));
+  add('trimBand',boxPart(-.20,1.57,-13.84,.04,1.26,.08));
+  add('trimBand',boxPart(-.20,1.57,-13.84,1.26,.04,.08));
+  // Partial venetian blinds at top of window
+  for(const by of [1.98,2.06,2.14])add('enamelCream',boxPart(-.20,by,-13.92,1.22,.022,.04));
+  const roomPane=paintLocal(1.24,1.22,(ctx,w,h)=>{
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,'rgba(62,88,90,.28)');
+    g.addColorStop(.55,'rgba(32,48,52,.10)');
+    g.addColorStop(1,'rgba(118,104,76,.36)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='rgba(155,165,156,.09)';ctx.fillRect(w*.12,0,w*.15,h);
+    agePaint(ctx,w,h,1961,.45);
+  },matTranslate(-.20,1.57,-13.84),{width:384,height:384,emissive:0x2b261b,intensity:.14,transparent:true,name:'Motel show room window'});
+  roomPane.material.side=2;roomPane.material.depthWrite=false;
+
+  // --- 4. Hinged Room Door with Stile/Rail Panels, Hinges, Rose Plates, and Handles ---
+  motelDoorHinge=new xi();
+  motelDoorHinge.name='Motel room door';
+  motelDoorHinge.position.set(.91,0,-14.58);
+  motelGroup.add(motelDoorHinge);
+  const dp={}, dadd=(r,p)=>(dp[r]||(dp[r]=[])).push(p);
+  // Door leaf (width 0.94m, height 2.18m, thickness 0.056m)
+  dadd('fadedTeal',boxPart(.47,1.09,0,.94,2.18,.052));
+  // Recessed upper and lower panels on both faces
+  for(const side of [-1,1]) {
+    dadd('trimBand',boxPart(.47,1.58,side*.029,.72,.76,.008));
+    dadd('trimBand',boxPart(.47,.58,side*.029,.72,.80,.008));
+    dadd('wallCream',boxPart(.47,1.58,side*.036,.64,.68,.008));
+    dadd('wallCream',boxPart(.47,.58,side*.036,.64,.72,.008));
+  }
+  // Three hinge knuckles along x=0.01
+  for(const hy of [.36,1.09,1.82]) {
+    dadd('wornMetal',boxPart(.01,hy,.028,.032,.09,.028));
+    dadd('rust',boxPart(.028,hy,.030,.045,.075,.012));
+  }
+  // Lockset escutcheon plate, strike bolt, and both inside/outside handles at x=0.83, y=1.00
+  dadd('wornMetal',boxPart(.83,1.00,0,.075,.21,.068));
+  dadd('brass',boxPart(.938,1.00,0,.022,.045,.026));
+  for(const side of [-1,1]) {
+    dadd('brass',{...latheGeom([[0,0],[.028,0],[.028,.012],[.014,.018],[.014,.052],[.026,.065],[.022,.082],[0,.085]],12),
+      matrix:matMul(matTranslate(.83,1.00,side*.032),matRotX(side>0?Math.PI/2:-Math.PI/2))});
+    // Lever handle extending horizontally for clear close-view silhouette
+    dadd('brass',boxPart(.78,1.00,side*.082,.11,.022,.022));
+  }
+  // Peephole & interior room rate frame on back of door
+  dadd('brass',boxPart(.47,1.56,.042,.028,.028,.024));
+  for(const r in dp){const m=addLocal(motelDoorHinge,r,dp[r]);if(m)m.receiveShadow=false;}
+
+  // --- 5. Room Floor, Rug, Wall Mirror, Chair, Bed, Nightstand, Drawer, and Bedside Lamp ---
+  paintLocal(4.42,7.10,(ctx,w,h)=>{
+    const rand=Vm(1962), step=32;
+    ctx.fillStyle='#52483d';ctx.fillRect(0,0,w,h);
+    for(let y=0;y<h;y+=step)for(let x=0;x<w;x+=step){
+      const t=Math.floor(96+rand()*10+((x/step+y/step)%2)*10);
+      ctx.fillStyle=`rgb(${t+10},${t+4},${t-5})`;
+      ctx.fillRect(x+1,y+1,step-1,step-1);
+    }
+    // Worn runner rug in the center of the room
+    ctx.fillStyle='#6d4c3d';ctx.fillRect(w*.22,h*.18,w*.56,h*.62);
+    ctx.strokeStyle='#9c8468';ctx.lineWidth=6;ctx.strokeRect(w*.24,h*.20,w*.52,h*.58);
+    agePaint(ctx,w,h,1962,.85);
+  },matMul(matTranslate(1.15,.082,-17.65),matRotX(-Math.PI/2)),{width:512,height:768,name:'Motel room floor and rug'});
+
+  // Bed along left wall (x=-1.05..0.95, z=-16.05..-17.95), leaving x=0.95..3.35 wide open for walking
+  // Headboard against x=-1.02
+  add('darkWood',boxPart(-.98,.72,-17.0,.09,1.16,1.76));
+  add('interiorCounter',boxPart(-.93,.82,-17.0,.05,.68,1.62));
+  for(const bz of [-17.82,-16.18])add('darkWood',boxPart(-.97,.66,bz,.11,1.32,.11));
+  // Bed frame & footposts
+  add('darkWood',boxPart(-.02,.32,-17.0,1.92,.18,1.72));
+  for(const bz of [-17.80,-16.20])add('darkWood',boxPart(.90,.28,bz,.09,.56,.09));
+  // Mattress, sheet, worn coverlet, and two pillows
+  add('motelSheet',boxPart(-.02,.48,-17.0,1.84,.22,1.62));
+  add('motelBlanket',boxPart(.14,.51,-17.0,1.52,.23,1.65));
+  add('fadedRed',boxPart(.82,.52,-17.0,.28,.24,1.66));
+  for(const pz of [-17.42,-16.58]) {
+    add('motelSheet',boxPart(-.68,.63,pz,.38,.11,.62));
+  }
+  Dt(motelX-1.05,-17.90,motelX+.96,-16.10,0,.95);
+
+  // Nightstand beside bed against left wall at x=-0.76, z=-18.55 (facing +X into the open room)
+  const nx=-.76, nz=-18.55;
+  // 4 tapered legs
+  for(const dx of [-.20,.20])for(const dz of [-.24,.24]) {
+    add('darkWood',boxPart(nx+dx,.20,nz+dz,.048,.40,.048));
+    add('brass',boxPart(nx+dx,.03,nz+dz,.054,.05,.054));
+  }
+  // Cabinet carcase with open drawer cavity at y=0.52..0.68 facing +X and lower shelf
+  add('interiorCounter',boxPart(nx,.16,nz,.42,.035,.52));
+  add('darkWood',boxPart(nx,.42,nz,.46,.04,.56));
+  add('darkWood',boxPart(nx,.72,nz,.48,.045,.58));
+  add('interiorShelf',boxPart(nx,.742,nz,.50,.018,.60));
+  for(const dz of [-.26,.26])add('darkWood',boxPart(nx,.57,nz+dz,.45,.26,.04));
+  add('darkWood',boxPart(nx-.21,.57,nz,.04,.26,.54));
+  // Lower cubby trim
+  add('interiorCounter',boxPart(nx,.48,nz,.42,.025,.48));
+  Dt(motelX+nx-.28,nz-.32,motelX+nx+.28,nz+.32,0,.82);
+
+  // Movable Nightstand Drawer (rotated +90 deg so local +Z slides along +X into room when opened)
+  motelDrawerTray=new xi();
+  motelDrawerTray.name='Nightstand drawer';
+  motelDrawerTray.position.set(nx,.58,nz);
+  motelDrawerTray.rotation.y=Math.PI/2;
+  motelGroup.add(motelDrawerTray);
+  const drp={}, dradd=(r,p)=>(drp[r]||(drp[r]=[])).push(p);
+  // Drawer face with beveled trim, side walls, back, and interior bottom
+  dradd('interiorCounter',boxPart(0,0,.225,.47,.16,.032));
+  dradd('fadedTeal',boxPart(0,0,.242,.43,.12,.012));
+  dradd('interiorShelf',boxPart(0,-.065,.02,.44,.022,.38));
+  for(const dx of [-.21,.21])dradd('interiorCounter',boxPart(dx,0,.02,.024,.13,.38));
+  dradd('interiorCounter',boxPart(0,0,-.16,.44,.13,.024));
+  // Shaped brass pull handle & backplate
+  dradd('brass',boxPart(0,0,.252,.14,.032,.012));
+  dradd('brass',{...tubeGeom([[-.045,0,.255],[-.045,0,.282],[.045,0,.282],[.045,0,.255]],.008,6),matrix:matIdentity()});
+  for(const r in drp)addLocal(motelDrawerTray,r,drp[r]);
+
+  // Inside the drawer: faded motel rate card (two prices under successive coats) + note about the show room
+  motelRateCard=paintLocal(.36,.24,(ctx,w,h)=>{
+    ctx.fillStyle='#d4c6a4';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='#6e5d48';ctx.lineWidth=4;ctx.strokeRect(10,10,w-20,h-20);
+    ctx.fillStyle='#4a3d31';ctx.font='bold 24px Georgia,serif';
+    ctx.fillText('CINDER COURT  •  ROOM 1',22,40);
+    ctx.font='18px Courier New,monospace';
+    ctx.fillText('FORMER RATE:  $4.50',22,74);
+    ctx.fillStyle='rgba(205,192,162,.62)';ctx.fillRect(150,54,110,26);
+    ctx.fillStyle='#7c362c';ctx.font='bold 20px Courier New,monospace';
+    ctx.fillText('$6.00 NIGHT',224,74);
+    ctx.fillStyle='#3d342b';ctx.font='17px Georgia,serif';
+    ctx.fillText('Keep Room 1 furnished & lamp',22,114);
+    ctx.fillText('connected as the show room',22,140);
+    ctx.fillText('so travelers can see the bed',22,166);
+    ctx.fillText('before taking a key.  — 1954 / 1966',22,192);
+    agePaint(ctx,w,h,1965,.9);
+  },matMul(matTranslate(0,-.048,.05),matRotX(-Math.PI/2)),{width:448,height:300,emissive:0x52432e,intensity:.28,name:'Motel rate card and show room note'});
+  motelDrawerTray.add(motelRateCard);
+
+  // Hero Bedside Lamp on top of nightstand at (nx, 0.75, nz)
+  const lx=nx, ly=.75, lz=nz;
+  // Stepped brass & ceramic body via lathe
+  add('brass',{...latheGeom([[0,0],[.11,0],[.105,.025],[.075,.045],[.042,.06]],14),matrix:matTranslate(lx,ly,lz)});
+  add('fadedTeal',{...latheGeom([[.042,.06],[.078,.12],[.086,.20],[.064,.28],[.032,.33],[.024,.36]],14),matrix:matTranslate(lx,ly,lz)});
+  add('brass',{...latheGeom([[.024,.36],[.036,.38],[.018,.44],[.028,.46]],12),matrix:matTranslate(lx,ly,lz)});
+  // Shade harp & pleated drum shade (open top/bottom silhouette)
+  add('motelShade',{...latheGeom([[.165,.38],[.158,.40],[.122,.58],[.115,.60],[.122,.58],[.158,.40]],16),matrix:matTranslate(lx,ly,lz)});
+  add('trimBand',{...latheGeom([[.167,.38],[.167,.395]],16),matrix:matTranslate(lx,ly,lz)});
+  add('trimBand',{...latheGeom([[.117,.585],[.117,.60]],16),matrix:matTranslate(lx,ly,lz)});
+  // Warm bulb inside shade
+  add('canopyLamp',boxPart(lx,ly+.46,lz,.048,.065,.048));
+  // Rotary / toggle switch on the lamp socket neck
+  motelLampSwitchHinge=new xi();
+  motelLampSwitchHinge.position.set(lx+.038,ly+.37,lz+.025);
+  motelGroup.add(motelLampSwitchHinge);
+  addLocal(motelLampSwitchHinge,'brass',[boxPart(.018,0,0,.042,.016,.018),boxPart(.036,0,0,.014,.028,.024)]);
+
+  // Armchair in back-right corner (x=2.55, z=-19.85, angled toward room & window)
+  const cx=2.55, cz=-19.85, cyaw=-.45;
+  const chairMat=matMul(matTranslate(cx,0,cz),matRotY(cyaw));
+  const cpart=(r,b)=>add(r,{...b,matrix:chairMat});
+  for(const dx of [-.28,.28])for(const dz of [-.26,.26])cpart('darkWood',boxPart(dx,.19,dz,.05,.38,.05));
+  cpart('fadedTeal',boxPart(0,.42,0,.64,.12,.60));
+  cpart('fadedTeal',boxPart(0,.74,-.24,.62,.56,.12));
+  for(const dx of [-.29,.29]) {
+    cpart('darkWood',boxPart(dx,.56,.02,.06,.18,.54));
+    cpart('interiorShelf',boxPart(dx,.65,.02,.075,.035,.58));
+  }
+  Dt(motelX+cx-.42,cz-.42,motelX+cx+.42,cz+.42,0,.95);
+
+  // Wall Mirror on right wall (x=3.36, y=1.56, z=-17.2) facing the bed & window
+  add('darkWood',boxPart(3.36,1.56,-17.2,.05,1.06,.76));
+  add('brass',boxPart(3.34,1.56,-17.2,.03,.96,.66));
+  paintLocal(.62,.92,(ctx,w,h)=>{
+    const g=ctx.createLinearGradient(0,0,w,h);
+    g.addColorStop(0,'#2e3c40');g.addColorStop(.48,'#56686b');g.addColorStop(.56,'#7a8884');g.addColorStop(1,'#253034');
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    // Silvering desilvered edge spots
+    ctx.fillStyle='rgba(38,32,26,.45)';
+    ctx.fillRect(0,0,w,10);ctx.fillRect(0,h-12,w,12);
+    agePaint(ctx,w,h,1956,.9);
+  },matMul(matTranslate(3.32,1.56,-17.2),matRotY(-Math.PI/2)),{width:256,height:384,emissive:0x242e30,intensity:.20,name:'Tarnished wall mirror'});
+
+  for(const role in parts)addLocal(motelGroup,role,parts[role]);
+})();
+
+function toggleMotelDoor() {
+  motelDoorOpen=!motelDoorOpen;
+  playInteractionSound('latch');
+}
+function toggleMotelLamp() {
+  motelLampOn=!motelLampOn;
+  playInteractionSound('metal');
+}
+function toggleMotelDrawer() {
+  motelDrawerOpen=!motelDrawerOpen;
+  if(!motelDrawerOpen && inspection==='motelDrawer')inspection=null;
+  playInteractionSound('wood');
+}
+function inspectMotelDrawer() {
+  if(!motelDrawerOpen)motelDrawerOpen=true;
+  inspection=inspection==='motelDrawer'?null:'motelDrawer';
+  inspectionTime=inspection?8:0;
+  playInteractionSound('paper');
+}
+
 function buildStationGestures() {
   const add=(...args)=>installGesture(Nt,...args);
   function prop(position,{size,material='steel'}={}) {
@@ -6334,13 +6833,13 @@ function renderInteractionMirror(dt) {
   }
 }
 
-const inspectionAmounts={read:.28,cabin:.16};
+const inspectionAmounts={read:.28,cabin:.16,motelDrawer:.24};
 function renderWithInspection() {
   if(!inspection){ls.render();return;}
   inspectionOffset.copy(Nn.position);
   if(inspection==='rest')Nn.position.set(-3.83,1.285,-13.58);
   else {
-    Nn.position.addScaledVector(Nn.getWorldDirection(inspectionForward),inspectionAmounts[inspection]);
+    Nn.position.addScaledVector(Nn.getWorldDirection(inspectionForward),inspectionAmounts[inspection]||.22);
     const [x,z]=vc(Nn.position.x,Nn.position.y,Nn.position.z);
     Nn.position.x=x;Nn.position.z=z;
   }
@@ -6352,9 +6851,10 @@ function findInteractionTarget() {
   if(inspection==='rest')return {label:'Stand up',action:()=>{inspection=null;}};
   const nearCar=seated || Nn.position.distanceTo(coupe.position)<6;
   const nearStation=Math.abs(Nn.position.x)<16 && Nn.position.z>-25 && Nn.position.z<-2;
+  const nearMotel=Math.abs(Nn.position.x-motelX)<18 && Nn.position.z>-24 && Nn.position.z<-2;
   const nearCargo=!seated && !heldPump && !carriedCargo && cargoItems.some(item=>item.slot<0 &&
     item.mesh.position.distanceToSquared(Nn.position)<11);
-  if(!nearCar && !nearStation && !nearCargo)return null;
+  if(!nearCar && !nearStation && !nearMotel && !nearCargo)return null;
   Nn.updateMatrixWorld(true);
   coupe.updateMatrixWorld(true);
   if(cursorMode) {
@@ -6429,6 +6929,16 @@ function findInteractionTarget() {
     if(heldPump===pump)target(pump.root,.477,.66,.18,.23,'Hang up nozzle',()=>putDownNozzle(true),true);
     else if(!heldPump && !carriedCargo)target(pump.nozzle,0,0,-.09,.19,'Pick up fuel nozzle',()=>takePumpNozzle(pump),true);
   }
+  if(!seated && nearMotel) {
+    motelDoorHinge.updateMatrixWorld(true);
+    motelDrawerTray.updateMatrixWorld(true);
+    for(const side of [-1,1])
+      target(motelDoorHinge,.79,1.00,side*.08,.22,motelDoorOpen?'Close room door':'Open room door',toggleMotelDoor,true);
+    target(motelGroup,-.72,1.12,-18.53,.20,motelLampOn?'Switch off bedside lamp':'Switch on bedside lamp',toggleMotelLamp,true);
+    target(motelDrawerTray,0,-.02,.27,motelDrawerOpen?.08:.18,motelDrawerOpen?'Close nightstand drawer':'Open nightstand drawer',toggleMotelDrawer,true);
+    if(motelDrawerOpen)
+      target(motelDrawerTray,0,.02,.05,.15,'Read motel rate card and note',inspectMotelDrawer,true);
+  }
   return best;
 }
 
@@ -6444,6 +6954,25 @@ function officeWallInWay(delta) {
     const t=(wall-x)/delta.x, depth=z+delta.z*t;
     if(t>0 && t<.98 && depth<-12.75 && depth>-20.55)return true;
   }
+  if(Math.abs(x-motelX)<16) {
+    const lx=x-motelX;
+    for(const wall of [-13.85,-14.58,-21.25]) {
+      const t=(wall-z)/delta.z;
+      if(t>0 && t<.98) {
+        const hx=lx+delta.x*t;
+        if(wall===-13.85 && hx>-1.25 && hx<3.55 && (hx<.85 || hx>1.90))return true;
+        if(wall!==-13.85 && hx>-1.25 && hx<3.55 && (wall<-20 || !motelDoorOpen || hx<.88 || hx>1.86))return true;
+      }
+    }
+    for(const wall of [-1.2,3.5]) {
+      const t=(wall-lx)/delta.x, depth=z+delta.z*t;
+      if(t>0 && t<.98 && depth<-13.85 && depth>-21.25)return true;
+    }
+    for(const wall of [.85,1.90]) {
+      const t=(wall-lx)/delta.x, depth=z+delta.z*t;
+      if(t>0 && t<.98 && depth<-13.85 && depth>-14.58)return true;
+    }
+  }
   return false;
 }
 function animateCar(dt) {
@@ -6458,6 +6987,23 @@ function animateCar(dt) {
   for(const item of controls) {
     item.press=Math.max(0,item.press-dt);
     item.button.position.z=.508+(item.on?.007:0)+(item.press>0?.012:0);
+  }
+  if(motelDoorHinge) {
+    const doorGoal=motelDoorOpen?1.45:0;
+    motelDoorHinge.rotation.y+=(doorGoal-motelDoorHinge.rotation.y)*Math.min(1,10*dt);
+    if(motelDoorOpen) {
+      Object.assign(motelDoorCollider,{minX:motelX+.84,maxX:motelX+1.04,minZ:-15.52,maxZ:-14.58});
+    } else {
+      Object.assign(motelDoorCollider,{minX:motelX+.88,maxX:motelX+1.88,minZ:-14.70,maxZ:-14.48});
+    }
+  }
+  if(motelDrawerTray) {
+    const drawerGoal=-.76+(motelDrawerOpen?.26:0);
+    motelDrawerTray.position.x+=(drawerGoal-motelDrawerTray.position.x)*Math.min(1,12*dt);
+  }
+  if(motelLampSwitchHinge) {
+    const swGoal=motelLampOn?0:.52;
+    motelLampSwitchHinge.rotation.z+=(swGoal-motelLampSwitchHinge.rotation.z)*Math.min(1,14*dt);
   }
 }
 
@@ -6547,7 +7093,7 @@ function updateCarHud() {
   const mode=cursorMode?'RMB look':'MOUSE look';
   const text=inspection==='rest' ? hint+mode+'  ·  Move to stand' : seated
     ? hint + (roadMap.visible?'Parked  ·  R fold map to drive':Math.round(Math.abs(carSpeed)*2.237)+' MPH  ·  WASD drive  ·  SPACE brake')+(carSpeed===0 && glovebox.engaged && !roadMap.visible?'  ·  R unfold map':'')+'  ·  C door  ·  F get out'
-    : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  Coupe by the station';
+    : hint + 'WASD walk  ·  '+mode+'  ·  SHIFT run  ·  SPACE jump  ·  '+(Math.abs(Nn.position.x-motelX)<120?'Cinder Court Motor Lodge':'Coupe by the station');
   const cargoStatus=heldPump?'  ·  Holding nozzle  ·  G let go':
     seated && carryingBlanket()?(cabinBlanketOpen?'  ·  Wrapped in blanket  ·  Unwrap to drive':'  ·  Blanket on passenger seat'):
     inspection==='rest'?(lapBlanket.visible?'  ·  Blanket across your lap':''):
@@ -6575,9 +7121,10 @@ updatePumpHoses(i);
 updateCarriedCargo();
 updateEngineAudio();
 updateCarHud();
-Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
-const depth=Math.min(5.84-Math.abs(x),z+20.52,-12.72-z);
-const shelter=xc(Math.max(0,Math.min(1,depth/.9)));
+Xm.position.copy(Nn.position);Nt.userData.stars.position.copy(Nn.position);recenterDesert(Nn.position.x,Nn.position.z);updateTelephoneLine(Nn.position.x);Qt.position.set(Nn.position.x+40,55,Nn.position.z+30);Qt.target.position.set(Nn.position.x,0,Nn.position.z);let t=eg.elapsedTime,k=Math.min(t/300,1);k=k*k*(3-2*k);Xm.material.uniforms.uNight.value=k;Nt.fog.color.setRGB(.400*(1-k)+.026*k,.270*(1-k)+.031*k,.290*(1-k)+.050*k);let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;Nt.fog.color.multiplyScalar(fb);Nt.fog.far=1400+90*(Hm(t*.03,9.2)-.5)*2;hhem.intensity=.45*(1-k)+.09*k;Qt.intensity=.55*(1-k)+1.05*k;let sk=Math.max(0,(k-.3)/.7);sk=sk*sk*(3-2*sk);Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}let mfl=.95+.05*Math.sin(t*31),mwfk=1+.007*Math.sin(t*1.1);motelSignLight.intensity=12*mfl;motelTurqLight.intensity=4.2*(.96+.04*Math.sin(t*43));motelPorchLight.intensity=3.8*mwfk;motelRoomLamp.intensity=motelLampOn?7.5*mwfk:0;motelDoorSpill.intensity=(motelLampOn?1.15:.18)*(motelDoorOpen?1:.22)*mwfk;if(ROLE_MATS.motelShade){ROLE_MATS.motelShade.emissiveIntensity=motelLampOn?.95*mwfk:.05}if(Nt.userData.motelSignMat){Nt.userData.motelSignMat.emissiveIntensity=1.05+.35*mfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
+const depthStation=Math.min(5.84-Math.abs(x),z+20.52,-12.72-z);
+const depthMotel=Math.min(2.35-Math.abs(x-(motelX+1.15)),z+21.2,-14.58-z);
+const shelter=xc(Math.max(0,Math.min(1,Math.max(depthStation,depthMotel)/.9)));
 const cabin=seated?(ventOpen?.26:.68):0;
 const muffled=Math.max(shelter*.72,cabin);
 const now=audio.ctx.currentTime;
@@ -6585,10 +7132,10 @@ audio.windFilter.frequency.setTargetAtTime((280+260*Hm(t*.02,7.7))*(1-muffled*.6
 audio.windGain.gain.setTargetAtTime((.026+.014*Hm(t*.013,3.1))*(1-muffled),now,.13);
 if(audio.windPan){
   Nn.getWorldDirection(Ni);
-  const threshold=Math.abs(x)<.68?Math.max(0,1-Math.abs(z+12.76)/.72):0;
+  const threshold=Math.abs(x)<.68?Math.max(0,1-Math.abs(z+12.76)/.72):(Math.abs(x-(motelX+1.38))<.55?Math.max(0,1-Math.abs(z+14.58)/.72):0);
   audio.windPan.pan.setTargetAtTime(threshold*Ni.x*.6+(seated&&ventOpen?.24:0),now,.12);
-}let L=audio.ctx.listener;Nn.getWorldDirection(Ni);if(L.positionX){L.positionX.value=Nn.position.x;L.positionY.value=Nn.position.y;L.positionZ.value=Nn.position.z;L.forwardX.value=Ni.x;L.forwardY.value=Ni.y;L.forwardZ.value=Ni.z;L.upX.value=0;L.upY.value=1;L.upZ.value=0}else{L.setPosition(Nn.position.x,Nn.position.y,Nn.position.z);L.setOrientation(Ni.x,Ni.y,Ni.z,0,1,0)}const blocked=officeWallInWay(inspectionForward.copy($n.position).sub(Nn.position));
-audio.humGain.gain.setTargetAtTime(.16*(.3+.7*gfl)*(blocked?.23:1)*(1-cabin*.70),now,.045);if(k>.85&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectChirp(audio.ctx.currentTime+Dn(.1,.9))}}let wfk=1+.008*Math.sin(t*.8);Ec.intensity=officeLampOn?10*wfk:0;Vsp.intensity=officeLampOn?1.1*wfk:.16;sillLight.intensity=officeLampOn?.72:0;benchLight.intensity=officeLampOn?4.0:0;if(ROLE_MATS.windowGlow){ROLE_MATS.windowGlow.emissiveIntensity=officeLampOn?.55*wfk:0}if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57)}for(let di=0;di<DUST_N;di++){dustPos[di*3]+=dustSeed[di].x*i;dustPos[di*3+1]+=dustSeed[di].y*i;dustPos[di*3+2]+=dustSeed[di].z*i;if(dustPos[di*3+1]<.5)dustPos[di*3+1]=3.9;if(dustPos[di*3]>4.2)dustPos[di*3]=-4.2;if(dustPos[di*3]<-4.2)dustPos[di*3]=4.2;if(dustPos[di*3+2]>-7.4)dustPos[di*3+2]=-11.2;if(dustPos[di*3+2]<-11.2)dustPos[di*3+2]=-7.4}dustGeo.attributes.position.needsUpdate=!0;dust.material.opacity=(.04+.14*sk)*wfk;for(let mi=0;mi<MOTH_N;mi++){
+}let L=audio.ctx.listener;Nn.getWorldDirection(Ni);if(L.positionX){L.positionX.value=Nn.position.x;L.positionY.value=Nn.position.y;L.positionZ.value=Nn.position.z;L.forwardX.value=Ni.x;L.forwardY.value=Ni.y;L.forwardZ.value=Ni.z;L.upX.value=0;L.upY.value=1;L.upZ.value=0}else{L.setPosition(Nn.position.x,Nn.position.y,Nn.position.z);L.setOrientation(Ni.x,Ni.y,Ni.z,0,1,0)}const nearMotelSign=Math.abs(x-motelX)<Math.abs(x);const signPos=nearMotelSign?motelSignLight.position:$n.position;if(audio.gasPanner.positionX){audio.gasPanner.positionX.value=signPos.x;audio.gasPanner.positionY.value=signPos.y;audio.gasPanner.positionZ.value=signPos.z}else audio.gasPanner.setPosition(signPos.x,signPos.y,signPos.z);const blocked=officeWallInWay(inspectionForward.copy(signPos).sub(Nn.position));
+audio.humGain.gain.setTargetAtTime(.16*(nearMotelSign?.85*(.6+.4*mfl):(.3+.7*gfl))*(blocked?.23:1)*(1-cabin*.70),now,.045);if(k>.85&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectChirp(audio.ctx.currentTime+Dn(.1,.9))}}let wfk=1+.008*Math.sin(t*.8);Ec.intensity=officeLampOn?10*wfk:0;Vsp.intensity=officeLampOn?1.1*wfk:.16;sillLight.intensity=officeLampOn?.72:0;benchLight.intensity=officeLampOn?4.0:0;if(ROLE_MATS.windowGlow){ROLE_MATS.windowGlow.emissiveIntensity=officeLampOn?.55*wfk:0}if(ROLE_MATS.canopyLamp){ROLE_MATS.canopyLamp.emissiveIntensity=.9+.06*Math.sin(t*57)}for(let di=0;di<DUST_N;di++){dustPos[di*3]+=dustSeed[di].x*i;dustPos[di*3+1]+=dustSeed[di].y*i;dustPos[di*3+2]+=dustSeed[di].z*i;if(dustPos[di*3+1]<.5)dustPos[di*3+1]=3.9;if(dustPos[di*3]>4.2)dustPos[di*3]=-4.2;if(dustPos[di*3]<-4.2)dustPos[di*3]=4.2;if(dustPos[di*3+2]>-7.4)dustPos[di*3+2]=-11.2;if(dustPos[di*3+2]<-11.2)dustPos[di*3+2]=-7.4}dustGeo.attributes.position.needsUpdate=!0;dust.material.opacity=(.04+.14*sk)*wfk;for(let mi=0;mi<MOTH_N;mi++){
   const seed=mothSeed[mi], angle=t*seed.s+seed.p;
   const strike=Math.pow(Math.abs(Math.sin(angle*.43)),12), radius=seed.r*(1-.85*strike);
   gasMothPoint.set(Math.cos(angle)*radius+.12*Math.sin(angle*13.1),
