@@ -22,9 +22,9 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
-| G1 — Composition and period silhouettes | Office furnished, 8.1 m pole sign, and drive-through forecourt built | The sign clears the canopy silhouette from the highway approaches. The office has clear sightlines through the storefront. |
+| G1 — Composition and period silhouettes | Office furnished, 8.1 m two-way pole sign, and drive-through forecourt built | The cabinet faces down both highway approaches and clears the canopy silhouette. The office has clear sightlines through the storefront. |
 | G2 — Palette, surfaces, and light hierarchy | Glazing, bench light, and two neon faces implemented | The canopy, glazed office, and higher red sign each have a distinct role. |
-| G3 — Graphics acceptance and performance | Offline run and sustained drive verified | Remaining graphics review includes matched G0 views and shadow checks. The 60-second driving sample measured 16.7 ms median and 16.9 ms p95 on Intel Iris Xe at 960 × 540 and DPR 1. |
+| G3 — Graphics acceptance and performance | Offline run and sustained drive verified | Remaining graphics review includes matched G0 views and shadow checks. The latest 60-second drive measured 16.7 ms median and 17.0 ms p95 on Intel Iris Xe at 960 × 540 and DPR 1. |
 | Phase 1 — Dusk-to-night cycle | Visually revalidated on the delivered offline file | Full night held at the 304- and 321-second captures. |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
@@ -211,6 +211,13 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — GAS/OIL faces aligned to the highway
+
+- Turned the 8.1 m cabinet 30 degrees to sit square across the straight highway, with one face pointing west and the other east. Centered the single red spill beneath the cabinet. Both faces carry correctly oriented lettering. This follows the sightline principle documented for a perpendicular sign on historic Route 66. [Historic Route 66 sign reference](https://route66ca.org/bekins-storage-company-roof-sign/)
+- Checked both opposing lane views from about 22 m and 50 m, the starting view, and the forecourt at preset dusk, blue hour, and night. The cabinet stays clear of the canopy and GAS reads from both near approaches. Verified the face normals in world space and ran the coupe footprint check in both directions. The pole base blocks direct contact.
+- All inline scripts passed `node --check`. Chrome opened the playable file offline with no external requests or browser errors. Pointer lock release and re-entry, walking, viewport resize, and both fuel nozzles passed. On the Samsung Galaxy Book (Core i7-1165G7, Intel Iris Xe, ANGLE Direct3D11) at 960 × 540 and DPR 1, 360 static night frame intervals per view measured 16.7 ms median, with p95 at 16.8 ms from the starting view, 17.2 ms from the west, and 17.1 ms from the east.
+- At the same settings, the instrumented 60-second drive cleared the forecourt from west to east and continued along the highway. The 3,560 frame intervals measured 16.7 ms median, 17.0 ms p95, and 65.5 ms maximum. The uninterrupted clock and full G3 shadow and reference-view checks were outside this pass.
 
 ### 2026-11-04 — Final GAS/OIL sign height
 

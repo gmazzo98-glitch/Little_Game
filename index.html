@@ -4861,7 +4861,8 @@ const gasSign=(function buildGasSign2() {
   const sign=new xi();
   sign.name='GAS/OIL roadside sign';
   sign.position.set(x,ground,z);
-  sign.rotation.y=-Math.PI/3;
+  // The highway runs along X. Aim the two faces down the opposing lanes.
+  sign.rotation.y=-Math.PI/2;
   Nt.add(sign);
   add('wornMetal',boxPart(0,.13,0,1.15,.26,1.15));
   add('trimBand',boxPart(0,.29,0,.61,.075,.61));
@@ -4928,7 +4929,7 @@ const gasSign=(function buildGasSign2() {
     if(role==='neonGasRed')mesh.castShadow=false;
   }
   // One quiet spill source under the cabinet serves both faces and the hum.
-  $n.position.copy(sign.localToWorld(new P(0,cy-1.19,.46)));
+  $n.position.set(x,ground+cy-1.19,z);
   Dt(x-.80,z-.80,x+.80,z+.80,ground,ground+.39);
   Dt(x-.21,z-.21,x+.21,z+.21,ground+.26,ground+cabinetBottom);
   Nt.userData.gasFaceMat = mat; // for flicker sync later
