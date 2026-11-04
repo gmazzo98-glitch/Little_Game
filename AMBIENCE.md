@@ -224,6 +224,8 @@ If a camper becomes the main vehicle in a future version, give its interior a be
 
 ## Things the player can do
 
+Pull off the highway at either end of the forecourt. The open lane runs along the road side of the pump island, under the canopy. You can stop in the light beside either pump or keep rolling toward the other connection. The parts drawer holds an old service slip from when drivers pulled through here.
+
 At the rear of the coupe, use **E** or click on the trunk latch. A small amber lamp lights the luggage well as the lid rises. Pick up the tool case or canvas roll beside the parked coupe, then aim into the open well to stow it. The folded blanket and any stowed item can be taken back out. Press **G** to set a carried item on clear ground. The trunk needs to be latched before driving.
 
 Carry the blanket to the padded bench below the **OFFICE** window. Use **Sit and unfold blanket** to settle with it across your lap. A small amber lamp warms the seat while the low window slit frames the cold road. Sit as long as you like. Press **E**, click, or move to stand and fold the blanket back up. The canvas roll can rest beside you on the bench.

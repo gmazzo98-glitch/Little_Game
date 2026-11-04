@@ -22,7 +22,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Repository direction and contributor rules | Complete | This documentation cleanup; runtime unchanged |
 | Asset production brief and agent launch prompt | Complete | Specifications and free-source research delivered; actual model production remains in G0–G2 |
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
-| G1 — Composition and period silhouettes | Office and exterior GAS lettering built | Counter and till, parts bench, shelves, interior window reveals, and lore surfaces. Aisle and furniture collision checked in source execution. Browser acceptance remains open. |
+| G1 — Composition and period silhouettes | Office, exterior GAS lettering, and drive-through forecourt built | The forecourt gives the coupe a clear lane alongside the pumps and a road connection at either end. |
 | G2 — Palette, surfaces, and light hierarchy | Office and neon pass implemented | Warm counter shade and sill spill, cyan canopy edge and spill, and red glass GAS lettering. Matching visual review remains open. |
 | G3 — Graphics acceptance and performance | Station geometry/render checks passed; full input/offline acceptance still open | 61,364 built triangles including pole instances; 60-second Intel Iris Xe night-station sample: median 16.7ms / p95 16.9ms at 1280×720, DPR 1.25 |
 | Phase 1 — Dusk-to-night cycle | Implemented; visual revalidation pending | Preserve while completing G0–G3 |
@@ -30,7 +30,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks); trim/window roles unchanged | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon, footsteps, night insects, and the coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Window rest, blanket use in the office and coupe, and focused prompts | Browser and performance acceptance in progress |
+| Phase 6 — Stillness and interaction polish | Window rest, blanket use, and seven station prompts | Browser and performance acceptance in progress |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -211,6 +211,14 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Drive-through forecourt and station prompts
+
+- Formed two flat road connections around the station apron and moved the front canopy columns toward the highway. The lane alongside the pump curb has about 3.18 m between the curb and the front column bases. The coupe starts aligned with this lane, with the loose cargo set back from it. Vegetation placement respects the new apron and driveway bounds.
+- The curb blocks the coupe while the foot route to the pumps and office stays passable. The GAS sign sits beyond the widened canopy silhouette from the starting view. The canopy and surface keep the existing painterly materials, cyan tubes, and warm pools.
+- Reduced station prompts from fourteen to seven. The player can change the lamp and blinds, sit by the window, or inspect the service board, parts drawer, ledger, and mileage strip. The maker's plate, fitting cover, repair tag, and similar details now sit in the scene as props. A service slip in the drawer refers to the old drive-through route.
+- The inline script passed syntax and resource checks. Chrome acquired pointer lock on the delivered offline file. An instrumented copy drove from the west apron past both pumps to the east apron using the normal throttle and brake inputs. Sampled the full coupe footprint in both directions along a road-to-road curve at 0.1 m intervals. The route stayed level and collision-free with a minimum radius of about 15.1 m, and the curb blocked a direct car incursion. Walking into the office, jump input, and resize also passed.
+- Reviewed the approach, lane, and both highway directions at preset dusk, blue hour, and night. The browser reported no app or shader errors and only local file requests. Four static night samples on Intel Iris Xe / ANGLE Direct3D11 at 960 × 540 and DPR 1 measured 16.7 ms median and 16.8–16.9 ms p95 over 120 intervals per view. The uninterrupted cycle and sustained driving sample remain open.
 
 ### 2026-11-04 — Blanket in the parked coupe
 

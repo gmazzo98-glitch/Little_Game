@@ -3919,14 +3919,17 @@ void main() {
 
 		}`};var Sr=class extends Ut{constructor(){super();let e=_c;this.uniforms=Ln.clone(e.uniforms),this.material=new cr({name:e.name,uniforms:this.uniforms,vertexShader:e.vertexShader,fragmentShader:e.fragmentShader}),this.fsQuad=new In(this.material),this._outputColorSpace=null,this._toneMapping=null}render(e,t,n){this.uniforms.tDiffuse.value=n.texture,this.uniforms.toneMappingExposure.value=e.toneMappingExposure,(this._outputColorSpace!==e.outputColorSpace||this._toneMapping!==e.toneMapping)&&(this._outputColorSpace=e.outputColorSpace,this._toneMapping=e.toneMapping,this.material.defines={},Ge.getTransfer(this._outputColorSpace)===qe&&(this.material.defines.SRGB_TRANSFER=""),this._toneMapping===$a?this.material.defines.LINEAR_TONE_MAPPING="":this._toneMapping===Ka?this.material.defines.REINHARD_TONE_MAPPING="":this._toneMapping===Qa?this.material.defines.CINEON_TONE_MAPPING="":this._toneMapping===ns?this.material.defines.ACES_FILMIC_TONE_MAPPING="":this._toneMapping===ja&&(this.material.defines.AGX_TONE_MAPPING=""),this.material.needsUpdate=!0),this.renderToScreen===!0?(e.setRenderTarget(null),this.fsQuad.render(e)):(e.setRenderTarget(t),this.clear&&e.clear(e.autoClearColor,e.autoClearDepth,e.autoClearStencil),this.fsQuad.render(e))}dispose(){this.material.dispose(),this.fsQuad.dispose()}};function Vm(i){return function(){i|=0,i=i+1831565813|0;let e=Math.imul(i^i>>>15,1|i);return e=e+Math.imul(e^e>>>7,61|e)^e,((e^e>>>14)>>>0)/4294967296}}var pn=Vm(1966),Dn=(i,e)=>i+pn()*(e-i);function Un(i,e){let t=Math.sin(i*127.1+e*311.7)*43758.5453;return t-Math.floor(t)}function xc(i){return i*i*(3-2*i)}function ao(i,e){let t=Math.floor(i),n=Math.floor(e),s=i-t,r=e-n,o=Un(t,n),a=Un(t+1,n),l=Un(t,n+1),c=Un(t+1,n+1),h=xc(s),d=xc(r);return o+(a-o)*h+(l-o)*d+(o-a-l+c)*h*d}function Hm(i,e){return ao(i,e)*.55+ao(i*2.1,e*2.1)*.3+ao(i*4.3,e*4.3)*.15}// Continuous world-space height, shared by the surface and player/prop placement.
 // The road is flat for its entire length; the apron blends into broad, low dunes.
+// Shared extents for the apron and its two road connections.
+const forecourt=[[-24,-10,-9,-3.15],[-12.5,-22,13.5,-4.45],[9,-10,24,-3.15]];
 function os(x, z) {
   const rectDistance = (x0, z0, x1, z1) => Math.hypot(Math.max(x0 - x, x - x1, 0), Math.max(z0 - z, z - z1, 0));
-  const distance = Math.min(Math.max(Math.abs(z) - 3.5, 0), rectDistance(-12.5, -22, 13.5, -5), rectDistance(-5.5, -6.5, 5.5, -3.2));
+  let distance=Math.max(Math.abs(z)-3.5,0);
+  for(const bounds of forecourt)distance=Math.min(distance,rectDistance(...bounds));
   const blend = xc(Math.min(distance / 20, 1));
   const dunes = .45 + 2.3 * Hm(x * .008, z * .008) + .28 * ao(x * .023 + 17, z * .023 + 43);
   return dunes * blend;
 }
-var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.55,.055,-.83).normalize()},uNight:{value:0}},vertexShader:`
+var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(s.carOnly||e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.55,.055,-.83).normalize()},uNight:{value:0}},vertexShader:`
       varying vec3 vDir;
       void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,fragmentShader:`
       varying vec3 vDir;
@@ -3987,7 +3990,10 @@ function gasTick(){if(!audio.tickGain||audio.ctx.state!=="running")return;var dx
 function insectChirp(at){if(!audio.ctx||audio.ctx.state!=="running")return;var c=audio.ctx,o=c.createOscillator();o.type="triangle";o.frequency.value=3900+Math.random()*700;var g=c.createGain();g.gain.value=0;o.connect(g);g.connect(audio.insectGain);var t=at;for(var p=0;p<3;p++){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.012,t+.012);g.gain.linearRampToValueAtTime(0,t+.05);t+=.09}o.start(at);o.stop(t+.1)}
 // Synthesized footsteps: harder bandpass thud on asphalt, softer lowpass scuff on sand.
 function footstep(hard){if(!audio.ctx||audio.ctx.state!=="running")return;var c=audio.ctx,s=c.createBufferSource();s.buffer=audio.noiseBuf;s.playbackRate.value=.65+Math.random()*.3;var f=c.createBiquadFilter();f.type=hard?"bandpass":"lowpass";f.frequency.value=hard?380+Math.random()*120:200+Math.random()*60;f.Q.value=hard?.8:.5;var g=c.createGain();var t=c.currentTime,peak=(hard?.052:.038)+Math.random()*.012;g.gain.setValueAtTime(1e-4,t);g.gain.linearRampToValueAtTime(peak,t+.006);g.gain.exponentialRampToValueAtTime(1e-4,t+.1);s.connect(f);f.connect(g);var th=c.createOscillator();th.type="triangle";th.frequency.setValueAtTime(hard?72:60,t);th.frequency.exponentialRampToValueAtTime(hard?46:42,t+.06);var tg2=c.createGain();tg2.gain.setValueAtTime(1e-4,t);tg2.gain.linearRampToValueAtTime(hard?.045:.028,t+.004);tg2.gain.exponentialRampToValueAtTime(1e-4,t+.075);th.connect(tg2);var mix=c.createGain();g.connect(mix);tg2.connect(mix);var out=mix;if(c.createStereoPanner){var p=c.createStereoPanner();audio.stepSide=1-audio.stepSide;p.pan.value=(audio.stepSide?.38:-.38)+Dn(-.08,.08);mix.connect(p);out=p}out.connect(audio.master);th.start(t);th.stop(t+.09);s.start(t,Math.random()*1.5,.15);s.stop(t+.17)}
-function onAsphalt(){let x=Nn.position.x,z=Nn.position.z;return Math.abs(z)<=3.5||(x>=-12.5&&x<=13.5&&z>=-22&&z<=-5)}
+function onAsphalt(){
+  const {x,z}=Nn.position;
+  return Math.abs(z)<=3.5 || forecourt.some(([x0,z0,x1,z1])=>x>=x0 && x<=x1 && z>=z0 && z<=z1);
+}
 // ---- Continuous desert: one smooth surface, world-space paint, no voxel cells. ----
 // The patch follows the player in 64m steps. Its far edge is always >8km away,
 // beyond the camera and fog, while the road/color field continues indefinitely.
@@ -4013,13 +4019,16 @@ desertGeometry.setAttribute('normal', new Et(desertNormals, 3));
 desertGeometry.setIndex(desertIndices);
 var desertMaterial = new Lm({ color: 0xffffff });
 desertMaterial.flatShading = false;
+const coupeFootprint = {value:new Float32Array(4)};
 desertMaterial.onBeforeCompile = shader => {
+  shader.uniforms.coupeFootprint = coupeFootprint;
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vDesertWorld;')
     .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDesertWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <common>', `#include <common>
       varying vec3 vDesertWorld;
+      uniform vec4 coupeFootprint;
       float sandHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float sandNoise(vec2 p) {
         vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -4035,17 +4044,31 @@ desertMaterial.onBeforeCompile = shader => {
       vec3 sand = mix(vec3(.29,.23,.17), vec3(.42,.34,.25), n);
       float road = 1.0 - smoothstep(3.20, 3.48, abs(p.y));
       float shoulder = 1.0 - smoothstep(3.45, 5.7, abs(p.y));
-      float drive = desertRect(p, vec2(-5.2,-6.5), vec2(5.2,-3.2), .40);
-      float apron = desertRect(p, vec2(-12.0,-21.6), vec2(13.0,-5.3), .55);
+      float west = desertRect(p, vec2(${forecourt[0][0]}, ${forecourt[0][1]}), vec2(${forecourt[0][2]}, ${forecourt[0][3]}), .40);
+      float east = desertRect(p, vec2(${forecourt[2][0]}, ${forecourt[2][1]}), vec2(${forecourt[2][2]}, ${forecourt[2][3]}), .40);
+      float apron = desertRect(p, vec2(${forecourt[1][0]}, ${forecourt[1][1]}), vec2(${forecourt[1][2]}, ${forecourt[1][3]}), .55);
       vec3 asphalt = vec3(.025,.026,.032) * (.93 + .14 * n);
       vec3 ground = mix(sand, sand * .83, shoulder * .45);
       ground = mix(ground, vec3(.185,.174,.157), apron);
-      ground = mix(ground, asphalt, max(road, drive));
+      ground = mix(ground, asphalt, max(road, max(west, east)));
+      float serviceEdge = (1.0 - smoothstep(.027,.047,abs(p.y+7.76)))
+                        * (1.0 - smoothstep(4.2,4.9,abs(p.x)));
+      ground = mix(ground,vec3(.34,.30,.22),serviceEdge*(.55+.30*n));
       float dash = 1.0 - smoothstep(2.7, 2.85, mod(p.x + 1.4, 7.5));
       float centerLine = (1.0 - smoothstep(.075, .105, abs(p.y))) * dash;
       float edgeLine = 1.0 - smoothstep(.025, .045, abs(abs(p.y) - 2.85));
       ground = mix(ground, vec3(.46,.34,.16), centerLine);
       ground = mix(ground, vec3(.45,.42,.34), edgeLine * .78);
+      vec2 offset = p - coupeFootprint.xy;
+      if (max(abs(offset.x), abs(offset.y)) < 3.0) {
+        vec2 forward = coupeFootprint.zw;
+        vec2 car = vec2(dot(offset, vec2(forward.y,-forward.x)), dot(offset, forward));
+        vec2 edge = abs(car) - vec2(.57,1.76);
+        float body = 1.0 - smoothstep(.06,.52,length(max(edge,vec2(0.0))));
+        vec2 tire = (abs(car) - vec2(.86,1.50)) / vec2(.25,.34);
+        float contact = 1.0 - smoothstep(.10,1.0,dot(tire,tire));
+        ground *= 1.0 - max(body * .48, contact * .64);
+      }
       diffuseColor.rgb *= ground;`);
 };
 var desertSurface = new dt(desertGeometry, desertMaterial);
@@ -4072,6 +4095,27 @@ function recenterDesert(x, z) {
   desertGeometry.computeBoundingSphere();
 }
 recenterDesert(Nn.position.x, Nn.position.z);
+
+// Follow the same two triangles used by the visible terrain cell.
+function desertCell(coordinate) {
+  let lower=0, upper=desertSize-1;
+  while(upper-lower>1){
+    const middle=(lower+upper)>>1;
+    if(desertCoords[middle]<=coordinate)lower=middle;
+    else upper=middle;
+  }
+  return lower;
+}
+function visibleDesertHeight(x,z) {
+  const localX=x-desertOriginX, localZ=z-desertOriginZ;
+  if(Math.max(Math.abs(localX),Math.abs(localZ))>=12000)return os(x,z);
+  const col=desertCell(localX), row=desertCell(localZ);
+  const u=(localX-desertCoords[col])/(desertCoords[col+1]-desertCoords[col]);
+  const v=(localZ-desertCoords[row])/(desertCoords[row+1]-desertCoords[row]);
+  const a=(row*desertSize+col)*3+1, c=a+desertSize*3;
+  if(u+v<=1)return desertPositions[a]*(1-u-v)+desertPositions[a+3]*u+desertPositions[c]*v;
+  return desertPositions[c+3]*(u+v-1)+desertPositions[a+3]*(1-v)+desertPositions[c]*(1-u);
+}
 // ============ G1 hero-model integration (inserted, replaces blockout) ==========
 // Geometry helpers (lathe/tube/extrude) built on bundled BufferGeometry (It);
 // material roles per ASSET_GUIDE; all data embedded, no runtime requests.
@@ -4579,7 +4623,7 @@ function buildOffice(add) {
   add('asphalt',boxPart(0,.12,z,7.6,.24,2.3));
   add('linePaint',boxPart(0,.245,z,7.35,.018,2.04));
   add('asphalt',boxPart(0,.258,z,7.15,.024,1.83));
-  for(const x of [-7.5,7.5])for(const zz of [-12.4,-5.6]) {
+  for(const x of [-7.5,7.5])for(const zz of [-12.4,-4.45]) {
     add('wallCream',boxPart(x,2.08,zz,.29,4.16,.29));
     add('fadedTeal',boxPart(x,.64,zz,.315,1.10,.315));
     add('wornMetal',boxPart(x,.09,zz,.43,.18,.43));
@@ -4587,39 +4631,41 @@ function buildOffice(add) {
     for(const dx of [-.15,.15])for(const dz of [-.15,.15])add('rust',boxPart(x+dx,.19,zz+dz,.035,.025,.035));
     add('trimBand',boxPart(x,4.13,zz,.37,.16,.37));
   }
-  add('fadedTeal',boxPart(0,y,z,W,.26,D));
-  for(const zz of [-5.06,-12.94])add('wallCream',boxPart(0,4.23,zz,W,.25,.16));
-  add('fadedTeal',boxPart(0,4.52,z,W+.4,.09,D+.4));
-  add('soffit',boxPart(0,4.18,z,W-.5,.045,D-.5));
-  for(const x of [-5.5,0,5.5])add('trimBand',boxPart(x,4.145,z,.035,.035,7.4));
+  add('fadedTeal',boxPart(0,y,z+.48,W,.26,D+.96));
+  for(const zz of [-4.10,-12.94])add('wallCream',boxPart(0,4.23,zz,W,.25,.16));
+  add('fadedTeal',boxPart(0,4.52,z+.48,W+.4,.09,D+1.36));
+  add('soffit',boxPart(0,4.18,z+.48,W-.5,.045,D+.46));
+  for(const x of [-5.5,0,5.5])add('trimBand',boxPart(x,4.145,z+.48,.035,.035,8.36));
   // Move the tube outside the fascia: the previous trim was buried behind it.
-  add('neonTrim',{...tubeGeom([[-8.25,4.10,-4.945],[8.25,4.10,-4.945]],.022,6),matrix:matIdentity()});
-  for(const x of [-8.53,8.53])add('neonTrim',{...tubeGeom([[x,4.10,-5.05],[x,4.10,-12.9]],.020,6),matrix:matIdentity()});
-  add('fadedRed',boxPart(0,4.43,-4.96,16.7,.035,.035));
+  add('neonTrim',{...tubeGeom([[-8.25,4.10,-3.985],[8.25,4.10,-3.985]],.022,6),matrix:matIdentity()});
+  for(const x of [-8.53,8.53])add('neonTrim',{...tubeGeom([[x,4.10,-4.09],[x,4.10,-12.9]],.020,6),matrix:matIdentity()});
+  add('fadedRed',boxPart(0,4.43,-4.00,16.7,.035,.035));
   for(const x of [-4.6,0,4.6]) {
     add('wornMetal',boxPart(x,4.14,z,.73,.06,.44));
     add('canopyLamp',boxPart(x,4.095,z,.57,.035,.29));
   }
-  add('fadedTeal',boxPart(0,4.34,-4.88,4.65,.60,.10));
+  add('fadedTeal',boxPart(0,4.34,-3.92,4.65,.60,.10));
   paintedSurface(4.51,.49,(ctx,w,h)=>{
     ctx.fillStyle='#c7b99a';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#6d8270';ctx.lineWidth=9;ctx.strokeRect(9,9,w-18,h-18);
     ctx.fillStyle='#93584a';ctx.textAlign='center';ctx.font='italic bold 120px Georgia,serif';ctx.fillText('Sunset',w/2,h*.65);
     ctx.fillStyle='#667062';ctx.font='bold 28px Arial,sans-serif';ctx.fillText('G A S O L I N E   &   O I L',w/2,h*.91);agePaint(ctx,w,h,1958,.75);
-  },matTranslate(0,4.34,-4.818),{width:1024,height:256,emissive:0xb39b75,intensity:.38,name:'Sunset porcelain canopy wordmark'});
+  },matTranslate(0,4.34,-3.858),{width:1024,height:256,emissive:0xb39b75,intensity:.38,name:'Sunset porcelain canopy wordmark'});
   for(const role in parts)addRoleMesh(Nt,role,parts[role]);
-  for(const x of [-7.5,7.5])for(const zz of [-12.4,-5.6])Dt(x-.22,zz-.22,x+.22,zz+.22);
+  for(const x of [-7.5,7.5])for(const zz of [-12.4,-4.45])Dt(x-.22,zz-.22,x+.22,zz+.22);
+  Dt(-3.80,-10.15,3.80,-7.85,0,.29);
+  Mc[Mc.length-1].carOnly=true;
   Sc.position.set(-3.8,3.60,-8.6);Sc.intensity=15;
   bc.position.set(3.8,3.60,-8.6);bc.intensity=13;
   Ec.position.set(2.72,2.89,-15.22);
   Vsp.position.set(0,.69,-12.38);
-  Tc.position.set(0,3.65,-5.35);
+  Tc.position.set(0,3.65,-4.42);
 })();
 
 // ---- GAS/OIL pole sign -----------------------------------------------------------
 (function buildGasSign2() {
   const parts = {};
   const add = (role, part) => { (parts[role] = parts[role] || []).push(part); };
-  const x = 11, z = -10.4, cy = 4.3, cw = 3.2, ch = 2.1, ct = .34;
+  const x = 14.7, z = -10.4, cy = 4.3, cw = 3.2, ch = 2.1, ct = .34;
   add('wornMetal', boxPart(x, .16, z, 1.2, .32, 1.2));
   add('metal', boxPart(x, 2.2, z, .32, 4.4, .32));
   add('fadedRed', boxPart(x, cy, z, cw, ch, ct));
@@ -4813,7 +4859,8 @@ Nt.userData.telephoneLine=telephoneLine;
   // that recedes into the distance, none on the road, plot, or driveway.
   const CELL = 7, RADIUS = 150;
   const spotBlocked = (x, z) =>
-    Math.abs(z) < 6.5 || (x > -14 && x < 14 && z > -22 && z < -4.5) || Math.hypot(x, z - 10) < 6;
+    Math.abs(z) < 6.5 || forecourt.some(([x0,z0,x1,z1])=>
+      x>=x0-1.4 && x<=x1+1.4 && z>=z0-1.4 && z<=z1+1.4) || Math.hypot(x, z - 10) < 6;
   const cactusByRole = {}, rocksByRole = {}, scrubs = [];
   for (let gx = -RADIUS; gx <= RADIUS; gx += CELL) {
     for (let gz = -RADIUS; gz <= RADIUS; gz += CELL) {
@@ -4850,7 +4897,7 @@ Nt.userData.telephoneLine=telephoneLine;
 // ---- Player's early-sixties touring coupe -----------------------------------
 const coupe = new xi();
 coupe.name = 'Sea-green touring coupe';
-coupe.position.set(-12.4, os(-12.4,-3.99), -3.99);
+coupe.position.set(-12.4, os(-12.4,-6.4), -6.4);
 coupe.rotation.y = Math.PI / 2;
 Nt.add(coupe);
 
@@ -4949,10 +4996,13 @@ for (const side of [-1,1]) {
 }
 const wheelGroups=[];
 const frontPivots=[];
+const wheelPivots=[];
+const tireRadius=.37;
 for (const x of [-.86,.86]) for (const z of [-1.49,1.51]) {
   const pivot = new xi();
-  pivot.position.set(x,.37,z);
+  pivot.position.set(x,tireRadius,z);
   coupe.add(pivot);
+  wheelPivots.push(pivot);
   if(z>0) frontPivots.push(pivot);
   const wheel = new xi();
   pivot.add(wheel);
@@ -4965,6 +5015,23 @@ for (const x of [-.86,.86]) for (const z of [-1.49,1.51]) {
     carMesh(wheel,'chrome',[round([[0,face+sign*.016],[.18,face+sign*.012],[.24,face],[0,face]])]);
   }
 }
+
+function groundCoupe() {
+  const {x,z}=coupe.position;
+  const sin=Math.sin(coupe.rotation.y), cos=Math.cos(coupe.rotation.y);
+  let groundSum=0;
+  for(const {position} of wheelPivots){
+    const wheelX=x+position.x*cos+position.z*sin;
+    const wheelZ=z-position.x*sin+position.z*cos;
+    position.y=visibleDesertHeight(wheelX,wheelZ);
+    groundSum+=position.y;
+  }
+  coupe.position.y=groundSum/wheelPivots.length;
+  for(const {position} of wheelPivots)position.y+=tireRadius-coupe.position.y;
+  const footprint=coupeFootprint.value;
+  footprint[0]=x; footprint[1]=z; footprint[2]=sin; footprint[3]=cos;
+}
+groundCoupe();
 
 // Curved seats, fabric headliner, stitched seams and a satin wood dash.
 carMesh(coupe,'carpet',[boxPart(0,.59,-.35,1.74,.06,2.05),
@@ -5030,7 +5097,7 @@ carMesh(coupe,'ivory',[
   boxPart(0,1.58,-.49,1.49,.073,1.44),
   carQuad([-.74,1.545,-1.21],[.74,1.545,-1.21],[.74,1.545,.23],[-.74,1.545,.23]),
   boxPart(0,1.53,-.37,1.43,.025,.07)
-]);
+],true);
 const pillars=[];
 for(const side of [-1,1]){
   pillars.push(carTube([[side*.885,.99,.76],[side*.73,1.55,.23]],.029));
@@ -5540,11 +5607,13 @@ function driveCar(dt) {
     const z=coupe.position.z+Math.cos(yaw)*carSpeed*step;
     if(!carClearAt(x,z,yaw)){carSpeed=0;break;}
     coupe.rotation.y=yaw;
-    coupe.position.set(x,os(x,z),z);
+    coupe.position.x=x;
+    coupe.position.z=z;
     Nn.rotateOnWorldAxis(upAxis,turn);
-    for(const wheel of wheelGroups)wheel.rotation.x+=carSpeed*step/.37;
+    for(const wheel of wheelGroups)wheel.rotation.x+=carSpeed*step/tireRadius;
   }
   needle.position.x=.218-Math.min(1,Math.abs(carSpeed)*2.237/80)*.436;
+  groundCoupe();
   updateDriverCamera();
 }
 function keepWalkerOutsideCar(previousX,previousZ) {
@@ -5655,15 +5724,14 @@ function buildStationGestures() {
     if(size)interactionPlate(group,[0,0,0],size,material);
     return group;
   }
-  // The three storage fixtures keep their contents attached to the moving piece.
+  // The drawer keeps the abandoned service slip attached to the moving tray.
   const drawer=add('Parts drawer',[-3.66,.59,-19.427],
     {size:[.94,.49,.035],material:'wood',axis:'z',travel:true,motion:.19,toggle:true,sound:'wood',radius:.21});
   interactionPlate(drawer,[0,.11,.025],[.23,.032,.041],'steel');
   interactionPlate(drawer,[0,-.046,-.085],[.8,.023,.20],'wood');
   for(const x of [-.23,0,.23])interactionPlate(drawer,[x,-.032,-.076],[.14,.003,.10],'paper');
-  const stock=add('Turn stock card',[-2.63,.52,-19.42],{motion:-2.65,sound:'paper',toggle:true});
-  detailText(stock,[0,0,.006],[.26,.11],['B-12  BELTS']);
-  detailText(stock,[0,0,-.006],[.26,.11],['B-12  FAN BELTS']).rotation.x=Math.PI;
+  detailText(drawer,[.04,-.027,-.078],[.35,.15],['SUNSET SERVICE','PULL THROUGH EAST','BELTS / HOSES']).rotation.x=-Math.PI/2;
+  detailText(Nt,[-2.63,.52,-19.414],[.26,.11],['B-12  FAN BELTS']);
   const lamp=add('Counter lamp switch',[.96,1.41,-13.02],
     {size:[.065,.12,.04],material:'brass',toggle:true,effect:item=>officeLampOn=!item.engaged});
   interactionPlate(lamp,[0,0,-.025],[.11,.16,.014],'enamel');
@@ -5707,16 +5775,13 @@ function buildStationGestures() {
   const carousel=prop([-2.56,1.10,-19.75],{size:[.30,.11,.28],material:'wood'});
   for(const x of [-.10,0,.10])interactionPlate(carousel,[x,.067,0],[.015,.08,.26],'steel');
   prop([-5.25,1.57,-20.13],{size:[.038,.18,.11]});
-  const mirror=add('Tilt inspection mirror',[-3.34,1.06,-19.78],{motion:-.68,toggle:true,view:'mirror',duration:4,sound:'latch'});
-  interactionPlate(mirror,[0,0,0],[.11,.086,.014],'steel');
+  prop([-3.34,1.06,-19.78],{size:[.11,.086,.014]});
   prop([-3.52,.947,-19.48],{size:[.38,.012,.032],material:'brass'});
   prop([-3.13,.18,-19.43],{size:[.25,.033,.17]});
   const funnel=prop([-5.24,1.20,-19.72]);
   interactionPlate(funnel,[0,-.052,0],[.10,.09,.075],'steel');
   interactionPlate(funnel,[0,-.13,0],[.023,.10,.022],'steel');
-  const makersPlate=detailText(Nt,[-2.07,.76,-19.459],[.24,.10],['SUNSET BENCH','NO. 04']);
-  const dustCover=interactionPlate(Nt,[-2.07,.76,-19.455],[.24,.10,.004],'paper');
-  add('Brush maker’s plate',[-2.07,.76,-19.445],{sound:'grit',effect:()=>{dustCover.visible=false;makersPlate.visible=true;}});
+  detailText(Nt,[-2.07,.76,-19.459],[.24,.10],['SUNSET BENCH','NO. 04']);
   const mat=prop([-3.10,.956,-19.98],{size:[.36,.018,.31],material:'rubber'});
   interactionPlate(mat,[.13,.009,.10],[.04,.004,.04],'steel');
 
@@ -5728,20 +5793,15 @@ function buildStationGestures() {
     prop([x,.48,-9.137],{size:[.25,.16,.018],material:'enamel'});
   }
   prop([.47,.27,-7.97],{size:[.44,.073,.035],material:'rubber'});
-  add('Lift water fitting cover',[-2,.79,-12.215],
-    {size:[.09,.073,.05],motion:-1.5,toggle:true,sound:'metal',radius:.095});
+  prop([-2,.79,-12.215],{size:[.09,.073,.05]});
   prop([-2,.56,-12.39],{size:[.105,.034,.054]});
-  const oil=add('Lift oil grade frame',[-5.04,1.15,-11.64],
-    {size:[.28,.10,.027],motion:-1.45,toggle:true,sound:'latch'});
-  detailText(oil,[0,0,-.016],[.25,.08],['SAE 30']).rotation.x=Math.PI;
-  const tag=add('Turn GAS maintenance tag',[11.15,1.31,-10.21],{axis:'y',motion:2.4,toggle:true,sound:'metal'});
-  detailText(tag,[0,0,0],[.17,.10],['GAS','S-2']);
-  prop([7.5,1.11,-5.416],{size:[.058,.068,.045],material:'enamel'});
+  detailText(Nt,[-5.04,1.15,-11.62],[.25,.08],['SAE 30']);
+  detailText(Nt,[$n.position.x+.15,1.31,-10.21],[.17,.10],['GAS','S-2']);
+  prop([7.5,1.11,-4.266],{size:[.058,.068,.045],material:'enamel'});
 
   prop([-.56,.14,-13.39],{size:[.04,.10,.29],material:'rubber'});
   interactionPlate(Nt,[1.50,1.09,-12.548],[.27,.048,.018],'brass');
   prop([1.50,1.09,-12.53],{size:[.26,.052,.038]});
-  add('Listen at wall grille',[6.23,1.65,-18.75],{radius:.26,view:'grille',duration:6,sound:null});
   prop([-6.25,2.47,-18.69],{size:[.034,.034,.46]});
   prop([6.17,1.25,-16.22],{size:[.025,.43,.31],material:'enamel'});
   const bracket=prop([-1.40,1.72,-12.42]);
@@ -5752,23 +5812,12 @@ function buildStationGestures() {
 }
 buildStationGestures();
 
-const rearMirrorTarget=new wt(192,72), benchMirrorTarget=new wt(128,72);
-for(const target of [rearMirrorTarget,benchMirrorTarget]){
-  target.texture.repeat.x=-1;target.texture.offset.x=1;
-}
+const rearMirrorTarget=new wt(192,72);
+rearMirrorTarget.texture.repeat.x=-1;
+rearMirrorTarget.texture.offset.x=1;
 const mirrorCamera=new gt(47,192/72,.14,3500);
 const mirrorAnchor=new P(), mirrorLook=new P();
-let rearMirror, benchMirror, mirrorYaw=0, mirrorDelay=0;
-function reflectiveFace(hinge,size,position,backward) {
-  const target=backward?rearMirrorTarget:benchMirrorTarget;
-  const material=new wi({map:target.texture,color:0xaab6b5,side:2});
-  const face=new dt(new ba(...size),material);
-  face.position.set(...position);
-  if(backward)face.rotation.y=Math.PI;
-  hinge.add(face);
-  return face;
-}
-benchMirror=reflectiveFace(stationActions.find(item=>item.label==='Tilt inspection mirror').hinge,[.104,.073],[0,0,.009],false);
+let rearMirror, mirrorYaw=0, mirrorDelay=0;
 function buildCabinGestures() {
   const add=(...args)=>installGesture(coupe,...args);
   add('Ignition',[.24,.815,.507],{size:[.041,.05,.04],material:'brass',axis:'z',motion:.9,toggle:true,
@@ -5786,7 +5835,10 @@ function buildCabinGestures() {
   interactionPlate(dimmer,[0,0,-.023],[.014,.036,.012],'brass');
   const mount=add('Adjust rearview mirror',[0,1.439,.58],
     {size:[.24,.084,.025],axis:'y',motion:.23,toggle:true,radius:.15,effect:item=>{mirrorYaw=item.engaged?.24:0;mirrorDelay=0;}});
-  rearMirror=reflectiveFace(mount,[.226,.071],[0,0,-.014],true);
+  rearMirror=new dt(new ba(.226,.071),new wi({map:rearMirrorTarget.texture,color:0xaab6b5,side:2}));
+  rearMirror.position.z=-.014;
+  rearMirror.rotation.y=Math.PI;
+  mount.add(rearMirror);
   const visor=add('Flip sun visor',[.46,1.511,.48],{motion:-1.68,toggle:true,radius:.20,sound:'rubber'});
   interactionPlate(visor,[0,.013,-.12],[.53,.025,.24],'enamel');
   add('Move seat one notch',[.68,.68,-.29],{size:[.087,.04,.11],motion:.73,toggle:true,radius:.13,sound:'latch',
@@ -5867,11 +5919,11 @@ addCargo('tool case',{
   wood:[boxPart(0,.085,0,.34,.17,.24)],
   chrome:[boxPart(0,.174,0,.115,.028,.034),boxPart(-.10,.123,-.123,.034,.044,.014),
     boxPart(.10,.123,-.123,.034,.044,.014)]
-},-16.15,-5.17);
+},-16.15,-8.55);
 addCargo('canvas roll',{
   ivory:[boxPart(0,.068,0,.31,.136,.20)],
   leather:[boxPart(-.094,.07,0,.025,.14,.206),boxPart(.094,.07,0,.025,.14,.206)]
-},-16.65,-5.02);
+},-16.65,-8.42);
 
 function takeCargo(item) {
   if(carriedCargo || seated || (item.slot>=0 && !trunkAccessible()))return;
@@ -5943,39 +5995,32 @@ function updateCarriedCargo() {
 }
 
 function renderInteractionMirror(dt) {
-  if(!seated && inspection!=='mirror')return;
+  if(!seated)return;
   mirrorDelay-=dt;
   if(mirrorDelay>0)return;
   mirrorDelay=.22;
-  if(seated) {
-    rearMirror.getWorldPosition(mirrorAnchor).sub(Nn.position).normalize();
-    if(Nn.getWorldDirection(mirrorLook).dot(mirrorAnchor)<.58)return;
-    mirrorCamera.position.copy(coupe.localToWorld(mirrorAnchor.set(0,1.29,-1.28)));
-    mirrorCamera.lookAt(coupe.localToWorld(mirrorLook.set(mirrorYaw*14,1.44,-15)));
-  } else {
-    mirrorCamera.position.set(-3.34,1.25,-19.73);
-    mirrorCamera.lookAt(0,1.6,-12);
-  }
-  mirrorCamera.aspect=seated?192/72:128/72;
-  mirrorCamera.updateProjectionMatrix();
+  rearMirror.getWorldPosition(mirrorAnchor).sub(Nn.position).normalize();
+  if(Nn.getWorldDirection(mirrorLook).dot(mirrorAnchor)<.58)return;
+  mirrorCamera.position.copy(coupe.localToWorld(mirrorAnchor.set(0,1.29,-1.28)));
+  mirrorCamera.lookAt(coupe.localToWorld(mirrorLook.set(mirrorYaw*14,1.44,-15)));
   const target=mn.getRenderTarget(), shadowUpdates=mn.shadowMap.autoUpdate;
   mn.shadowMap.autoUpdate=false;
-  benchMirror.visible=rearMirror.visible=false;
+  rearMirror.visible=false;
   Xm.position.copy(mirrorCamera.position);
   Nt.userData.stars.position.copy(mirrorCamera.position);
   try {
-    mn.setRenderTarget(seated?rearMirrorTarget:benchMirrorTarget);
+    mn.setRenderTarget(rearMirrorTarget);
     mn.render(Nt,mirrorCamera);
   } finally {
     mn.setRenderTarget(target);
     Xm.position.copy(Nn.position);
     Nt.userData.stars.position.copy(Nn.position);
-    benchMirror.visible=rearMirror.visible=true;
+    rearMirror.visible=true;
     mn.shadowMap.autoUpdate=shadowUpdates;
   }
 }
 
-const inspectionAmounts={read:.28,grille:.08,mirror:.10,cabin:.16};
+const inspectionAmounts={read:.28,cabin:.16};
 function renderWithInspection() {
   if(!inspection){ls.render();return;}
   inspectionOffset.copy(Nn.position);
@@ -6198,7 +6243,7 @@ const shelter=xc(Math.max(0,Math.min(1,depth/.9)));
 const cabin=seated?(ventOpen?.26:.68):0;
 const muffled=Math.max(shelter*.72,cabin);
 const now=audio.ctx.currentTime;
-audio.windFilter.frequency.setTargetAtTime(inspection==='grille'?160:(280+260*Hm(t*.02,7.7))*(1-muffled*.69),now,.13);
+audio.windFilter.frequency.setTargetAtTime((280+260*Hm(t*.02,7.7))*(1-muffled*.69),now,.13);
 audio.windGain.gain.setTargetAtTime((.026+.014*Hm(t*.013,3.1))*(1-muffled),now,.13);
 if(audio.windPan){
   Nn.getWorldDirection(Ni);
