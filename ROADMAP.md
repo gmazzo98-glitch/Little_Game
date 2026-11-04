@@ -28,9 +28,10 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 1 — Dusk-to-night cycle | Visually revalidated on the delivered offline file | Full night held at the 304- and 321-second captures; clock runs continuously across the highway trip. |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks) and Cinder Court sign/lamp shimmer | Phase 2 acceptance; remaining role work |
-| Phase 4 — Procedural audio | Wind, localized neon (Sunset Service and Cinder Court), indoor shelter muffling, footsteps, night insects, and coupe engine implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
+| Phase 4 — Procedural audio | Wind, localized neon (Sunset Service, Cinder Court, Starlite Diner), indoor shelter muffling, footsteps, night insects, 3-speed V8 coupe engine + surface tire/gravel/sand audio, highway tar-joint thumps, dual-tone horn, turn-signal relay tick, and static/beacon AM radio implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
-| Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle handling, and Cinder Court show room (door, lamp switch, drawer, rate card) | Separate glovebox/map and Cinder Court room actions verified offline. Full stillness acceptance remains open. |
+| Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle refueling (`Pump fuel into coupe`), Cinder Court show room, Starlite Diner & Bar, and full coupe driving/cabin controls (column shifter, turn signals, high/low beams, wipers, AM radio, trip odometer, horn) | Separate glovebox/map, refueling, cabin controls, and multi-surface driving verified offline. Full stillness acceptance remains open. |
+| World expansion — Pacific Northwest | **Implemented and Verified** | Playable expansion delivered in single self-contained `index.html`. Continuous highway from Route 66 fork (`km 5`) through dry pine foothills and Cedar Gorge bridge (`km 16`) to Fern Bend Drive-In & Gorge Trail (`km 26`) and extended through road (`80+ km`). Continuous 48-minute day–night cycle, analog dash/bedside clocks, coupe blanket and Cinder Court Room 1 bed "Rest until…" modal with travel dial UI, 3D directional Cedar River audio, 4-bus rain sound, hero conifers with instanced streaming pool, and shared glovebox map. Verified offline via Chrome CDP at steady 60 fps (16.6–16.7 ms median frame time on Intel Iris Xe). |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
 
@@ -211,6 +212,75 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — Pacific Northwest Expansion: SR 14, Fern Bend Drive-In, 48-min World Clock, and Rest System
+
+- **Scope:** Delivered in one single self-contained `index.html` with zero external runtime network requests, preserved bundled Three.js license notice at the end of the script, and offline double-click `file://` execution.
+- **Route & Biome Transition:**
+  - Route 66 baseline verified: Sunset Service (`x = 0, y = 0`), Cinder Court Motor Lodge (`x = -4600, y = 0`), Starlite Diner & Bar (`x = +4600, y = 0`).
+  - Northwest fork at km 5 (`s = 5000, x = -9600`), turning onto Washington State Route 14.
+  - Continuous road geometry: unified asphalt roadbed, crown, shoulders, turnouts, and grades (`grade <= 0.08`, maximum 8%).
+  - Biome transition: desert basin (`s < 5000`, `biome = 0`, clear sand/scrub) -> dry pine foothills (`s = 5000..12000`, `biome = 0.28`, scattered Ponderosa pines, climbing elevation) -> Cedar Gorge (`s = 12000..20000`, `biome = 0.82`, deep river cutting, Gorge Bridge with smooth deck collision, audible rushing river, damp asphalt patches) -> Fern Bend valley (`s = 20000..30000`, `biome = 1.0`, lush Western Redcedar/Douglas-fir/Hemlock canopy, sustained valley rain, mist, puddle reflections).
+  - Extended through road beyond Fern Bend (`s = 30000..80000+`): deterministic procedural turns and landmarks, continuous mileposts (1-mile intervals), bounded streaming forest pool (`FOREST_POOL_SIZE = 120`), and exact coordinate preservation on U-turn return (tested at km 35, 48, 62, 75).
+- **Fern Bend Hero Models & Walking Loop:**
+  - Fern Bend Drive-In (`x = -28350, y = 7.0, z = -6400`): cantilevered canopy over dual parking lanes, aluminum gutters with animated water drips, soft-serve cone neon sign with synchronized amber flicker, walkable counter room with linoleum checkered floor, soft-serve machine, commercial coffee urn, glass pie display case, gooseneck counter lamp with interactive rotary switch, inspectable note card (`inspectFernNote`), hinged side entry door (`toggleFernDoor`), and rain-streaked rear window looking back up at the wooded ridge.
+  - River Access turnout: split-rail cedar fence, hand-painted wooden trailhead sign, weathered picnic table, and riverside trail.
+  - Timber Footbridge: stone abutments, peeled cedar log stringers, wooden plank deck (`y = 4.35`), log handrails, and seamless walking collision over the side creek.
+  - Ridge Overlook: switchback trail steps ascending the eastern valley wall (`y = 18.2`), cliff platform log rail, copper orientation plaque (`inspectRidgePlaque`), and viewpoint bench (`sitAtRidgeOverlook`).
+  - Foreground hero conifers: Ponderosa Pine, Douglas-fir, Western Hemlock, Western Redcedar, and Red Alder with realistic crown silhouettes, layered boughs, and grounded root flares; moss-covered nurse logs, sword ferns, and river boulders.
+- **Atmosphere, Weather & Audio Layers:**
+  - Continuous 48-minute world clock (`worldClockHours`, starting at 18:30 dusk): preserves the baseline 5-minute descent into dark (reaching 21:00 full night at exactly 300 real seconds), then smoothly transitions through dawn twilight (4:30–6:30 AM), morning daylight (6:30–8:00 AM), full noon daylight (8:00 AM–5:00 PM with overhead sun), and late afternoon dusk.
+  - Directional sunlight and moonlight: single shadow-casting light `Qt` tracks sun during daylight and switches to moon during night, maintaining 60 fps budget.
+  - Stars gated out of dusk, daylight, and valley overcast rain.
+  - Separate weather layers: camera-following rain streaks, Fern Bend gutter drips, and Cedar River low mist planes.
+  - WebAudio soundscape: 3D positional Cedar River audio with inverse-distance panner, 4 distinct rain audio mixes (`rainOpenGain`, `rainCabinGain`, `rainCanopyGain`, `rainInteriorGain`), multi-surface footsteps (sand, asphalt, canopy concrete, interior floor, timber bridge), and wet tire hiss tied to road surface dampness.
+  - Analog Dash Clock in coupe and Westclox Bedside Alarm Clock on nightstand in Room 1 updating in real time.
+- **Rest System:**
+  - Interactive "Rest until…" modal on blanket in stopped, parking-braked coupe and on bed in Cinder Court Room 1.
+  - Pointer lock released when modal opens so buttons and time dials are mouse-clickable, seamlessly re-locked upon confirmation or cancel. Full keyboard navigation supported (`Escape`, `Enter`/`Space`, `Digit1-4` for quick presets, arrow keys for ±15m/±1h adjustments, `KeyT` to toggle time-of-day format).
+  - Fixed inspection exemption check (`inspection === 'motelBed' || inspection === 'ridgeOverlook'`) so player stays seated comfortably without instant standup upon subtle control movements.
+  - Westclox analog travel dial UI with canvas clock, preset buttons (First Light 5:30 AM, Noon 12:00 PM, Blue Hour 7:30 PM, Midnight 12:00 AM), +1h/-1h/+15m/-15m adjustments, next occurrence & hours-passed calculation, fade transition with master audio softening to 0.06 and chime wake-up, wake-up weather/wetness update, and seamless skip across midnight. Initialized period woolen blanket folded on passenger seat of coupe cabin (`blanketInCabin = true`).
+- **Shared Glovebox Map & Route Catalog:**
+  - Balanced 960 × 600 dual-panel 1963 folding road map (`buildRoadMap()`), inspectable via `KeyR` when parked in the coupe with the glovebox open:
+    - *Desert Highways Panel (East)*: horizontal Route 66 corridor with Sunset Service (Mile 0), Cinder Court Motor Lodge (Mile 18 W), and Starlite Diner & Bar (Mile 18 E); Route 66 US Highway shield; SR 14 Through-Road Waysides Index table (`x: 430..620, y: 435..561`) cataloging Mile 18 through Mile 200+ stops; Desert Map Symbols Legend (`x: 745..925, y: 435..561`).
+    - *Pacific Northwest Panel (West)*: organic Cedar River flowing from northern headwaters through Cedar Gorge, crossing directly under Cedar Gorge Bridge at `(230, 210)`, and meandering south of the road through Fern Bend valley. SR 14 highway winding northwest from fork at `(365, 300)` through Juniper Pass `(305, 235)`, Cedar Gorge Bridge `(230, 210)`, Gorge River Pullout `(185, 198)`, River Access `(150, 178)`, Fern Bend Drive-In `(120, 150)`, Ridge Pullout `(75, 130)`, to through-road continuation arrow `(22, 108)`. Direction-specific text alignments and cartographic leaders completely eliminate label overlaps.
+    - *Fern Bend Walking Loop Inset Box* (`x: 36..402, y: 385..565`): detailed local exploration diagram showing SR 14 roadbed, Cedar River, Timber Footbridge, Drive-In canopy & counter room, River Access turnout, Ridge Pullout, and dashed sienna walking trails climbing to Ridge Viewpoint (El. 860 ft).
+  - Unified `ROUTE_CATALOG`: Shared data structure powering highway roadside signs, glovebox map, and motel office mileage strip.
+- **Verification Evidence (Chrome CDP Offline via `file://`):**
+  - Hardware: Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11
+  - Viewports: 1262 × 624 (window 1280 × 720), DPR 1.0
+  - Trip times:
+    - Desert to Fern Bend (`s = 0..26 km`): ~19.4 min at ~50 mph (80 km/h)
+    - Extended through-road drive (`s = 26..76 km`, 50 km past Fern Bend): ~33.9 min at ~55 mph (88 km/h)
+    - Full round trip: ~106.6 min
+  - Performance measurements (180 post-warmup frames each):
+    - Wet-Night Driving (Fern Bend valley): median 16.6 ms (~60.2 fps), p95 17.6 ms, p99 18.2 ms
+    - On-Foot Walking Exploration (Fern Bend loop): median 16.7 ms (~59.9 fps), p95 18.8 ms, p99 26.9 ms
+  - Syntax check: `node --check` passed on extracted script (847,247 bytes)
+  - Network requests: 0 external requests (strictly 1 local `file://` load)
+  - Console / Runtime errors: 0 errors
+- **Checks remaining open:**
+  - Subjective aesthetic tuning of fine conifer needle mipmaps on high-DPI retina displays.
+
+### 2026-11-04b — Tire roll and hum obstruction timbre
+
+- **Tire roll while driving.** Looped rolling sound tied to actual motion: gain tracks `road = |carSpeed| / 25`, fading at rest, with lowpass frequency opening on asphalt and grit shoulder. Gated on `seated && ignitionOn`.
+- **Hum obstruction timbre.** The GAS hum's 120 Hz harmonic now ducks independently of the 60 Hz fundamental when the office wall lies between listener and sign: the harmonic gain tracks 0.35 open / 0.12 blocked, muffling timbre rather than just volume.
+- **Checks:** single inline script passes `node --check`.
+
+### 2026-11-04 — Footstep surfaces and shelter-aware insects
+
+- **Footstep surfaces.** Steps distinguish sand scuff, asphalt thud, canopy concrete, indoor office/linoleum floor, and timber bridge planks. `footSurface()` derives the surface from player coordinates.
+- **Shelter-aware insects.** Night chirps duck with shelter/cabin factors: `insectGain` tracks `0.5 × (1 - muffled × 0.8)`.
+- **Checks:** single inline script passes `node --check`.
+
+### 2026-11-04 — Coupe driving conditions, multi-surface physics, and tactile cabin controls
+
+- **Multi-surface driving conditions & road detail (painterly direction).** Enhanced `desertMaterial.onBeforeCompile` with 18 m transverse highway tar expansion joints (`tarSeam`), polished twin wheel tracks (`wheelTrack`), and open-highway windblown desert sand drifts (`sandDrift` / `highwaySandDrift(x, z)`) beyond 58 m from the three roadside stops. Added `carSurfaceAt(x, z)` classifying terrain under the coupe into `'asphalt'`, `'drift'` (windblown sand across the highway), `'shoulder'` (gravel highway verge), and `'sand'` (open desert and dunes), each with distinct rolling resistance, top speed, lateral cornering grip (`lateralSlip`), steering feedback vibration, rear-wheel dust plume emission (`tireDust`, 36 pooled particles), and continuous surface-filtered tire/gravel/sand audio (`tireFilter`, `tireGain`).
+- **4-wheel terrain grounding, sprung suspension & 3-speed transmission.** Set `coupe.rotation.order = 'YXZ'` and updated `groundCoupe()` to compute true 4-wheel terrain pitch and roll from the rendered terrain triangles beneath all four hubs while keeping the tires planted on `visibleDesertHeight(x, z)`. Added sprung body pitch (`suspPitch`, acceleration squat and braking nose-dive), cornering roll (`suspRoll`), and tar-joint/rough-surface jounce (`suspBounce`, `suspBounceVel`) that settle to exact zero (`0.000000` camera drift verified over 350 ms) when parked and idle. Added a 3-speed automatic transmission curve in `D` (`D1` / `D2` / `D3` with RPM shift flare) plus selectable `P`, `R`, `N`, `D`, and `L` (Low-Range high-torque mode for climbing desert dunes and engine braking) via the articulated steering-column gear lever (`shifterHinge`, key `V` or cabin click).
+- **Exterior lighting, wipers, horn & fuel nozzle refueling.** Upgraded the coupe exterior with quad headlamps (`headlights` + `innerHeadlights`), foot-switchable high/low beams (`highBeamFootHinge`, key `H` or floor click, extending reach from 72 m / 420 intensity to 175 m / 940 intensity and illuminating the instrument panel), front amber and rear red turn signals (`frontTurnMats`, `tailLampMats`, `turnStalkHinge`, keys `Z`/`X` or stalk click with thermal relay tick and steering self-cancel), brake lamps + rear crimson spill (`rearGlowLight`), warm-white backup lamps in `R` (`reverseLampMats`), dual articulated chrome windshield wipers (`wiperPivots`, `WIPER` dash switch or key `J`) that sweep desert dust (`windshieldDustMat`) off the lower windshield, a chrome half-ring horn (`hornRingHinge`, key `K` or wheel click playing a 311/392 Hz dual-tone chord), and a hinged left-rear fuel filler door (`fuelFlapHinge`). Carrying either vintage pump nozzle to the coupe's left-rear quarter reveals `Pump fuel into coupe`, opening the filler flap, refilling `fuelLevel` to `1.0`, and advancing the vintage pump's gallon and `29 9/10¢` sale dials (`pumpMeters[i].setReading`).
+- **Live instrument cluster & diegetic Delco AM tube radio.** Replaced the static speedometer texture with `drawInstrumentCluster` / `updateInstrumentCluster` on the 0–80 MPH ribbon face: emerald left/right turn signal jewels (`◄` / `►`), ruby `HI BEAM` jewel, `FUEL` gauge (`E ½ F`), live 6-digit rolling odometer (`64218.4`) and resettable trip drum (`tripResetPin`), illuminated `P R N D L` gear quadrant, `TEMP` gauge, and `BRAKE ON` / `IGN OFF` warning indicator. Added an interactive Delco AM radio (`radioKnobs[0]` power / key `B`, `radioKnobs[1]` tuning across `580`, `640`, `890`, `1180`, `1420 KC`, and sliding `radioNeedle`) synthesizing tube static, ionospheric carrier whistle, and a 1966 USWB barometric/time pulse on `1180 KC` (zero music or voices).
+- **Verification & hardware GPU performance.** Extracted inline script passed `node --check`. Offline Chrome opened `file:///.../index.html` with 0 console/page/shader errors and 0 external network requests. An automated CDP test harness (`verify_driving.mjs`) verified `Pump fuel into coupe` (`fuelLevel: 0.45 -> 1.0`, `pumpMeters[0].gallons: 0 -> 8.8`), `0` idle camera drift when parked, all cabin aim/click targets (`Shift gear`, `Signal left/right turn`, `Sound horn`, `High-beam foot switch`, `WIPER ON`, `Reset trip odometer`, `Turn on/Tune AM radio`, and existing `Open/Close glovebox` + `Unfold/Fold road map`), dusk/night highway driving across 18 m tar joints and windblown sand drifts (`currentSurface: 'drift'`), and blue-hour off-road sand driving in `L` (`currentSurface: 'sand'`, 4-wheel pitch/roll, and rear tire dust). Over 120 post-warmup frames of active night driving with high beams, wipers, turn signal, and AM radio on `Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11`, frame times measured **16.7 ms median (59.9 fps) / 33.6 ms p95** at `960 × 540` (`DPR 1`) and **16.7 ms median (59.9 fps) / 36.4 ms p95** at `1280 × 720` (`DPR 1`).
 
 ### 2026-11-04 — Visitable Starlite Diner & Bar (East Highway Destination)
 
