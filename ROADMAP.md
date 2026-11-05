@@ -2,7 +2,7 @@
 
 The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02. The G0 style decision and the G1/G2 graphical overhaul were implemented on 2026-11-02 on `vibe/neon-gas-voxel-f660eb` (PR #1); see the validation record for what is and is not verified.
 
-**Next: close the remaining G3 graphics review.** The latest performance pass restores rendering after audio starts and reduces GPU and streaming work in the painterly build. Long-tail frame spikes under the canopy and during travel remain part of G3 acceptance.
+**Next: close the remaining G3 graphics review and sustained 60 fps acceptance.** The latest performance pass restores rendering after audio starts and reduces GPU and streaming work in the painterly build. Long-tail frame spikes under the canopy and during travel remain part of G3 acceptance.
 
 **Style state:** painterly surfaces and modeled props (style B) are selected. Architecture uses hard-surface meshes; the desert has continuous heights and interpolated normals. The old voxel emitter, cube terrain grid, road-extension boxes, and rectangular mesa solids are removed. The moon remains the only shadow-caster. See the newest validation record and [actual landscape comparison](captures/landscape-comparison.jpg).
 
@@ -212,6 +212,27 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-05 — G3 travel hitch reduction and rain primitive correction
+
+- Preserved the existing performance recovery (`841fd21`), audio fix, all destinations, driving, interactions, lighting, weather, and adaptive resolution. This follow-up keeps the painterly direction and changes terrain scheduling plus the rain draw primitive.
+- Terrain preparation now runs in approximately 1.25 ms batches during ordinary travel, staging heights and indexed triangle normals separately. Heights, normals, origin, and bounds commit together. The old dense surface remains usable during preparation; initialization, teleports, and reaching the dense-core safety margin complete synchronously. The height function, mesh density, road shading, and terrain topology are unchanged.
+- Rain incorrectly used a triangle mesh for 650 pairs of drop endpoints, producing large translucent triangles across the view. The bundled renderer now submits those same endpoints as 650 independent line segments using its existing line path. No rain particles or weather features were removed.
+- Exact numerical regression: 14 terrain placements covering the station, fork, gorge, Fern Bend, reverse travel, and ±100 km produced byte-identical positions and normals to the starting file. A 1,800-step moving test checked 19 atomic surface commits, unchanged displayed buffers between commits, and continued dense-core coverage. Conservative bounds contain every vertex.
+- Hardware: Samsung 950XDB/951XDB/950XDY, Core i7-1165G7, Intel Iris Xe, driver 32.0.101.6874, ANGLE Direct3D11, embedded Chromium 156. Localhost preview at 1280 × 720 CSS, display/render DPR 1.25 (1600 × 900 internal), audio running. The temporary harness used normal coupe throttle and steering for approximately 975 m of rainy SR 14 travel per 30-second sample. Measurements below are callback-start wall-clock intervals, including scheduling jitter, not GPU timer queries.
+
+| 30-second rainy drive | Before | After |
+| --- | ---: | ---: |
+| Frame median | 16.7 ms | 16.6 ms |
+| Frame p95 | 22.2 ms | 23.7 ms |
+| Frame p99 | 81.5 ms | 29.4 ms |
+| Worst frame | 110.7 ms | 40.2 ms |
+| Frames over 34 ms | 21 / 1704 | 4 / 1783 |
+| Worst terrain callback | 99.8 ms | 2.4 ms |
+
+- The severe periodic terrain stalls are reduced, but the p95 did not improve: **steady 60 fps acceptance remains open**. The retained baseline canopy sample measured 16.7 ms median / 17.4 ms p95 over 1,801 intervals. These are specific-machine measurements, not a guarantee for all hardware.
+- All inline scripts parse; library and license are unchanged; source audit found no external resource attributes, CSS requests, or game network calls. The preview reported zero captured runtime errors during driving. No gameplay system was removed. Temporary tests and measurements remain outside the repository.
+- Missing checks: direct offline `file://` launch was blocked by browser URL policy; this session used a loopback HTTP preview. Final matching dusk/blue-hour/night captures, full pointer-lock/walking/collision/resize replay, uninterrupted clock verification, and a longer sustained 60 fps run remain open. A final preview reload returned an empty response, so no further browser acceptance is claimed. Earlier records describe earlier revisions.
 
 ### 2026-11-04 — G3 performance recovery
 

@@ -4350,6 +4350,13 @@ const desertCoordIndices = new Map(desertCoords.map((coordinate, index) => [coor
 const desertOldRows = new Int16Array(desertSize);
 const desertOldColumns = new Int16Array(desertSize);
 const desertHeights = new Float32Array(desertSize * desertSize);
+const desertNextNormals = new Float32Array(desertNormals.length);
+let desertBuild = null;
+for (let row = 0; row < desertSize; row++) for (let col = 0; col < desertSize; col++) {
+  const index = (row * desertSize + col) * 3;
+  desertPositions[index] = desertCoords[col];
+  desertPositions[index + 2] = desertCoords[row];
+}
 var desertIndices = [];
 for (let z = 0; z < desertSize - 1; z++) for (let x = 0; x < desertSize - 1; x++) {
   const a = z * desertSize + x, b = a + 1, c = a + desertSize, d = c + 1;
@@ -4605,39 +4612,76 @@ function mapDesertOverlap(previousOrigin, nextOrigin, indices) {
       previousOrigin + desertCoords[oldIndex] === nextOrigin + coordinate ? oldIndex : -1;
   }
 }
-function recenterDesert(x, z) {
+function recenterDesert(x, z, budgetMs = Infinity) {
   const ox = Math.round(x / 64) * 64, oz = Math.round(z / 64) * 64;
-  if (ox === desertOriginX && oz === desertOriginZ) return;
-  mapDesertOverlap(desertOriginX, ox, desertOldColumns);
-  mapDesertOverlap(desertOriginZ, oz, desertOldRows);
-  const firstPatch = desertOriginX === Infinity;
-  desertOriginX = ox; desertOriginZ = oz;
-  // Sample only the newly exposed grid points. Stage heights so overlapping
-  // rows and columns can still read the old patch in either travel direction.
-  for (let row = 0; row < desertSize; row++) {
-    const oldRow = desertOldRows[row];
-    const wz = oz + desertCoords[row];
-    for (let col = 0; col < desertSize; col++) {
-      const oldCol = desertOldColumns[col];
-      const index = row * desertSize + col;
-      desertHeights[index] = oldRow >= 0 && oldCol >= 0
-        ? desertPositions[(oldRow * desertSize + oldCol) * 3 + 1]
-        : os(ox + desertCoords[col], wz, true);
-      if (firstPatch) {
-        desertPositions[index * 3] = desertCoords[col];
-        desertPositions[index * 3 + 2] = desertCoords[row];
-      }
-    }
+  const urgent = Math.max(Math.abs(x - desertOriginX), Math.abs(z - desertOriginZ)) >= 80;
+  // Initial placement and teleports finish synchronously. During travel the old
+  // patch still has its full 96m dense core, so prepare its replacement offscreen.
+  if (urgent) budgetMs = Infinity;
+  if (ox === desertOriginX && oz === desertOriginZ) { desertBuild = null; return; }
+  if (!desertBuild || (budgetMs === Infinity && (desertBuild.x !== ox || desertBuild.z !== oz))) {
+    mapDesertOverlap(desertOriginX, ox, desertOldColumns);
+    mapDesertOverlap(desertOriginZ, oz, desertOldRows);
+    desertBuild = {x:ox, z:oz, vertex:0, face:0, normal:0, stage:0, min:Infinity, max:-Infinity};
   }
+  const build = desertBuild, deadline = performance.now() + budgetMs;
+  while (build.stage < 3) {
+    if (build.stage === 0) {
+      // Small batches keep height/noise work within the animation-frame budget.
+      const end = Math.min(build.vertex + 32, desertHeights.length);
+      for (; build.vertex < end; build.vertex++) {
+        const index = build.vertex, row = Math.floor(index / desertSize), col = index % desertSize;
+        const oldRow = desertOldRows[row], oldCol = desertOldColumns[col];
+        desertHeights[index] = oldRow >= 0 && oldCol >= 0
+          ? desertPositions[(oldRow * desertSize + oldCol) * 3 + 1]
+          : os(build.x + desertCoords[col], build.z + desertCoords[row], true);
+        build.min = Math.min(build.min, desertHeights[index]);
+        build.max = Math.max(build.max, desertHeights[index]);
+      }
+      if (build.vertex === desertHeights.length) { desertNextNormals.fill(0); build.stage = 1; }
+    } else if (build.stage === 1) {
+      // Same indexed triangle order and Float32 accumulation as BufferGeometry's
+      // computeVertexNormals, without temporary Vector3 work or an all-at-once scan.
+      const end = Math.min(build.face + 768, desertIndices.length);
+      for (; build.face < end; build.face += 3) {
+        const a = desertIndices[build.face], b = desertIndices[build.face+1], c = desertIndices[build.face+2];
+        const ai = a*3, bi = b*3, ci = c*3;
+        const cbx = desertPositions[ci]-desertPositions[bi], cby = desertHeights[c]-desertHeights[b], cbz = desertPositions[ci+2]-desertPositions[bi+2];
+        const abx = desertPositions[ai]-desertPositions[bi], aby = desertHeights[a]-desertHeights[b], abz = desertPositions[ai+2]-desertPositions[bi+2];
+        const nx = cby*abz-cbz*aby, ny = cbz*abx-cbx*abz, nz = cbx*aby-cby*abx;
+        desertNextNormals[ai] += nx; desertNextNormals[ai+1] += ny; desertNextNormals[ai+2] += nz;
+        desertNextNormals[bi] += nx; desertNextNormals[bi+1] += ny; desertNextNormals[bi+2] += nz;
+        desertNextNormals[ci] += nx; desertNextNormals[ci+1] += ny; desertNextNormals[ci+2] += nz;
+      }
+      if (build.face === desertIndices.length) build.stage = 2;
+    } else {
+      const end = Math.min(build.normal + 768, desertNextNormals.length);
+      for (; build.normal < end; build.normal += 3) {
+        const j = build.normal, nx = desertNextNormals[j], ny = desertNextNormals[j+1], nz = desertNextNormals[j+2];
+        const length = 1 / (Math.sqrt(nx*nx+ny*ny+nz*nz) || 1);
+        desertNextNormals[j] *= length; desertNextNormals[j+1] *= length; desertNextNormals[j+2] *= length;
+      }
+      if (build.normal === desertNextNormals.length) build.stage = 3;
+    }
+    if (build.stage < 3 && performance.now() >= deadline) return;
+  }
+  // Commit heights, normals, origin, and bounds together. Collision queries keep
+  // following the displayed triangles throughout preparation; no partial upload.
   for (let index = 0; index < desertHeights.length; index++) {
     desertPositions[index * 3 + 1] = desertHeights[index];
   }
-  desertGeometry.computeVertexNormals();
-  desertSurface.position.set(ox, 0, oz);
+  desertNormals.set(desertNextNormals);
+  desertOriginX = build.x; desertOriginZ = build.z;
+  desertSurface.position.set(build.x, 0, build.z);
   desertGeometry.attributes.position.needsUpdate = true;
   desertGeometry.attributes.normal.needsUpdate = true;
-  desertGeometry.computeBoundingBox();
-  desertGeometry.computeBoundingSphere();
+  if (!desertGeometry.boundingBox) desertGeometry.computeBoundingBox();
+  if (!desertGeometry.boundingSphere) desertGeometry.computeBoundingSphere();
+  desertGeometry.boundingBox.min.set(-12000, build.min, -12000);
+  desertGeometry.boundingBox.max.set(12000, build.max, 12000);
+  desertGeometry.boundingSphere.center.set(0, (build.min + build.max) / 2, 0);
+  desertGeometry.boundingSphere.radius = Math.hypot(12000, 12000, (build.max - build.min) / 2);
+  desertBuild = null;
 }
 recenterDesert(Nn.position.x, Nn.position.z);
 
@@ -9871,7 +9915,14 @@ for (let i = 0; i < RAIN_N; i++) {
 }
 rainGeo.setAttribute('position', new Et(rainPos, 3));
 const rainMat = new wi({ color: 0xa8c2c8, transparent: true, opacity: 0, depthWrite: false });
-const rainMesh = new dt(rainGeo, rainMat);
+// The bundle has Object3D (xt) and the renderer's line path, but no LineSegments
+// constructor. Submit endpoint pairs as lines, never as triangles spanning drops.
+const rainMesh = new xt();
+rainMesh.isLine = true;
+rainMesh.isLineSegments = true;
+rainMesh.type = 'LineSegments';
+rainMesh.geometry = rainGeo;
+rainMesh.material = rainMat;
 rainMesh.name = 'Pacific Northwest valley rain streaks';
 Nt.add(rainMesh);
 
@@ -11643,7 +11694,7 @@ Xm.material.uniforms.uForestSkyline.value = nwBiome;
 
 Xm.position.copy(Nn.position);
 Nt.userData.stars.position.copy(Nn.position);
-recenterDesert(Nn.position.x, Nn.position.z);
+recenterDesert(Nn.position.x, Nn.position.z, 1.25);
 updateTelephoneLine(Nn.position.x);
 updateRiverSurface(Nn.position.x);
 updateForestPool(Nn.position.x);
