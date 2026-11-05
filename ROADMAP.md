@@ -159,6 +159,7 @@ The delivered offline file passed a full run from dusk to the night hold. The co
 - [ ] Clear held movement keys on blur/unlock; test pointer-lock release/re-entry, jumping, walls, doorway, and resize.
 - [x] Consider a very sparse under-canopy dust cloud only if it improves depth and stays within budget. Omit it if the existing scene already communicates stillness. *(40 motes on one Points batch inside the canopy volume; opacity 0 at dusk, ≤0.18 at night, following the canopy-lamp flicker.)*
 - [ ] Keep the idle camera fixed. Do not add mandatory breathing sway/head bob. Review the entry overlay and HUD so they do not dominate the scene or imply objectives.
+- [x] Coupe steering calibration & in-game settings modal: progressive tap accumulator eliminates high-speed twitchiness and enables delicate micro-trim corrections; full lock preserved for intersections and parking; period-styled bakelite/amber settings modal with sensitivity sliders, presets, highway assist damping, mouse sensitivity, volume, and comprehensive key reference (`O` key or top-right button).
 
 **Pass:** the player can leave and return without lost dusk, stuck movement, or unsolicited camera motion. A long idle view remains calm. Repeat the final graphics, offline, and performance checks.
 
@@ -511,6 +512,21 @@ For each `index.html` change:
 
 - Use the [1963 Chevrolet Impala Sport Coupe factory reference](https://news.chevrolet.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1963-Chevrolet.pdf) for the roof, rear seat, and deck relationship. The game coupe now has a rearward roof and backlight, fixed rear quarter glass, and a separate parcel shelf behind a reclined saddle-vinyl bench.
 - Inline JavaScript parses. The transformed rear backrest vertices above the glass sill clear the rear glass plane by at least 0.128 m. In-game visual review remains open.
+
+### 2026-11-05 — Progressive coupe steering micro-trim and in-game settings modal
+
+- **Report:** The coupe's steering was excessively sensitive and twitchy on the keyboard, making fine highway lane corrections and subtle course trims impossible without erratic chassis twitching.
+- **Progressive micro-trim accumulator:** Replaced instantaneous binary steering rate with a progressive virtual accumulator (`virtualSteerInput`). Tap inputs (50–80 ms) ramp gently through a 1.6 power curve with speed-sensitive highway damping (`1 / (1 + max(0, speed - 5) * 0.038)`), delivering subtle ~0.002–0.015 rad (0.1–0.8°) lane micro-adjustments without chassis twitch or upset. Holding the key builds full steering authority (0.38 rad / ~22°) for intersections, turnaround loops, and parking. Counter-steering against a slide engages an immediate 7.2 rad/s reversal rate to catch drifts cleanly.
+- **Period-styled settings modal:** Added an in-game operator's manual modal (`#settings-modal`, accessible via `O` key, top-right `[ ⚙ SETTINGS (O) ]` HUD button, or title overlay button) styled in 1960s Westclox amber and dark bakelite (`#211b16`, `#dab87a`, `#9e8b66`). Features:
+  - Steering sensitivity slider (40%–180%) with quick presets (Gentle 60%, Normal 90%, Quick 130%).
+  - Highway speed assist toggle (damped highway stability vs raw direct input).
+  - Driver seat sway toggle (period bench seat inertia vs fixed camera).
+  - Look / mouse sensitivity slider (40%–200%).
+  - Master volume slider (0%–100%) and mute toggle with synchronized Web Audio master gain.
+  - Complete period key bindings and controls quick-reference grid.
+  - Settings persist to `localStorage` (`neon_gas_settings_v1`) across sessions.
+- **Controls & Arrow key support:** Extended steering, throttle, and walk controls so Arrow keys work interchangeably with WASD. Physics and movement pause cleanly while the settings modal is active.
+- **Checks:** Single inline script extracted and passed `node --check` with 0 errors (924,157 bytes). Offline headless Edge dumped DOM verifying modal, card, presets, and controls. Steering physics simulation confirmed: 60 ms highway tap peaks at 0.00184 rad (0.11°), sustained 0.6 s turn at low speed reaches 0.335 rad (19.2°). Zero external runtime dependencies or network requests.
 
 ### 2026-11-04c — Interior steps too bright: retuned and extended
 
