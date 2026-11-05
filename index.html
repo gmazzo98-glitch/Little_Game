@@ -4665,7 +4665,7 @@ desertMaterial.onBeforeCompile = shader => {
       vec3 basinGround = mix(sand, vec3(.27,.25,.17), washGrass * 0.55);
       vec3 foothillGround = mix(vec3(.26,.21,.16), vec3(.20,.19,.13), n);
       float shadeAspect = clamp((p.y - zr) * 0.025 - vDesertWorldNormal.z * 0.65, 0.0, 1.0);
-      vec3 gorgeSunny = mix(vec3(.24,.19,.15), vec3(.31,.25,.19), n);
+      vec3 gorgeSunny = mix(mix(vec3(.24,.19,.15), vec3(.31,.25,.19), n), vec3(.095,.125,.075), nwH(bioS, 10800.0, 15200.0));
       vec3 gorgeShaded = mix(vec3(.11,.14,.10), vec3(.16,.15,.11), n);
       vec3 gorgeGround = mix(gorgeSunny, gorgeShaded, shadeAspect);
       vec3 valleyFloor = mix(vec3(.085,.118,.078), vec3(.135,.112,.082), n);
@@ -4678,7 +4678,7 @@ desertMaterial.onBeforeCompile = shader => {
         float rockMask = smoothstep(0.24, 0.48, steep + 0.10 * (n - 0.5));
         float perpE = abs(p.y - zr);
         float verge = smoothstep(6.5, 24.0, perpE);
-        float moist = nwH(bioS, 8500.0, 20500.0);
+        float moist = nwH(bioS, 7600.0, 15200.0);
         float bands = 0.5 + 0.5 * sin(vDesertWorld.y * 1.35 + sandNoise(p * 0.045) * 7.0);
         float seep = smoothstep(0.58, 0.92, sandNoise(vec2((p.x + p.y) * 0.5, vDesertWorld.y * 0.085)));
         vec3 rockDry = mix(vec3(.31,.24,.175), vec3(.42,.33,.235), bands * 0.65 + 0.35 * n);
@@ -4689,10 +4689,11 @@ desertMaterial.onBeforeCompile = shader => {
         float crown = sandNoise(p * 0.07) * 0.55 + sandNoise(p * 0.19) * 0.30 + sandNoise(p * 0.52) * 0.15;
         vec3 tawny = mix(vec3(.30,.255,.150), vec3(.42,.35,.21), n);
         vec3 conifer = mix(vec3(.050,.088,.056), vec3(.115,.165,.085), crown);
-        vec3 soil = mix(tawny, conifer, smoothstep(0.26, 0.70, moist + 0.30 * (sandNoise(p * 0.0035) - 0.5)));
+        vec3 soil = mix(tawny, conifer, smoothstep(0.16, 0.50, moist + 0.26 * (sandNoise(p * 0.0035) - 0.5)));
+        soil = mix(soil, vec3(.030,.052,.034) * (.7 + .6 * crown), smoothstep(0.55, 1.0, moist) * 0.55);
         soil = mix(soil, vec3(.060,.092,.054), smoothstep(0.64, 0.80, crown) * (1.0 - moist) * 0.55);
         vec3 slopeGround = mix(soil, rock, rockMask);
-        vec3 roadside = mix(vec3(.25,.215,.145), vec3(.105,.140,.075), moist) * (0.88 + 0.24 * n);
+        vec3 roadside = mix(vec3(.25,.215,.145), vec3(.085,.125,.062), smoothstep(0.10, 0.52, moist)) * (0.88 + 0.24 * n);
         float hillStart = nwH(bioS, 5200.0, 8200.0);
         natGround = mix(natGround, roadside, hillStart * (1.0 - verge) * 0.85);
         natGround = mix(natGround, slopeGround, hillStart * verge);
@@ -4784,10 +4785,10 @@ desertMaterial.onBeforeCompile = shader => {
       float asphaltMask = max(road, max(max(west, east), max(forkApron, fbRamps)));
       float pavedApron = max(max(motelApron, dinerApron), fbApron);
       float wetFactor = 0.0;
-      if (bioS > 16200.0 && max(asphaltMask, max(srTurnout, pavedApron)) > 0.0) {
+      if (bioS > 11600.0 && max(asphaltMask, max(srTurnout, pavedApron)) > 0.0) {
         // Patchy damp pavement in shaded gorge rock cuts before sustained valley wetness.
-        float patchDamp = nwH(bioS, 16200.0, 18400.0) * smoothstep(0.12, 0.62, sandNoise(p * 0.042) + 0.25 * sin(bioS * 0.008));
-        float valleyDamp = nwH(bioS, 22000.0, 25000.0);
+        float patchDamp = nwH(bioS, 11600.0, 14400.0) * smoothstep(0.10, 0.58, sandNoise(p * 0.042) + 0.25 * sin(bioS * 0.008));
+        float valleyDamp = nwH(bioS, 14800.0, 19500.0);
         wetFactor = clamp(max(patchDamp * 0.78, valleyDamp * (0.65 + 0.35 * uWetness)), 0.0, 1.0);
       }
       float puddle = 0.0;
@@ -9968,7 +9969,7 @@ function makeConiferParts(species, height, seed) {
   for (let t = 0; t < tiers; t++) {
     const frac = t / (tiers - 1);
     const ty = baseH + frac * crownH;
-    const maxR = (1 - frac * 0.75) * (height * (species === 'ponderosa' ? 0.22 : 0.32));
+    const maxR = (1 - frac * 0.75) * (height * (species === 'ponderosa' ? 0.22 : (species === 'cedar' ? 0.40 : 0.32)));
     const tierR = Math.max(0.4, maxR * (0.8 + rand() * 0.4));
     const tierH = crownH / tiers * 1.35;
     const coneProf = [
@@ -10044,50 +10045,168 @@ function makeConiferParts(species, height, seed) {
   for (const r in parts) addRoleMesh(Nt, r, parts[r]);
 })();
 
-// Streaming SR 14 forest. Every road cell owns a deterministic tree list, so the same trees return from either
-// direction. Crowns near the player use the full conifer model; the wooded flanks use a cheap three-tier
-// silhouette. Density follows moisture, slope, clearings, the river and the authored places.
+// Streaming SR 14 forest, second pass. Every road cell owns a deterministic tree list, so the same trees return from
+// either direction. Six near species carry painted vertex colour (lit branch tips, dark crown interiors, moss on the
+// lower trunk); wooded flanks use one cheap silhouette; ferns, salal and sage share one instanced shrub; fallen
+// logs lie in the wet half. Species, density and ground cover all follow the moisture gradient along the route.
 const FOREST_CELL = 40;
 const FOREST_NEAR_CELLS = 3;
-const FOREST_FAR_CELLS = 28;
-const FOREST_NEAR_MAX = 420;
-const FOREST_FAR_MAX = 3200;
-const FOREST_CANDIDATES = 34;
-const forestMeshes = (function initForestMeshes() {
-  const treeParts = makeConiferParts('dougFir', 18.0, 77);
-  const near = ['firFoliage', 'firBark'].map(role => {
-    const merged = mergeParts(treeParts.filter(part => part.role === role).map(part => part.part));
-    const geometry = new It();
-    geometry.setAttribute('position', new Et(new Float32Array(merged.pos), 3));
-    geometry.setAttribute('normal', new Et(new Float32Array(merged.nor), 3));
-    geometry.setIndex(merged.idx);
-    const mesh = new ar(geometry, roleMat(role), FOREST_NEAR_MAX);
-    mesh.name = `Streaming forest near ${role}`;
-    mesh.castShadow = true;
-    mesh.receiveShadow = role === 'firFoliage';
-    mesh.frustumCulled = false;
-    mesh.count = 0;
-    Nt.add(mesh);
-    return mesh;
+const FOREST_UNDER_CELLS = 2;
+const FOREST_FAR_CELLS = 17;
+const FOREST_FAR_MAX = 6400;
+const FOREST_UNDER_MAX = 3400;
+const FOREST_LOG_MAX = 160;
+const FOREST_CANDIDATES = 150;
+const FOREST_UNDER_CANDIDATES = 210;
+const FOREST_NEAR_CAPS = [380, 260, 200, 200, 150, 60];   // fir, hemlock, cedar, alder, ponderosa, snag
+const forestFoliageMats = [];
+const forestBarkMats = [];
+// The bundled Material.clone() returns a blank material, so each forest material is built from its palette entry.
+function forestMaterial(role, white) {
+  const m = new Lm({ color: white ? 0xffffff : PAL[role] });
+  if (/Foliage$/.test(role)) { m.emissive = new Me(PAL[role]); m.emissiveIntensity = 0; forestFoliageMats.push(m); }
+  else { m.emissive = new Me(0x4c4a40); m.emissiveIntensity = 0; forestBarkMats.push(m); }
+  return m;
+}
+function forestPaintedMat(role, absolute) {
+  const m = forestMaterial(role, absolute);
+  m.vertexColors = true;
+  return m;
+}
+function forestPartsGeometry(parts, colorFn) {
+  const merged = mergeParts(parts);
+  const geometry = new It();
+  geometry.setAttribute('position', new Et(new Float32Array(merged.pos), 3));
+  geometry.setAttribute('normal', new Et(new Float32Array(merged.nor), 3));
+  const col = new Float32Array(merged.pos.length);
+  for (let i = 0; i < merged.pos.length; i += 3) {
+    const c = colorFn(merged.pos[i], merged.pos[i + 1], merged.pos[i + 2]);
+    col[i] = c[0]; col[i + 1] = c[1]; col[i + 2] = c[2];
+  }
+  geometry.setAttribute('color', new Et(col, 3));
+  geometry.setIndex(merged.idx);
+  return geometry;
+}
+function forestAlderParts() {
+  const parts = [];
+  const rand = Vm(205);
+  parts.push({ role: 'alderBark', part: latheGeom([[0.42, 0], [0.30, 0.6], [0.24, 5.5], [0.17, 9.5], [0, 10.2]], 7) });
+  for (let k = 0; k < 4; k++) {
+    const R = 3.1 + 1.5 * rand();
+    const a = rand() * 6.283, off = k === 0 ? 0 : 1.6 + rand() * 1.3;
+    parts.push({ role: 'alderFoliage', part: { ...latheGeom([[0.02, 0], [R * 0.78, R * 0.22], [R, R * 0.62], [R * 0.74, R * 1.05], [R * 0.3, R * 1.32], [0, R * 1.4]], 7), matrix: matTranslate(Math.cos(a) * off, 6.6 + k * 1.15 + rand() * 0.6, Math.sin(a) * off) } });
+  }
+  return parts;
+}
+function forestSnagParts() {
+  const parts = [];
+  parts.push({ role: 'alderBark', part: latheGeom([[0.5, 0], [0.34, 1.2], [0.26, 9], [0.18, 13.4], [0.05, 14.6], [0, 14.8]], 6) });
+  const limbs = [[4.6, 1.2, 0.2, 1.0], [7.4, -1.0, 1.4, 0.7], [10.2, 0.5, -1.5, 0.6], [11.8, -0.7, -0.5, 0.45]];
+  for (const [y, dx, dz, w] of limbs) {
+    parts.push({ role: 'alderBark', part: tubeGeom([[0, y, 0], [dx * 1.1, y + 0.55, dz * 1.1], [dx * 2.2, y + 0.3, dz * 2.2]], 0.07 + 0.05 * w, 5, true) });
+  }
+  return parts;
+}
+const forestNear = (function initForestNear() {
+  const table = [
+    { name: 'fir', parts: makeConiferParts('dougFir', 18.0, 77), H: 18, bark: [0.085, 0.064, 0.048], moss: 1.0 },
+    { name: 'hemlock', parts: makeConiferParts('hemlock', 15.0, 31), H: 15, bark: [0.100, 0.080, 0.060], moss: 1.0 },
+    { name: 'cedar', parts: makeConiferParts('cedar', 17.0, 53), H: 17, bark: [0.135, 0.082, 0.056], moss: 0.8 },
+    { name: 'alder', parts: forestAlderParts(), H: 13, bark: [0.30, 0.30, 0.27], moss: 1.0 },
+    { name: 'ponderosa', parts: makeConiferParts('ponderosa', 22.0, 19), H: 22, bark: [0.220, 0.110, 0.060], moss: 0 },
+    { name: 'snag', parts: forestSnagParts(), H: 15, bark: [0.28, 0.27, 0.24], moss: 0.15 }
+  ];
+  const moss = [0.040, 0.120, 0.035];
+  const set = table.map((sp, si) => {
+    const cap = FOREST_NEAR_CAPS[si];
+    const out = { cap, fol: null, bark: null };
+    const folParts = sp.parts.filter(p => /Foliage$/.test(p.role));
+    const barkParts = sp.parts.filter(p => !/Foliage$/.test(p.role));
+    const mk = (parts, role, colorFn, absolute, shadowReceive) => {
+      const mesh = new ar(forestPartsGeometry(parts.map(p => p.part), colorFn), forestPaintedMat(role, absolute), cap);
+      mesh.name = `Streaming forest ${sp.name} ${absolute ? 'bark' : 'crown'}`;
+      mesh.castShadow = true;
+      mesh.receiveShadow = shadowReceive;
+      mesh.frustumCulled = false;
+      mesh.count = 0;
+      mesh.setColorAt(0, new Me(1, 1, 1));
+      Nt.add(mesh);
+      return mesh;
+    };
+    if (folParts.length) {
+      const H = sp.H, broad = sp.name === 'alder';
+      out.fol = mk(folParts, folParts[0].role, (x, y, z) => {
+        const r = Math.hypot(x, z) / (broad ? 4.2 : 0.30 * H);
+        const b = broad ? 0.82 + 0.30 * Math.min(r, 1) : 0.80 + 0.66 * Math.min(r, 1.15) + 0.34 * (y / H);
+        return [b * 0.96, b, b * 0.9];
+      }, false, true);
+    }
+    if (barkParts.length) {
+      out.bark = mk(barkParts, barkParts[0].role, (x, y, z) => {
+        const nz = Un(Math.floor(Math.atan2(z, x) * 2.6) + 11, Math.floor(y * 0.9));
+        const m = sp.moss * Math.max(0, 1 - y / (2.4 + 4.2 * nz)) * (0.55 + 0.45 * nz);
+        return [sp.bark[0] + (moss[0] - sp.bark[0]) * m, sp.bark[1] + (moss[1] - sp.bark[1]) * m, sp.bark[2] + (moss[2] - sp.bark[2]) * m];
+      }, true, false);
+    }
+    return out;
   });
-  const cone = mergeParts([latheGeom([[0.45, 0], [0.45, 2.2], [5.2, 2.2], [1.7, 7.6], [4.0, 7.6], [1.2, 13.2], [2.6, 13.2], [0, 19.5]], 6)]);
-  const farGeometry = new It();
-  farGeometry.setAttribute('position', new Et(new Float32Array(cone.pos), 3));
-  farGeometry.setAttribute('normal', new Et(new Float32Array(cone.nor), 3));
-  farGeometry.setIndex(cone.idx);
-  const far = new ar(farGeometry, roleMat('hemlockFoliage'), FOREST_FAR_MAX);
-  far.name = 'Streaming forest flank silhouettes';
-  far.frustumCulled = false;
-  far.count = 0;
-  Nt.add(far);
-  return { near, far };
+  return set;
+})();
+const forestFar = (function initForestFar() {
+  const cone = mergeParts([latheGeom([[0.45, 0], [0.45, 2.0], [5.0, 2.0], [1.9, 9.0], [3.4, 9.0], [0, 19.5]], 5)]);
+  const g = new It();
+  g.setAttribute('position', new Et(new Float32Array(cone.pos), 3));
+  g.setAttribute('normal', new Et(new Float32Array(cone.nor), 3));
+  g.setIndex(cone.idx);
+  const m = forestMaterial('hemlockFoliage', false);
+  const mesh = new ar(g, m, FOREST_FAR_MAX);
+  mesh.name = 'Streaming forest flank silhouettes';
+  mesh.frustumCulled = false;
+  mesh.count = 0;
+  mesh.setColorAt(0, new Me(1, 1, 1));
+  Nt.add(mesh);
+  return mesh;
+})();
+const forestUnder = (function initForestUnder() {
+  const shrub = mergeParts([latheGeom([[0.03, 1.0], [0.22, 0.82], [0.52, 0.42], [0.92, 0.06], [0.62, 0]], 6)]);
+  const g = new It();
+  g.setAttribute('position', new Et(new Float32Array(shrub.pos), 3));
+  g.setAttribute('normal', new Et(new Float32Array(shrub.nor), 3));
+  g.setIndex(shrub.idx);
+  const mat = new Lm({ color: 0xffffff });
+  mat.emissive = new Me(0x23361c); mat.emissiveIntensity = 0;
+  forestFoliageMats.push(mat);
+  const mesh = new ar(g, mat, FOREST_UNDER_MAX);
+  mesh.name = 'Streaming understory ferns and scrub';
+  mesh.frustumCulled = false; mesh.receiveShadow = true; mesh.count = 0;
+  mesh.setColorAt(0, new Me(1, 1, 1));
+  Nt.add(mesh);
+  const log = mergeParts([tubeGeom([[-3.4, 0, 0], [3.4, 0.12, 0.25]], 0.36, 6, true)]);
+  const lg = new It();
+  lg.setAttribute('position', new Et(new Float32Array(log.pos), 3));
+  lg.setAttribute('normal', new Et(new Float32Array(log.nor), 3));
+  lg.setIndex(log.idx);
+  const lm = new Lm({ color: 0xffffff });
+  const logMesh = new ar(lg, lm, FOREST_LOG_MAX);
+  logMesh.name = 'Streaming nurse logs';
+  logMesh.frustumCulled = false; logMesh.castShadow = true; logMesh.count = 0;
+  logMesh.setColorAt(0, new Me(1, 1, 1));
+  Nt.add(logMesh);
+  return { shrub: mesh, log: logMesh };
 })();
 
-// Share of ground that carries trees at this position along the route (dry pine, then wet conifer).
+// Moisture gradient along the route: sage and sparse ponderosa first, then Douglas fir, then the dark hemlock and cedar valley.
+function forestMoist(s) { return nwH(s, 8200, 15000); }
 function forestDensity(s) {
-  const dryPine = nwH(s, 5800, 8200) * (1 - nwH(s, 9500, 15500));
-  const wet = nwH(s, 9000, 15500);
-  return 0.16 * dryPine + wet * (0.5 + 0.5 * nwH(s, 13000, 23000));
+  const parkland = nwH(s, 5800, 9200) * (1 - nwH(s, 9800, 13500));
+  const wet = nwH(s, 8600, 13800);
+  return Math.min(1, 0.20 * parkland + wet * (0.80 + 0.20 * nwH(s, 12000, 20000)));
+}
+function forestPickSpecies(m, h, nearWater) {
+  if (nearWater && h < 0.24) return 3;                         // alder along the water
+  if (m < 0.30) return h < 0.74 ? 4 : (h < 0.90 ? 0 : (h < 0.95 ? 5 : 3));
+  if (m < 0.60) return h < 0.20 ? 4 : (h < 0.62 ? 0 : (h < 0.78 ? 1 : (h < 0.86 ? 3 : (h < 0.92 ? 2 : 5))));
+  return h < 0.34 ? 0 : (h < 0.62 ? 1 : (h < 0.82 ? 2 : (h < 0.92 ? 3 : (h < 0.96 ? 5 : 0))));
 }
 function forestCellTrees(c) {
   const list = [];
@@ -10102,26 +10221,69 @@ function forestCellTrees(c) {
       const s = nwSFromX(x);
       const density = forestDensity(s);
       if (density <= 0.01) continue;
-      const lat = 13 + 256 * Math.pow(hl, 1.5);
+      const lat = 10.5 + 233 * Math.pow(hl, 2.2);
       const zr = nwRoadZ(x), z = zr + side * lat;
-      // Groves and openings, so the forest has rhythm rather than a regular fringe.
-      const grove = 0.30 + 0.70 * xc(Math.min(Math.max((Hm(x * 0.0065 + 2, z * 0.0065) - 0.30) / 0.3, 0), 1));
-      if (hd > density * grove * (lat < 16 ? 0.55 : 1)) continue;
+      // Groves and openings give the forest rhythm; the verge stays a little thinner than the wood behind it.
+      const grove = 0.38 + 0.62 * xc(Math.min(Math.max((Hm(x * 0.0065 + 2, z * 0.0065) - 0.28) / 0.3, 0), 1));
+      if (hd > density * grove * (lat < 13 ? 0.7 : 1)) continue;
       if (sr14TurnoutDist(x, z, zr, 6) < 5.5) continue;
+      const nearWater = s > 13200 && Math.abs(z - nwRiverZ(x)) < 44;
       if (s > 13200 && Math.abs(z - nwRiverZ(x)) < 13) continue;
       if (Math.abs(x + 22546.4) < 48 && lat < 40) continue;
+      if (Math.hypot(x - fernBendX, z - fernBendZ) < 26) continue;
       const wp = fernWalkPathInfo(x, z);
       if (wp && wp.d < 5) continue;
       const y = os(x, z);
       const grade = Math.hypot(os(x + 3, z) - y, os(x, z + 3) - y) / 3;
-      if (grade > 0.8) continue;
-      const sc = 0.55 + 0.72 * Un(x * 0.37, z * 0.41);
-      list.push(x, y - 0.25, z, sc * (0.78 + 0.26 * Un(z * 0.13, x * 0.29)), sc, Un(x * 0.77, z * 0.31) * 6.2832);
+      if (grade > 0.85) continue;
+      const hs = Un(x * 0.51, z * 0.43);
+      const sp = forestPickSpecies(forestMoist(s), hs, nearWater);
+      let sc = 0.60 + 0.80 * Un(x * 0.37, z * 0.41);
+      if (lat > 24 && Un(x * 0.19, z * 0.23) > 0.93 && sp !== 3 && sp !== 5) sc *= 1.55;   // the occasional old giant, set back from the road
+      if (sp === 5) sc *= 0.85;
+      if (sp === 3) sc *= 0.78;
+      list.push(x, y - 0.25, z, sc * (0.80 + 0.24 * Un(z * 0.13, x * 0.29)), sc, Un(x * 0.77, z * 0.31) * 6.2832, sp, Un(x * 0.29, z * 0.61));
+    }
+  }
+  return list;
+}
+function forestCellUnder(c) {
+  const list = [];
+  const x0 = c * FOREST_CELL;
+  if (x0 > forkX - 120) return list;
+  for (const side of [-1, 1]) {
+    for (let k = 0; k < FOREST_UNDER_CANDIDATES; k++) {
+      const hx = Un(c * 5.31 + k * 1.37, side * 3.3 + 7.1);
+      const hl = Un(c * 2.19 + k * 3.11, side * 6.7 + 2.9);
+      const hd = Un(c * 9.7 + k * 0.53, side * 4.1 + 1.2);
+      const x = x0 + hx * FOREST_CELL;
+      const s = nwSFromX(x);
+      const m = forestMoist(s);
+      const dry = nwH(s, 5400, 7600) * (1 - nwH(s, 8800, 11800));
+      const dens = 0.30 * dry + 0.95 * nwH(s, 8000, 12000);
+      if (dens <= 0.02) continue;
+      const lat = 6.2 + 52 * Math.pow(hl, 1.6);
+      const zr = nwRoadZ(x), z = zr + side * lat;
+      if (hd > dens * (0.45 + 0.55 * xc(Math.min(Math.max((Hm(x * 0.02 + 5, z * 0.02) - 0.25) / 0.3, 0), 1)))) continue;
+      if (sr14TurnoutDist(x, z, zr, 6) < 4.5) continue;
+      if (s > 13200 && Math.abs(z - nwRiverZ(x)) < 9) continue;
+      if (Math.abs(x + 22546.4) < 40 && lat < 30) continue;
+      if (Math.hypot(x - fernBendX, z - fernBendZ) < 22) continue;
+      const wp = fernWalkPathInfo(x, z);
+      if (wp && wp.d < 3.5) continue;
+      const y = os(x, z);
+      const grade = Math.hypot(os(x + 2, z) - y, os(x, z + 2) - y) / 2;
+      if (grade > 1.1) continue;
+      const kindHash = Un(x * 0.71, z * 0.67);
+      const isLog = m > 0.5 && kindHash > 0.975;
+      const scale = isLog ? 0.8 + 0.7 * Un(x * 0.13, z * 0.17) : (0.55 + 0.55 * (1 - m)) + (0.55 + 0.6 * m) * Un(x * 0.31, z * 0.33);
+      list.push(x, y, z, scale, Un(x * 0.43, z * 0.47) * 6.2832, isLog ? 1 : 0, m, Un(x * 0.57, z * 0.59));
     }
   }
   return list;
 }
 const forestCellCache = new Map();
+const forestUnderCache = new Map();
 const forestMatrix = new $e();
 let lastForestCell;
 function setForestInstance(mesh, i, x, y, z, sx, sy, rot) {
@@ -10132,17 +10294,24 @@ function setForestInstance(mesh, i, x, y, z, sx, sy, rot) {
   e[12] = x; e[13] = y; e[14] = z; e[15] = 1;
   mesh.setMatrixAt(i, forestMatrix);
 }
+function setForestTint(mesh, i, r, g, b) {
+  const a = mesh.instanceColor.array;
+  a[i * 3] = r; a[i * 3 + 1] = g; a[i * 3 + 2] = b;
+}
 function updateForestPool(camX) {
   const currentCell = camX > forkX + 200 ? null : Math.floor(camX / FOREST_CELL);
   if (currentCell === lastForestCell) return;
   lastForestCell = currentCell;
-  const [nearFoliage, nearBark] = forestMeshes.near, far = forestMeshes.far;
+  const shrubMesh = forestUnder.shrub, logMesh = forestUnder.log;
   if (currentCell === null) {
-    nearFoliage.visible = nearBark.visible = far.visible = false;
+    for (const sp of forestNear) { if (sp.fol) sp.fol.visible = false; if (sp.bark) sp.bark.visible = false; }
+    forestFar.visible = shrubMesh.visible = logMesh.visible = false;
     return;
   }
   for (const key of forestCellCache.keys()) if (Math.abs(key - currentCell) > FOREST_FAR_CELLS + 8) forestCellCache.delete(key);
-  let nearCount = 0, farCount = 0, built = 0, pending = false;
+  for (const key of forestUnderCache.keys()) if (Math.abs(key - currentCell) > FOREST_UNDER_CELLS + 6) forestUnderCache.delete(key);
+  const counts = [0, 0, 0, 0, 0, 0];
+  let farCount = 0, shrubCount = 0, logCount = 0, built = 0, pending = false;
   for (let step = 0; step <= 2 * FOREST_FAR_CELLS; step++) {
     // Nearest cells first; one new cell per frame keeps passing the fork or a teleport free of a long stall.
     const c = currentCell + (step & 1 ? (step + 1) >> 1 : -(step >> 1));
@@ -10151,24 +10320,72 @@ function updateForestPool(camX) {
       if (built >= 1) { pending = true; continue; }
       list = forestCellTrees(c); forestCellCache.set(c, list); built++;
     }
-    const isNear = Math.abs(c - currentCell) <= FOREST_NEAR_CELLS;
-    for (let i = 0; i < list.length; i += 6) {
-      if (isNear) {
-        if (nearCount >= FOREST_NEAR_MAX) continue;
-        setForestInstance(nearFoliage, nearCount, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
-        setForestInstance(nearBark, nearCount, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
-        nearCount++;
-      } else if (farCount < FOREST_FAR_MAX) {
-        setForestInstance(far, farCount, list[i], list[i + 1], list[i + 2], list[i + 3] * 0.95, list[i + 4] * 0.9, list[i + 5]);
+    const near = Math.abs(c - currentCell) <= FOREST_NEAR_CELLS;
+    for (let i = 0; i < list.length; i += 8) {
+      const sp = list[i + 6], tone = list[i + 7];
+      if (near) {
+        const ent = forestNear[sp];
+        const n = counts[sp];
+        if (n >= ent.cap) continue;
+        const t = 0.78 + 0.40 * tone;
+        if (ent.fol) {
+          setForestInstance(ent.fol, n, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
+          setForestTint(ent.fol, n, t, t * (0.96 + 0.1 * tone), t * (1.0 - 0.18 * tone));
+        }
+        if (ent.bark) {
+          setForestInstance(ent.bark, n, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
+          setForestTint(ent.bark, n, t, t, t);
+        }
+        counts[sp] = n + 1;
+      } else if (farCount < FOREST_FAR_MAX && sp !== 3 && sp !== 5) {
+        setForestInstance(forestFar, farCount, list[i], list[i + 1], list[i + 2], list[i + 3] * 0.95, list[i + 4] * 0.9, list[i + 5]);
+        const pine = sp === 4;
+        const t = 0.72 + 0.36 * tone;
+        setForestTint(forestFar, farCount, t * (pine ? 0.85 : 1.15), t * (pine ? 0.95 : 1.25), t * (pine ? 0.5 : 1.3));
         farCount++;
       }
     }
   }
-  nearFoliage.count = nearBark.count = nearCount;
-  far.count = farCount;
-  nearFoliage.visible = nearBark.visible = nearCount > 0;
-  far.visible = farCount > 0;
-  nearFoliage.instanceMatrix.needsUpdate = nearBark.instanceMatrix.needsUpdate = far.instanceMatrix.needsUpdate = true;
+  for (let c = currentCell - FOREST_UNDER_CELLS; c <= currentCell + FOREST_UNDER_CELLS; c++) {
+    let list = forestUnderCache.get(c);
+    if (!list) {
+      if (built >= 1) { pending = true; continue; }
+      list = forestCellUnder(c); forestUnderCache.set(c, list); built++;
+    }
+    for (let i = 0; i < list.length; i += 8) {
+      const m = list[i + 6], v = list[i + 7];
+      if (list[i + 5] === 1) {
+        if (logCount >= FOREST_LOG_MAX) continue;
+        setForestInstance(logMesh, logCount, list[i], list[i + 1] + 0.2, list[i + 2], list[i + 3], list[i + 3], list[i + 4]);
+        const g = 0.8 + 0.4 * v;
+        setForestTint(logMesh, logCount, 0.043 * g, 0.044 * g, 0.026 * g);
+        logCount++;
+      } else {
+        if (shrubCount >= FOREST_UNDER_MAX) continue;
+        const sc = list[i + 3];
+        setForestInstance(shrubMesh, shrubCount, list[i], list[i + 1] - 0.05, list[i + 2], sc * (1.0 + 0.35 * m), sc * (0.9 + 0.6 * m), list[i + 4]);
+        // Dry side: pale sage and rabbitbrush. Wet side: deep sword fern and salal.
+        const dryR = 0.150, dryG = 0.130, dryB = 0.070, wetR = 0.045 + 0.030 * v, wetG = 0.150 + 0.070 * v, wetB = 0.034;
+        const w = Math.min(1, m * 1.5);
+        setForestTint(shrubMesh, shrubCount, dryR + (wetR - dryR) * w, dryG + (wetG - dryG) * w, dryB + (wetB - dryB) * w);
+        shrubCount++;
+      }
+    }
+  }
+  for (let si = 0; si < forestNear.length; si++) {
+    const ent = forestNear[si], n = counts[si];
+    for (const mesh of [ent.fol, ent.bark]) {
+      if (!mesh) continue;
+      mesh.count = n; mesh.visible = n > 0;
+      mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true;
+    }
+  }
+  forestFar.count = farCount; forestFar.visible = farCount > 0;
+  forestFar.instanceMatrix.needsUpdate = true; forestFar.instanceColor.needsUpdate = true;
+  shrubMesh.count = shrubCount; shrubMesh.visible = shrubCount > 0;
+  shrubMesh.instanceMatrix.needsUpdate = true; shrubMesh.instanceColor.needsUpdate = true;
+  logMesh.count = logCount; logMesh.visible = logCount > 0;
+  logMesh.instanceMatrix.needsUpdate = true; logMesh.instanceColor.needsUpdate = true;
   if (pending) lastForestCell = undefined;
 }
 
@@ -10274,6 +10491,64 @@ for (let m = 0; m < 8; m++) {
   mistPlane.rotation.x = -Math.PI / 2;
   mistPlane.position.set(-28350 + (m - 3.5) * 45, 3.8 + (m % 3) * 0.45, -6360 + (m % 2) * 8);
   mistGroup.add(mistPlane);
+}
+
+// Valley mist banks: upright, camera-facing soft sheets that hug the valley floor and hang between the tree layers.
+// They thicken as the road climbs into the cloud at the crest, then settle low in the wet valley.
+const MIST_BANK_COUNT = 24;
+const mistBankGroup = new xi();
+mistBankGroup.name = 'Pacific Northwest valley mist banks';
+Nt.add(mistBankGroup);
+const mistBankTex = (function () {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
+  const cx = cv.getContext('2d');
+  const gr = cx.createRadialGradient(128, 70, 4, 128, 70, 120);
+  gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  cx.save(); cx.scale(1, 0.5); cx.fillStyle = gr; cx.fillRect(0, 0, 256, 256); cx.restore();
+  const tx = new qt(cv); tx.colorSpace = 'srgb'; tx.needsUpdate = true;
+  return tx;
+})();
+const mistBanks = [];
+for (let i = 0; i < MIST_BANK_COUNT; i++) {
+  const mat = new wi({ map: mistBankTex, color: 0xc4d2d0, transparent: true, opacity: 0, depthWrite: false });
+  const mesh = new dt(new ba(1, 1), mat);
+  mistBankGroup.add(mesh);
+  mistBanks.push({ mesh, mat, wet: 0, crest: 0, baseX: 0 });
+}
+let lastMistBankCell = null;
+function updateMistBanks(wet, rain, tSec) {
+  const camX = Nn.position.x;
+  const on = wet > 0.02 && camX < forkX + 100;
+  mistBankGroup.visible = on;
+  if (!on) { lastMistBankCell = null; return; }
+  const cell = Math.floor(camX / 60);
+  if (cell !== lastMistBankCell) {
+    lastMistBankCell = cell;
+    for (let i = 0; i < MIST_BANK_COUNT; i++) {
+      const c = cell - 12 + i, b = mistBanks[i];
+      const x = c * 60 + Un(c * 1.3, i * 0.7) * 60;
+      const side = Un(c * 2.9, 4.4) < 0.5 ? -1 : 1;
+      const z = nwRoadZ(x) + side * (4 + 62 * Math.pow(Un(c * 2.1, 3.3), 1.4));
+      const s = nwSFromX(x);
+      const h = Un(c * 5.1, 9.9);
+      const w = 100 + 130 * h, hh = 20 + 26 * Un(c * 7.7, 1.1);
+      b.baseX = x;
+      b.wet = nwH(s, 9200, 14500);
+      b.crest = nwH(s, 9200, 11600) * (1 - nwH(s, 13200, 16800));
+      b.density = 0.55 + 0.45 * Un(c * 3.3, 6.6);
+      b.mesh.position.set(x, os(x, z) + hh * 0.38, z);
+      b.mesh.scale.set(w, hh, 1);
+      b.mesh.userData.z = z;
+    }
+  }
+  for (let i = 0; i < MIST_BANK_COUNT; i++) {
+    const b = mistBanks[i], m = b.mesh;
+    const dx = camX - b.baseX, dz = Nn.position.z - m.userData.z;
+    m.position.x = b.baseX + Math.sin(tSec * 0.025 + i * 1.7) * 7;
+    m.rotation.y = Math.atan2(dx, dz);
+    const near = xc(Math.min(Math.max((Math.hypot(dx, dz) - 16) / 44, 0), 1));
+    b.mat.opacity = Math.min(0.62, b.wet * b.density * (0.34 + 0.14 * rain + 0.38 * b.crest)) * near;
+  }
 }
 
 // --- 6. Rest Until Modal Logic & Wake Time Calculations ---
@@ -12360,10 +12635,10 @@ Xm.material.uniforms.moonDir.value.copy(moonV);
 const routeS = nwSFromX(Nn.position.x);
 const nwBiome = Math.max(0, Math.min(1, (forkX - Nn.position.x) / 12000));
 // Climate follows the watershed by position. A separate, 24-hour-periodic weather timeline moves cloud and rain through it.
-const wetRegion = nwH(routeS, 11500, 21500);
+const wetRegion = nwH(routeS, 9600, 15800);
 const weatherHour = ((worldClockHours % 24) + 24) % 24 / 24 * Math.PI * 2;
 const weatherSwing = Math.max(0, Math.min(1, 0.5 + 0.30 * Math.sin(weatherHour * 5 + 1.1) + 0.22 * Math.sin(weatherHour * 3 + 2.4)));
-const nwCloud = wetRegion * (0.55 + 0.45 * weatherSwing);
+const nwCloud = wetRegion * (0.72 + 0.28 * weatherSwing);
 const rainFactor = wetRegion * nwH(weatherSwing, 0.40, 0.78);
 const gloom = Math.min(1, nwCloud * 0.72 + rainFactor * 0.28);
 terrainWetnessUniform.value = Math.max(0, Math.min(1, wetRegion * (0.45 + 0.35 * weatherSwing + 0.35 * rainFactor)));
@@ -12387,27 +12662,31 @@ Qt.target.position.set(shadowX, 0, shadowZ);
 if (uDay > 0.05) {
   Qt.position.set(shadowX + sunV.x * 60, Math.max(22, sunV.y * 65), shadowZ + sunV.z * 60);
   Qt.color.setRGB(0.99, 0.94 - 0.15 * gloom, 0.88 - 0.22 * gloom);
-  Qt.intensity = (1.05 * (1 - uDay) + 1.28 * uDay) * (1.0 - 0.42 * gloom);
-  hhem.intensity = (0.09 * (1 - uDay) + 0.95 * uDay) * (1.0 - 0.20 * gloom);
+  // Overcast light is diffuse: the sun weakens a great deal and the sky fills the shadow, so a dense canopy reads dim but never black.
+  Qt.intensity = (1.05 * (1 - uDay) + 1.28 * uDay) * (1.0 - 0.64 * gloom);
+  hhem.intensity = (0.09 * (1 - uDay) + 0.95 * uDay) * (1.0 + 0.55 * gloom * uDay);
 } else {
   Qt.position.set(shadowX + 52, 26, shadowZ + 20);
   Qt.color.setRGB(0.98 * (1 - uNight) + 0.72 * uNight, 0.62 * (1 - uNight) + 0.80 * uNight, 0.40 * (1 - uNight) + 0.98 * uNight);
   Qt.intensity = (0.55 * (1 - uNight) + 1.05 * uNight) * (1.0 - 0.45 * gloom);
-  hhem.intensity = (0.45 * (1 - uNight) + 0.09 * uNight) * (1.0 - 0.35 * gloom);
+  // Under cloud and canopy the sky is the only light left: lift the fill so the forest stays readable without losing its dark.
+  hhem.intensity = (0.45 * (1 - uNight) + 0.09 * uNight) * (1.0 + 0.95 * gloom) + 0.10 * gloom * uNight;
 }
 
 // Foliage keeps a little life on its shadowed side in daylight, and none at night.
-const foliageLift = (0.24 * uDay + 0.05 * (1 - uNight) * (1 - uDay)) * (1.0 - 0.35 * gloom);
+const foliageLift = (0.30 * uDay + 0.11 * (1 - uNight) * (1 - uDay)) * (1.0 - 0.20 * gloom);
 for (const role of ['firFoliage', 'pineFoliage', 'hemlockFoliage', 'cedarFoliage', 'alderFoliage']) {
   if (ROLE_MATS[role]) ROLE_MATS[role].emissiveIntensity = foliageLift;
 }
+for (const fm of forestFoliageMats) fm.emissiveIntensity = foliageLift;
+for (const bm of forestBarkMats) bm.emissiveIntensity = 0.04 + 2.0 * foliageLift;
 let t=eg.elapsedTime;
 const duskFogR = .400 * (1 - uNight) + .026 * uNight;
 const duskFogG = .270 * (1 - uNight) + .031 * uNight;
 const duskFogB = .290 * (1 - uNight) + .050 * uNight;
-const dayFogR = .585 * (1 - gloom) + .340 * gloom;
-const dayFogG = .540 * (1 - gloom) + .370 * gloom;
-const dayFogB = .480 * (1 - gloom) + .395 * gloom;
+const dayFogR = .585 * (1 - gloom) + .300 * gloom;
+const dayFogG = .540 * (1 - gloom) + .352 * gloom;
+const dayFogB = .480 * (1 - gloom) + .370 * gloom;
 Nt.fog.color.setRGB(
   duskFogR * (1 - uDay) + dayFogR * uDay,
   duskFogG * (1 - uDay) + dayFogG * uDay,
@@ -12416,9 +12695,15 @@ Nt.fog.color.setRGB(
 let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;
 Nt.fog.color.multiplyScalar(fb);
 const baseFar = 1400 + 90 * (Hm(t * .03, 9.2) - .5) * 2;
-Nt.fog.far = baseFar * (1.0 - 0.74 * gloom);
-Nt.fog.near = 70 - 38 * gloom;
+Nt.fog.far = baseFar * (1.0 - 0.62 * gloom);
+Nt.fog.near = 70 - 46 * gloom;
 terrainSkyTone.value.setRGB(Nt.fog.color.r, Nt.fog.color.g, Nt.fog.color.b).multiplyScalar(0.55);
+// Under cloud the fill light takes the cool grey-green of the overcast instead of the clear-dusk violet.
+{
+  const hs = Math.min(1, gloom * 0.85) * (1 - 0.65 * uNight);
+  hhem.color.setRGB(0.069 + (Nt.fog.color.r * 0.95 - 0.069) * hs, 0.044 + (Nt.fog.color.g * 0.95 - 0.044) * hs, 0.147 + (Nt.fog.color.b * 0.95 - 0.147) * hs);
+  hhem.groundColor.setRGB(0.042 + (Nt.fog.color.r * 0.30 - 0.042) * hs, 0.023 + (Nt.fog.color.g * 0.32 - 0.023) * hs, 0.010 + (Nt.fog.color.b * 0.30 - 0.010) * hs);
+}
 let sk=Math.max(0,(uNight-.3)/.7);
 sk=sk*sk*(3-2*sk) * (1.0 - uDay) * (1.0 - 0.95 * gloom);
 Nt.userData.stars.visible = sk > 0;
@@ -12479,7 +12764,9 @@ if (Math.abs(Nn.position.x - fernBendX) < 350) {
   mistMaterial.opacity = (0.28 + 0.18 * rainFactor) * (0.8 + 0.2 * Math.sin(t * 0.6));
 } else {
   mistGroup.visible = false;
-}let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}let mfl=.95+.05*Math.sin(t*31),mwfk=1+.007*Math.sin(t*1.1);motelSignLight.intensity=12*mfl;motelTurqLight.intensity=4.2*(.96+.04*Math.sin(t*43));motelPorchLight.intensity=3.8*mwfk;motelRoomLamp.intensity=motelLampOn?7.5*mwfk:0;motelDoorSpill.intensity=(motelLampOn?1.15:.18)*(motelDoorOpen?1:.22)*mwfk;if(ROLE_MATS.motelShade){ROLE_MATS.motelShade.emissiveIntensity=motelLampOn?.95*mwfk:.05}if(Nt.userData.motelSignMat){Nt.userData.motelSignMat.emissiveIntensity=1.05+.35*mfl}let dfl=.95+.05*Math.sin(t*29+1.2),dwfk=1+.007*Math.sin(t*.95+.6);dinerSignLight.intensity=12*dfl;dinerTurqLight.intensity=4.2*(.96+.04*Math.sin(t*39+.8));dinerPorchLight.intensity=3.8*dwfk;dinerCounterLight.intensity=9.2*dwfk;dinerBarWindowLight.intensity=4.6*dfl;dinerBarLight.intensity=4.4*dwfk;dinerBarLamp.intensity=dinerLampOn?6.8*dwfk:0;if(ROLE_MATS.dinerLampShade){ROLE_MATS.dinerLampShade.emissiveIntensity=dinerLampOn?.95*dwfk:.06}if(Nt.userData.dinerSignMat){Nt.userData.dinerSignMat.emissiveIntensity=1.05+.35*dfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
+}
+updateMistBanks(wetRegion, rainFactor, t);
+let gfl=1;if(gasDipEnd<0&&t>=gasNextDip){gasDipEnd=t+Dn(.1,.45);gasNextDip=gasDipEnd+Dn(15,45);gasTick()}if(gasDipEnd>=0){if(t>=gasDipEnd)gasDipEnd=-1;else gfl=.18+.4*Math.abs(Math.sin(t*67))}$n.intensity=10*(.93+.07*Math.sin(t*40))*gfl;if(Nt.userData.gasFaceMat){Nt.userData.gasFaceMat.emissiveIntensity=.15+.5*gfl}if(ROLE_MATS.neonGasRed){ROLE_MATS.neonGasRed.emissiveIntensity=.4+1.9*gfl}let mfl=.95+.05*Math.sin(t*31),mwfk=1+.007*Math.sin(t*1.1);motelSignLight.intensity=12*mfl;motelTurqLight.intensity=4.2*(.96+.04*Math.sin(t*43));motelPorchLight.intensity=3.8*mwfk;motelRoomLamp.intensity=motelLampOn?7.5*mwfk:0;motelDoorSpill.intensity=(motelLampOn?1.15:.18)*(motelDoorOpen?1:.22)*mwfk;if(ROLE_MATS.motelShade){ROLE_MATS.motelShade.emissiveIntensity=motelLampOn?.95*mwfk:.05}if(Nt.userData.motelSignMat){Nt.userData.motelSignMat.emissiveIntensity=1.05+.35*mfl}let dfl=.95+.05*Math.sin(t*29+1.2),dwfk=1+.007*Math.sin(t*.95+.6);dinerSignLight.intensity=12*dfl;dinerTurqLight.intensity=4.2*(.96+.04*Math.sin(t*39+.8));dinerPorchLight.intensity=3.8*dwfk;dinerCounterLight.intensity=9.2*dwfk;dinerBarWindowLight.intensity=4.6*dfl;dinerBarLight.intensity=4.4*dwfk;dinerBarLamp.intensity=dinerLampOn?6.8*dwfk:0;if(ROLE_MATS.dinerLampShade){ROLE_MATS.dinerLampShade.emissiveIntensity=dinerLampOn?.95*dwfk:.06}if(Nt.userData.dinerSignMat){Nt.userData.dinerSignMat.emissiveIntensity=1.05+.35*dfl}if(audio.ctx&&audio.ctx.state==="running"){const {x,z}=Nn.position;
 const depthStation=Math.min(5.84-Math.abs(x),z+20.52,-12.72-z);
 const depthMotel=Math.min(2.35-Math.abs(x-(motelX+1.15)),z+21.2,-14.58-z);
 const depthDiner=Math.min(8.95-Math.abs(x-dinerX),z+21.2,-13.65-z);
