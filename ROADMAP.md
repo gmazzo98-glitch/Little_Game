@@ -513,6 +513,12 @@ For each `index.html` change:
 - Use the [1963 Chevrolet Impala Sport Coupe factory reference](https://news.chevrolet.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1963-Chevrolet.pdf) for the roof, rear seat, and deck relationship. The game coupe now has a rearward roof and backlight, fixed rear quarter glass, and a separate parcel shelf behind a reclined saddle-vinyl bench.
 - Inline JavaScript parses. The transformed rear backrest vertices above the glass sill clear the rear glass plane by at least 0.128 m. In-game visual review remains open.
 
+### 2026-11-05b — Duplicate coupe rearview mirror cleanup
+
+- **Report:** The coupe displayed two overlapping rearview mirrors near the windshield header, where only one projected the road behind the vehicle and the other had a dead black face.
+- **Fix:** Removed the vestigial static dummy mirror (`boxPart(0, 1.43, .43, .23, .079, .025)` in chrome and `boxPart(0, 1.43, .413, .204, .058, .012)` in black) left over from the original pre-interaction car model. Replaced the dummy box with a sleek chrome mounting stem (`boxPart(0, 1.505, .565, .016, .068, .016)`) anchoring the active, interactive mirror (`Adjust rearview mirror`, `rearMirror`) securely to the windshield header.
+- **Checks:** Single inline script extracted and passed `node --check` with 0 errors. Verified in coupe coordinates that only one unified rearview mirror exists in the vehicle, correctly connected to the render target and interactive gesture system. Zero external dependencies or network requests.
+
 ### 2026-11-05 — Progressive coupe steering micro-trim and in-game settings modal
 
 - **Report:** The coupe's steering was excessively sensitive and twitchy on the keyboard, making fine highway lane corrections and subtle course trims impossible without erratic chassis twitching.
