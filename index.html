@@ -4076,15 +4076,22 @@ const sr14Boxes = [
   [-28382, -11.0, -28364, -3.0, 0],
   [-28482, -12.6, -28438, -2.8, 1]
 ];
-function sr14TurnoutDist(x, z, zr) {
-  let d = Infinity;
+// Only measure a rectangle when each axis can beat the current distance.
+function nearerRectDistance(x, z, x0, z0, x1, z1, distance) {
+  const dx = Math.max(x0 - x, x - x1, 0);
+  if (dx >= distance) return distance;
+  const dz = Math.max(z0 - z, z - z1, 0);
+  return dz >= distance ? distance : Math.min(distance, Math.hypot(dx, dz));
+}
+function sr14TurnoutDist(x, z, zr, limit = Infinity) {
+  let d = limit;
   if (x >= -9646 && x <= -9572) {
     const zLo = zr - 3.3, zHi = 3.3;
     d = Math.min(d, Math.hypot(Math.max(-9642 - x, x - -9576, 0), Math.max(zLo - z, z - zHi, 0)));
   }
   const relZ = z - zr;
   for (const [x0, z0, x1, z1] of sr14Boxes) {
-    d = Math.min(d, Math.hypot(Math.max(x0 - x, x - x1, 0), Math.max(z0 - relZ, relZ - z1, 0)));
+    d = nearerRectDistance(x, relZ, x0, z0, x1, z1, d);
   }
   const s = nwSFromX(x);
   if (s >= 29850) {
@@ -4124,9 +4131,14 @@ function bridgeDeckHeight(x, z) {
   return -Infinity;
 }
 function os(x, z, forTerrainMesh = false) {
-  const rectDistance = (x0, z0, x1, z1) => Math.hypot(Math.max(x0 - x, x - x1, 0), Math.max(z0 - z, z - z1, 0));
-  let distance = Math.max(Math.abs(z) - 3.5, 0);
-  for (const bounds of forecourt) distance = Math.min(distance, rectDistance(...bounds));
+  // The widest forecourt distance blend saturates at 89 meters.
+  let distance = Math.min(89, Math.max(Math.abs(z) - 3.5, 0));
+  if (distance > 0) {
+    for (const [x0, z0, x1, z1] of forecourt) {
+      distance = nearerRectDistance(x, z, x0, z0, x1, z1, distance);
+    }
+  }
+  if (x >= -9540 && distance === 0) return 0;
   const dunes = .45 + 2.3 * Hm(x * .008, z * .008) + .28 * ao(x * .023 + 17, z * .023 + 43);
   if (x >= -9540) {
     const blend = xc(Math.min(distance / 20, 1));
@@ -4149,7 +4161,10 @@ function os(x, z, forTerrainMesh = false) {
   const s = nwSFromX(x), yr = nwRoadY(x), slope = nwRoadSlopeZ(x);
   const perp = Math.abs(z - zr) / Math.hypot(1, slope);
   const onGorgeSpan = Math.abs(x - -22546.4) < 33;
-  let dPad = Math.min(onGorgeSpan ? Math.max(perp - 3.6, Math.max(0, 33 - Math.abs(x - -22546.4)) * 0.45) : Math.max(perp - 3.6, 0), sr14TurnoutDist(x, z, zr));
+  const roadDistance = onGorgeSpan
+    ? Math.max(perp - 3.6, (33 - Math.abs(x - -22546.4)) * 0.45)
+    : Math.max(perp - 3.6, 0);
+  let dPad = sr14TurnoutDist(x, z, zr, Math.min(roadDistance, 22));
   if (x >= -9660) dPad = Math.min(dPad, distance);
   const padBlend = xc(Math.min(dPad / 22, 1));
   const relZ = z - zr;
@@ -4162,8 +4177,8 @@ function os(x, z, forTerrainMesh = false) {
     const northSide = xc(Math.min(Math.max((-relZ - 14) / 85, 0), 1));
     const southSide = xc(Math.min(Math.max((relZ - 18) / 95, 0), 1));
     const ridgeHeight = 28 + 38 * valley;
-    relief += gorge * northSide * (ridgeHeight * (0.45 + 0.55 * Hm(x * .0028, z * .0028)) + 8 * ao(x * .008, z * .008));
-    relief += gorge * southSide * ((22 - 8 * valley) * Hm(x * .003, z * .003));
+    if (northSide > 0) relief += gorge * northSide * (ridgeHeight * (0.45 + 0.55 * Hm(x * .0028, z * .0028)) + 8 * ao(x * .008, z * .008));
+    if (southSide > 0) relief += gorge * southSide * ((22 - 8 * valley) * Hm(x * .003, z * .003));
   }
   let h = yr + relief * padBlend;
   if (s > 13200) {
@@ -4190,7 +4205,11 @@ function os(x, z, forTerrainMesh = false) {
 }
 var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(s.carOnly||e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.985,.062,-.15).normalize()},moonDir:{value:new P(52,26,20).normalize()},uNight:{value:0},uDay:{value:0},uOvercast:{value:0},uForestSkyline:{value:0}},vertexShader:`
       varying vec3 vDir;
-      void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,fragmentShader:`
+      void main(){
+        vDir = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        gl_Position.z = gl_Position.w;
+      }`,fragmentShader:`
       varying vec3 vDir;
       uniform vec3 sunDir;
       uniform vec3 moonDir;
@@ -4236,25 +4255,28 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
         col += (vec3(.84, .90, .98) * moonDisc * 1.55 + vec3(.22, .28, .42) * pow(m, 95.0) * .28 + vec3(.09, .13, .22) * pow(m, 12.0) * .08) * moonVis;
         col = mix(haze, col, smoothstep(-.025, .16, h));
 
-        float a = atan(direction.z, direction.x);
-        float nwDir = smoothstep(-0.2, 0.85, -direction.x * 0.7 - direction.z * 0.5) * uForestSkyline;
-        float serration = (0.5 + 0.5 * sin(a * 95.0) * cos(a * 143.0)) * 0.011 * nwDir;
-        float farRidge = ridge(a, .7, .095 + .065 * nwDir) + serration * 0.7;
-        float midRidge = ridge(a, 2.9, .058 + .052 * nwDir) + serration;
-        float nearRidge = ridge(a, 5.1, .030 + .038 * nwDir) + serration * 0.85;
-        vec3 farColor = mix(mix(vec3(.305, .220, .285), vec3(.021, .025, .043), uNight), mix(vec3(.34, .38, .44), vec3(.14, .19, .18), nwDir), uDay);
-        vec3 midColor = mix(mix(vec3(.235, .185, .250), vec3(.016, .020, .034), uNight), mix(vec3(.26, .29, .34), vec3(.09, .14, .12), nwDir), uDay);
-        vec3 nearColor = mix(mix(vec3(.185, .155, .215), vec3(.012, .016, .028), uNight), mix(vec3(.20, .22, .26), vec3(.05, .09, .07), nwDir), uDay);
-        farColor = mix(farColor, vec3(.010, .018, .016), nwDir * uNight * 0.65);
-        midColor = mix(midColor, vec3(.007, .013, .011), nwDir * uNight * 0.75);
-        nearColor = mix(nearColor, vec3(.004, .009, .008), nwDir * uNight * 0.85);
-        col = mix(col, farColor, 1.0 - smoothstep(farRidge - .0014, farRidge + .0014, direction.y));
-        col = mix(col, midColor, 1.0 - smoothstep(midRidge - .0010, midRidge + .0010, direction.y));
-        col = mix(col, nearColor, 1.0 - smoothstep(nearRidge - .0008, nearRidge + .0008, direction.y));
+        // Above the highest possible ridge, all three silhouette masks are zero.
+        if (direction.y < .18) {
+          float a = atan(direction.z, direction.x);
+          float nwDir = smoothstep(-0.2, 0.85, -direction.x * 0.7 - direction.z * 0.5) * uForestSkyline;
+          float serration = (0.5 + 0.5 * sin(a * 95.0) * cos(a * 143.0)) * 0.011 * nwDir;
+          float farRidge = ridge(a, .7, .095 + .065 * nwDir) + serration * 0.7;
+          float midRidge = ridge(a, 2.9, .058 + .052 * nwDir) + serration;
+          float nearRidge = ridge(a, 5.1, .030 + .038 * nwDir) + serration * 0.85;
+          vec3 farColor = mix(mix(vec3(.305, .220, .285), vec3(.021, .025, .043), uNight), mix(vec3(.34, .38, .44), vec3(.14, .19, .18), nwDir), uDay);
+          vec3 midColor = mix(mix(vec3(.235, .185, .250), vec3(.016, .020, .034), uNight), mix(vec3(.26, .29, .34), vec3(.09, .14, .12), nwDir), uDay);
+          vec3 nearColor = mix(mix(vec3(.185, .155, .215), vec3(.012, .016, .028), uNight), mix(vec3(.20, .22, .26), vec3(.05, .09, .07), nwDir), uDay);
+          farColor = mix(farColor, vec3(.010, .018, .016), nwDir * uNight * 0.65);
+          midColor = mix(midColor, vec3(.007, .013, .011), nwDir * uNight * 0.75);
+          nearColor = mix(nearColor, vec3(.004, .009, .008), nwDir * uNight * 0.85);
+          col = mix(col, farColor, 1.0 - smoothstep(farRidge - .0014, farRidge + .0014, direction.y));
+          col = mix(col, midColor, 1.0 - smoothstep(midRidge - .0010, midRidge + .0010, direction.y));
+          col = mix(col, nearColor, 1.0 - smoothstep(nearRidge - .0008, nearRidge + .0008, direction.y));
+        }
         // A shallow haze band joins the distant silhouettes to the ground fog.
         col = mix(col, haze, 1.0 - smoothstep(-.018, .009 + .018 * uOvercast, direction.y));
         gl_FragColor = vec4(col, 1.0);
-      }`}));Xm.renderOrder=-1000;Xm.material.depthTest=false;Nt.add(Xm);{let e=new Float32Array(7800);for(let s=0;s<2600;s++){let r=pn()*Math.PI*2,o=Math.acos(Dn(.105,1)),a=850;e[s*3]=a*Math.sin(o)*Math.cos(r),e[s*3+1]=a*Math.cos(o),e[s*3+2]=a*Math.sin(o)*Math.sin(r)}let t=new It;t.setAttribute("position",new Et(e,3));let n=new or(t,new Qi({color:13621503,size:2,sizeAttenuation:!1,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.userData.stars=n,Nt.add(n)}var hhem=new hr(4864875,3811866,.45);Nt.userData.hemi=hhem,Nt.add(hhem);var Qt=new dr(9413631,.55);Qt.position.set(52,26,20);Qt.castShadow=!0;Qt.shadow.mapSize.set(2048,2048);Qt.shadow.camera.left=-55;Qt.shadow.camera.right=55;Qt.shadow.camera.top=55;Qt.shadow.camera.bottom=-55;Qt.shadow.camera.far=160;Qt.shadow.bias=-6e-4;Nt.add(Qt);Nt.add(Qt.target);var $n=new Pn(16723285,10,35,2);$n.position.set(11,5.6,-8.4);$n.castShadow=!1;$n.shadow.camera.near=.5;$n.shadow.camera.far=60;$n.shadow.bias=-.002;Nt.add($n);var Sc=new Pn(16767392,6,18,2);Sc.position.set(-4.5,4.2,-9);Nt.add(Sc);var bc=new Pn(16767392,6,18,2);bc.position.set(4.5,4.2,-9);Nt.add(bc);var Ec=new Pn(16763274,4,10,2);Ec.position.set(0,3,-17);Nt.add(Ec);var Tc=new Pn(6747903,2.5,8,2);Tc.position.set(0,1.4,-9);Nt.add(Tc);
+      }`}));Xm.renderOrder=1000;Nt.add(Xm);{let e=new Float32Array(7800);for(let s=0;s<2600;s++){let r=pn()*Math.PI*2,o=Math.acos(Dn(.105,1)),a=850;e[s*3]=a*Math.sin(o)*Math.cos(r),e[s*3+1]=a*Math.cos(o),e[s*3+2]=a*Math.sin(o)*Math.sin(r)}let t=new It;t.setAttribute("position",new Et(e,3));let n=new or(t,new Qi({color:13621503,size:2,sizeAttenuation:!1,transparent:!0,opacity:0,fog:!1,depthWrite:!1}));Nt.userData.stars=n,Nt.add(n)}var hhem=new hr(4864875,3811866,.45);Nt.userData.hemi=hhem,Nt.add(hhem);var Qt=new dr(9413631,.55);Qt.position.set(52,26,20);Qt.castShadow=!0;Qt.shadow.mapSize.set(2048,2048);Qt.shadow.camera.left=-55;Qt.shadow.camera.right=55;Qt.shadow.camera.top=55;Qt.shadow.camera.bottom=-55;Qt.shadow.camera.far=160;Qt.shadow.bias=-6e-4;Nt.add(Qt);Nt.add(Qt.target);var $n=new Pn(16723285,10,35,2);$n.position.set(11,5.6,-8.4);$n.castShadow=!1;$n.shadow.camera.near=.5;$n.shadow.camera.far=60;$n.shadow.bias=-.002;Nt.add($n);var Sc=new Pn(16767392,6,18,2);Sc.position.set(-4.5,4.2,-9);Nt.add(Sc);var bc=new Pn(16767392,6,18,2);bc.position.set(4.5,4.2,-9);Nt.add(bc);var Ec=new Pn(16763274,4,10,2);Ec.position.set(0,3,-17);Nt.add(Ec);var Tc=new Pn(6747903,2.5,8,2);Tc.position.set(0,1.4,-9);Nt.add(Tc);
 // Warm spill at the office threshold, linked to the counter light.
 var Vsp=new Pn(0xffb46a,1.25,7,2);Vsp.position.set(0,.9,-11.2);Vsp.castShadow=!1;Nt.add(Vsp);
 // Sparse dust motes drifting under the canopy, readable only once the lamps dominate.
@@ -4292,15 +4314,21 @@ function onAsphalt(){
   }
   return false;
 }
+function fernShelterAt(x, z) {
+  const across = Math.abs(x - fernBendX), depth = fernBendZ - z;
+  if (across < 3.6 && depth > 12.2 && depth < 16.6) return 3;
+  if (across < 4.4 && depth >= 6.5 && depth <= 12.2) return 2;
+  return 0;
+}
 // 0 sand/dirt trail, 1 asphalt, 2 canopy concrete, 3 office/room/counter floor, 4 timber bridge
 function footSurface(){
   const {x,z}=Nn.position;
   if(Math.abs(x)<5.7 && z>-20.4 && z<-12.9)return 3;
   if(Math.abs(x-(-4600-1.8))<3.6 && z>-19.2 && z<-13.2)return 3;
-  if(Math.abs(x-fernBendDriveInPos.x)<3.8 && Math.abs(z-(fernBendDriveInPos.z-8.2))<2.5)return 3;
-  if(Math.abs(x-(-19500))<30 && Math.abs(z-(-3021))<16)return 4;
+  const fernShelter = fernShelterAt(x,z);
+  if(fernShelter)return fernShelter;
+  if(bridgeDeckHeight(x,z)===4.35)return 4;
   if(Math.abs(x)<8.5 && z>=-12.94 && z<=-4.45)return 2;
-  if(Math.abs(x-fernBendDriveInPos.x)<10.0 && Math.abs(z-(fernBendDriveInPos.z-3.0))<4.5)return 2;
   if(onAsphalt())return 1;
   return 0;
 }
@@ -4318,6 +4346,10 @@ desertCoords.sort((a, b) => a - b);
 var desertSize = desertCoords.length;
 var desertPositions = new Float32Array(desertSize * desertSize * 3);
 var desertNormals = new Float32Array(desertPositions.length);
+const desertCoordIndices = new Map(desertCoords.map((coordinate, index) => [coordinate, index]));
+const desertOldRows = new Int16Array(desertSize);
+const desertOldColumns = new Int16Array(desertSize);
+const desertHeights = new Float32Array(desertSize * desertSize);
 var desertIndices = [];
 for (let z = 0; z < desertSize - 1; z++) for (let x = 0; x < desertSize - 1; x++) {
   const a = z * desertSize + x, b = a + 1, c = a + desertSize, d = c + 1;
@@ -4380,9 +4412,7 @@ desertMaterial.onBeforeCompile = shader => {
         }
         return z;
       }
-      float nwRiverZ(float x) {
-        float s = x >= -9600.0 ? (-4600.0 - x) : (5000.0 + (-9600.0 - x) * 1.12);
-        float zr = nwRoadZ(x);
+      float nwRiverZ(float s, float zr) {
         float sideShift = -30.0 + 60.0 * nwH(s, 19220.0, 19780.0) + 10.0 * nwH(s, 24500.0, 25750.0);
         float bridgeGate = 1.0 - nwH(s, 19150.0, 19400.0) * (1.0 - nwH(s, 19600.0, 19850.0));
         float fernGate = 1.0 - nwH(s, 25650.0, 25850.0) * (1.0 - nwH(s, 26250.0, 26500.0));
@@ -4410,7 +4440,7 @@ desertMaterial.onBeforeCompile = shader => {
       natGround = mix(natGround, gorgeGround, nwH(bioS, 11200.0, 16800.0));
       natGround = mix(natGround, valleyFloor, nwH(bioS, 19500.0, 24800.0));
       if (bioS > 13200.0) {
-        float dRiv = abs(p.y - nwRiverZ(p.x));
+        float dRiv = abs(p.y - nwRiverZ(sVal, zr));
         float rivCobble = 1.0 - smoothstep(6.0, 13.5, dRiv);
         float rivMoss = (1.0 - smoothstep(10.0, 28.0, dRiv)) * (1.0 - rivCobble);
         natGround = mix(natGround, vec3(.065,.072,.080) * (.85 + .3 * n), rivCobble * nwH(bioS, 13200.0, 15200.0));
@@ -4427,34 +4457,55 @@ desertMaterial.onBeforeCompile = shader => {
       float road = max(road66, srRoad);
       float shoulder = max(shoulder66, srShoulder);
 
-      float west = max(max(desertRect(p, vec2(${forecourt[0][0]}, ${forecourt[0][1]}), vec2(${forecourt[0][2]}, ${forecourt[0][3]}), .40),
-                           desertRect(p, vec2(${forecourt[3][0]}, ${forecourt[3][1]}), vec2(${forecourt[3][2]}, ${forecourt[3][3]}), .40)),
-                       desertRect(p, vec2(${forecourt[6][0]}, ${forecourt[6][1]}), vec2(${forecourt[6][2]}, ${forecourt[6][3]}), .40));
-      float east = max(max(desertRect(p, vec2(${forecourt[2][0]}, ${forecourt[2][1]}), vec2(${forecourt[2][2]}, ${forecourt[2][3]}), .40),
-                           desertRect(p, vec2(${forecourt[5][0]}, ${forecourt[5][1]}), vec2(${forecourt[5][2]}, ${forecourt[5][3]}), .40)),
-                       desertRect(p, vec2(${forecourt[8][0]}, ${forecourt[8][1]}), vec2(${forecourt[8][2]}, ${forecourt[8][3]}), .40));
-      float apron = desertRect(p, vec2(${forecourt[1][0]}, ${forecourt[1][1]}), vec2(${forecourt[1][2]}, ${forecourt[1][3]}), .55);
-      float motelApron = desertRect(p, vec2(${forecourt[4][0]}, ${forecourt[4][1]}), vec2(${forecourt[4][2]}, ${forecourt[4][3]}), .55);
-      float dinerApron = desertRect(p, vec2(${forecourt[7][0]}, ${forecourt[7][1]}), vec2(${forecourt[7][2]}, ${forecourt[7][3]}), .55);
+      // Each site group covers its apron and both asphalt connectors.
+      float west = 0.0, east = 0.0, apron = 0.0;
+      float motelApron = 0.0, dinerApron = 0.0;
+      if (p.y < 0.0 && p.y > -28.0) {
+        if (abs(p.x) < 29.0) {
+          west = desertRect(p, vec2(${forecourt[0][0]}, ${forecourt[0][1]}), vec2(${forecourt[0][2]}, ${forecourt[0][3]}), .40);
+          apron = desertRect(p, vec2(${forecourt[1][0]}, ${forecourt[1][1]}), vec2(${forecourt[1][2]}, ${forecourt[1][3]}), .55);
+          east = desertRect(p, vec2(${forecourt[2][0]}, ${forecourt[2][1]}), vec2(${forecourt[2][2]}, ${forecourt[2][3]}), .40);
+        } else if (abs(p.x - ${motelX}.0) < 29.0) {
+          west = desertRect(p, vec2(${forecourt[3][0]}, ${forecourt[3][1]}), vec2(${forecourt[3][2]}, ${forecourt[3][3]}), .40);
+          motelApron = desertRect(p, vec2(${forecourt[4][0]}, ${forecourt[4][1]}), vec2(${forecourt[4][2]}, ${forecourt[4][3]}), .55);
+          east = desertRect(p, vec2(${forecourt[5][0]}, ${forecourt[5][1]}), vec2(${forecourt[5][2]}, ${forecourt[5][3]}), .40);
+        } else if (abs(p.x - ${dinerX}.0) < 29.0) {
+          west = desertRect(p, vec2(${forecourt[6][0]}, ${forecourt[6][1]}), vec2(${forecourt[6][2]}, ${forecourt[6][3]}), .40);
+          dinerApron = desertRect(p, vec2(${forecourt[7][0]}, ${forecourt[7][1]}), vec2(${forecourt[7][2]}, ${forecourt[7][3]}), .55);
+          east = desertRect(p, vec2(${forecourt[8][0]}, ${forecourt[8][1]}), vec2(${forecourt[8][2]}, ${forecourt[8][3]}), .40);
+        }
+      }
 
       vec2 pr = vec2(p.x, p.y - zr);
-      float forkApron = desertRect(p, vec2(-9642.0, zr - 3.25), vec2(-9576.0, 3.25), 0.55);
-      float srTurnout = max(
-        max(desertRect(pr, vec2(-16326.0, 2.8), vec2(-16266.0, 11.8), 0.55),
-            desertRect(pr, vec2(-23918.0, 2.8), vec2(-23854.0, 12.6), 0.55)),
-        max(desertRect(pr, vec2(-28308.0, 2.8), vec2(-28268.0, 15.2), 0.55),
-            desertRect(pr, vec2(-28482.0, -12.6), vec2(-28438.0, -2.8), 0.55))
-      );
-      if (sVal >= 29850.0 && onR66West < 0.5) {
-        float kT = floor((sVal - 28000.0) / 4000.0);
-        float dsT = abs(sVal - (30000.0 + kT * 4000.0));
-        float sideT = mod(kT, 2.0) < 0.5 ? 1.0 : -1.0;
-        float latT = pr.y * sideT;
-        srTurnout = max(srTurnout, 1.0 - smoothstep(0.0, 0.55, length(max(vec2(dsT - 32.0, max(2.8 - latT, latT - 11.2)), vec2(0.0)))));
+      float forkApron = 0.0;
+      if (p.x > -9643.0 && p.x < -9575.0) {
+        forkApron = desertRect(p, vec2(-9642.0, zr - 3.25), vec2(-9576.0, 3.25), 0.55);
       }
-      float fbRamps = max(desertRect(p, vec2(-28336.0, -6411.0), vec2(-28318.0, -6403.0), .45),
-                          desertRect(p, vec2(-28382.0, -6411.0), vec2(-28364.0, -6403.0), .45));
-      float fbApron = desertRect(p, vec2(-28366.0, -6423.0), vec2(-28334.0, -6404.2), .55);
+      float srTurnout = 0.0;
+      if (abs(pr.y) < 16.0) {
+        if (p.x > -16327.0 && p.x < -16265.0) {
+          srTurnout = desertRect(pr, vec2(-16326.0, 2.8), vec2(-16266.0, 11.8), 0.55);
+        } else if (p.x > -23919.0 && p.x < -23853.0) {
+          srTurnout = desertRect(pr, vec2(-23918.0, 2.8), vec2(-23854.0, 12.6), 0.55);
+        } else if (p.x > -28309.0 && p.x < -28267.0) {
+          srTurnout = desertRect(pr, vec2(-28308.0, 2.8), vec2(-28268.0, 15.2), 0.55);
+        } else if (p.x > -28483.0 && p.x < -28437.0) {
+          srTurnout = desertRect(pr, vec2(-28482.0, -12.6), vec2(-28438.0, -2.8), 0.55);
+        }
+        if (sVal >= 29850.0 && onR66West < 0.5) {
+          float kT = floor((sVal - 28000.0) / 4000.0);
+          float dsT = abs(sVal - (30000.0 + kT * 4000.0));
+          float sideT = mod(kT, 2.0) < 0.5 ? 1.0 : -1.0;
+          float latT = pr.y * sideT;
+          srTurnout = max(srTurnout, 1.0 - smoothstep(0.0, 0.55, length(max(vec2(dsT - 32.0, max(2.8 - latT, latT - 11.2)), vec2(0.0)))));
+        }
+      }
+      float fbRamps = 0.0, fbApron = 0.0;
+      if (p.x > -28383.0 && p.x < -28317.0 && p.y > -6424.0 && p.y < -6402.0) {
+        fbRamps = max(desertRect(p, vec2(-28336.0, -6411.0), vec2(-28318.0, -6403.0), .45),
+                      desertRect(p, vec2(-28382.0, -6411.0), vec2(-28364.0, -6403.0), .45));
+        fbApron = desertRect(p, vec2(-28366.0, -6423.0), vec2(-28334.0, -6404.2), .55);
+      }
 
       float walkTrail = 0.0;
       if (p.x > -28505.0 && p.x < -28255.0 && p.y > -6455.0 && p.y < -6355.0) {
@@ -4472,25 +4523,34 @@ desertMaterial.onBeforeCompile = shader => {
         walkTrail = max(1.0 - smoothstep(0.85, 1.45, dTr), overlookPad);
       }
 
-      // Patchy damp pavement in shaded gorge rock cuts before sustained valley wetness
-      float patchDamp = nwH(bioS, 16200.0, 18400.0) * smoothstep(0.12, 0.62, sandNoise(p * 0.042) + 0.25 * sin(bioS * 0.008));
-      float valleyDamp = nwH(bioS, 22000.0, 25000.0);
-      float wetFactor = clamp(max(patchDamp * 0.78, valleyDamp * (0.65 + 0.35 * uWetness)), 0.0, 1.0);
-      float puddle = smoothstep(0.58, 0.76, sandNoise(p * 0.17 + vec2(4.1, 9.3))) * wetFactor;
+      float asphaltMask = max(road, max(max(west, east), max(forkApron, fbRamps)));
+      float pavedApron = max(max(motelApron, dinerApron), fbApron);
+      float wetFactor = 0.0;
+      if (bioS > 16200.0 && max(asphaltMask, max(srTurnout, pavedApron)) > 0.0) {
+        // Patchy damp pavement in shaded gorge rock cuts before sustained valley wetness.
+        float patchDamp = nwH(bioS, 16200.0, 18400.0) * smoothstep(0.12, 0.62, sandNoise(p * 0.042) + 0.25 * sin(bioS * 0.008));
+        float valleyDamp = nwH(bioS, 22000.0, 25000.0);
+        wetFactor = clamp(max(patchDamp * 0.78, valleyDamp * (0.65 + 0.35 * uWetness)), 0.0, 1.0);
+      }
+      float puddle = 0.0;
+      if (wetFactor > 0.0 && (asphaltMask > 0.0 || fbApron > 0.2)) {
+        puddle = smoothstep(0.58, 0.76, sandNoise(p * 0.17 + vec2(4.1, 9.3))) * wetFactor;
+      }
 
       float latCoord = srRoad > road66 ? (p.y - zr) / sqrt(1.0 + slopeZ * slopeZ) : p.y;
-      vec3 asphalt = vec3(.025,.026,.032) * (.93 + .14 * n);
-      float tarSeam = (1.0 - smoothstep(.035, .075, abs(mod(p.x + 4.2 + .18 * sin(latCoord * 1.7), 18.0) - 9.0))) * road;
-      float wheelTrack = (1.0 - smoothstep(.18, .72, abs(abs(latCoord) - 1.55))) * road;
-      asphalt *= 1.0 - .22 * tarSeam - .09 * wheelTrack;
-      asphalt *= mix(1.0, 0.54 - 0.14 * puddle, wetFactor);
-
       vec3 ground = mix(natGround, natGround * .82, shoulder * .48);
       ground = mix(ground, vec3(.14,.12,.095) * (0.88 + 0.24 * n), walkTrail * 0.85);
       ground = mix(ground, vec3(.155,.148,.135) * mix(1.0, 0.62, wetFactor), srTurnout * 0.92);
       ground = mix(ground, vec3(.185,.174,.157), apron);
-      ground = mix(ground, vec3(.145,.138,.128) * mix(1.0, 0.60, wetFactor), max(max(motelApron, dinerApron), fbApron));
-      ground = mix(ground, asphalt, max(road, max(max(west, east), max(forkApron, fbRamps))));
+      ground = mix(ground, vec3(.145,.138,.128) * mix(1.0, 0.60, wetFactor), pavedApron);
+      if (asphaltMask > 0.0) {
+        vec3 asphalt = vec3(.025,.026,.032) * (.93 + .14 * n);
+        float tarSeam = (1.0 - smoothstep(.035, .075, abs(mod(p.x + 4.2 + .18 * sin(latCoord * 1.7), 18.0) - 9.0))) * road;
+        float wheelTrack = (1.0 - smoothstep(.18, .72, abs(abs(latCoord) - 1.55))) * road;
+        asphalt *= 1.0 - .22 * tarSeam - .09 * wheelTrack;
+        asphalt *= mix(1.0, 0.54 - 0.14 * puddle, wetFactor);
+        ground = mix(ground, asphalt, asphaltMask);
+      }
       if (puddle > 0.01 && max(road, fbApron) > 0.2) {
         ground += vec3(.022, .028, .036) * puddle * max(road, fbApron);
       }
@@ -4508,16 +4568,18 @@ desertMaterial.onBeforeCompile = shader => {
                   * step(-6412.2, p.y) * step(p.y, -6409.2);
       ground = mix(ground,vec3(.34,.30,.22),max(serviceEdge,max(max(motelBay,dinerBay),fbBay)*.65)*(.55+.30*n));
 
-      float desertKeep = 1.0 - nwH(bioS, 5200.0, 9200.0);
-      float siteClear = smoothstep(58.0, 96.0, min(abs(p.x), min(abs(p.x - (${motelX}.0)), abs(p.x - (${dinerX}.0)))));
-      float driftWave = sin(p.x * .019 + 1.3) * cos(p.x * .047 - .8);
-      float sandDrift = smoothstep(.42, .80, driftWave + .22 * (n - .5) - .11 * abs(latCoord)) * siteClear * road * desertKeep;
-      float dash = 1.0 - smoothstep(2.7, 2.85, mod(p.x + 1.4, 7.5));
-      float centerLine = (1.0 - smoothstep(.075, .105, abs(latCoord))) * dash * (1.0 - .75 * sandDrift) * road;
-      float edgeLine = (1.0 - smoothstep(.025, .045, abs(abs(latCoord) - 2.85))) * (1.0 - .82 * sandDrift) * road;
-      ground = mix(ground, vec3(.46,.34,.16) * mix(1.0, 0.72, wetFactor), centerLine);
-      ground = mix(ground, vec3(.45,.42,.34) * mix(1.0, 0.72, wetFactor), edgeLine * .78);
-      ground = mix(ground, sand * (.92 + .12 * sin(p.x * .45 + p.y * 1.9)), sandDrift * .76);
+      if (road > 0.0) {
+        float desertKeep = 1.0 - nwH(bioS, 5200.0, 9200.0);
+        float siteClear = smoothstep(58.0, 96.0, min(abs(p.x), min(abs(p.x - (${motelX}.0)), abs(p.x - (${dinerX}.0)))));
+        float driftWave = sin(p.x * .019 + 1.3) * cos(p.x * .047 - .8);
+        float sandDrift = smoothstep(.42, .80, driftWave + .22 * (n - .5) - .11 * abs(latCoord)) * siteClear * road * desertKeep;
+        float dash = 1.0 - smoothstep(2.7, 2.85, mod(p.x + 1.4, 7.5));
+        float centerLine = (1.0 - smoothstep(.075, .105, abs(latCoord))) * dash * (1.0 - .75 * sandDrift) * road;
+        float edgeLine = (1.0 - smoothstep(.025, .045, abs(abs(latCoord) - 2.85))) * (1.0 - .82 * sandDrift) * road;
+        ground = mix(ground, vec3(.46,.34,.16) * mix(1.0, 0.72, wetFactor), centerLine);
+        ground = mix(ground, vec3(.45,.42,.34) * mix(1.0, 0.72, wetFactor), edgeLine * .78);
+        ground = mix(ground, sand * (.92 + .12 * sin(p.x * .45 + p.y * 1.9)), sandDrift * .76);
+      }
       vec2 offset = p - coupeFootprint.xy;
       if (max(abs(offset.x), abs(offset.y)) < 3.0) {
         vec2 forward = coupeFootprint.zw;
@@ -4535,16 +4597,40 @@ desertSurface.name = 'Continuous desert surface';
 desertSurface.receiveShadow = true;
 desertSurface.castShadow = false;
 Nt.add(desertSurface);
+function mapDesertOverlap(previousOrigin, nextOrigin, indices) {
+  for (let index = 0; index < desertSize; index++) {
+    const coordinate = desertCoords[index];
+    const oldIndex = desertCoordIndices.get(coordinate + (nextOrigin - previousOrigin));
+    indices[index] = oldIndex !== undefined &&
+      previousOrigin + desertCoords[oldIndex] === nextOrigin + coordinate ? oldIndex : -1;
+  }
+}
 function recenterDesert(x, z) {
   const ox = Math.round(x / 64) * 64, oz = Math.round(z / 64) * 64;
   if (ox === desertOriginX && oz === desertOriginZ) return;
+  mapDesertOverlap(desertOriginX, ox, desertOldColumns);
+  mapDesertOverlap(desertOriginZ, oz, desertOldRows);
+  const firstPatch = desertOriginX === Infinity;
   desertOriginX = ox; desertOriginZ = oz;
-  for (let row = 0; row < desertSize; row++) for (let col = 0; col < desertSize; col++) {
-    const localX = desertCoords[col], localZ = desertCoords[row];
-    const wx = ox + localX, wz = oz + localZ, i = (row * desertSize + col) * 3;
-    desertPositions[i] = localX;
-    desertPositions[i + 1] = os(wx, wz, true);
-    desertPositions[i + 2] = localZ;
+  // Sample only the newly exposed grid points. Stage heights so overlapping
+  // rows and columns can still read the old patch in either travel direction.
+  for (let row = 0; row < desertSize; row++) {
+    const oldRow = desertOldRows[row];
+    const wz = oz + desertCoords[row];
+    for (let col = 0; col < desertSize; col++) {
+      const oldCol = desertOldColumns[col];
+      const index = row * desertSize + col;
+      desertHeights[index] = oldRow >= 0 && oldCol >= 0
+        ? desertPositions[(oldRow * desertSize + oldCol) * 3 + 1]
+        : os(ox + desertCoords[col], wz, true);
+      if (firstPatch) {
+        desertPositions[index * 3] = desertCoords[col];
+        desertPositions[index * 3 + 2] = desertCoords[row];
+      }
+    }
+  }
+  for (let index = 0; index < desertHeights.length; index++) {
+    desertPositions[index * 3 + 1] = desertHeights[index];
   }
   desertGeometry.computeVertexNormals();
   desertSurface.position.set(ox, 0, oz);
@@ -9107,6 +9193,7 @@ riverMesh.name = 'Cedar River ribbon surface';
 riverMesh.receiveShadow = true;
 Nt.add(riverMesh);
 
+let riverStartX;
 function updateRiverSurface(camX) {
   if (camX > -12200) {
     riverMesh.visible = false;
@@ -9114,7 +9201,10 @@ function updateRiverSurface(camX) {
   }
   riverMesh.visible = true;
   const dx = 12.5;
-  const startX = Math.min(-13500, camX + RIVER_SEGS * dx * 0.48);
+  // Keep the same world-space samples while the streaming window is within one segment.
+  const startX = Math.min(-13500, Math.round((camX + RIVER_SEGS * dx * 0.48) / dx) * dx);
+  if (startX === riverStartX) return;
+  riverStartX = startX;
   const halfW = 9.2;
   for (let i = 0; i <= RIVER_SEGS; i++) {
     const rx = startX - i * dx;
@@ -9642,49 +9732,50 @@ function makeConiferParts(species, height, seed) {
 
 // Bounded Instanced Streaming Forest Pool along SR 14 (s >= 4800, through road to km 80+)
 const FOREST_POOL_SIZE = 120;
-const forestFoliageMesh = new ar(new It(), roleMat('firFoliage'), FOREST_POOL_SIZE);
-forestFoliageMesh.name = 'Streaming forest pool foliage';
-forestFoliageMesh.castShadow = true; forestFoliageMesh.receiveShadow = true;
-const forestBarkMesh = new ar(new It(), roleMat('firBark'), FOREST_POOL_SIZE);
-forestBarkMesh.name = 'Streaming forest pool trunks';
-forestBarkMesh.castShadow = true; forestBarkMesh.receiveShadow = false;
-
-(function initForestMeshTemplates() {
+const FOREST_CHUNK_SIZE = 12;
+const forestChunks = (function initForestMeshTemplates() {
   const treeParts = makeConiferParts('dougFir', 18.0, 77);
-  const folParts = treeParts.filter(p => p.role === 'firFoliage').map(p => p.part);
-  const barkParts = treeParts.filter(p => p.role === 'firBark').map(p => p.part);
-  const folMerged = mergeParts(folParts), barkMerged = mergeParts(barkParts);
-
-  forestFoliageMesh.geometry.setAttribute('position', new Et(new Float32Array(folMerged.pos), 3));
-  forestFoliageMesh.geometry.setAttribute('normal', new Et(new Float32Array(folMerged.nor), 3));
-  forestFoliageMesh.geometry.setIndex(folMerged.idx);
-
-  forestBarkMesh.geometry.setAttribute('position', new Et(new Float32Array(barkMerged.pos), 3));
-  forestBarkMesh.geometry.setAttribute('normal', new Et(new Float32Array(barkMerged.nor), 3));
-  forestBarkMesh.geometry.setIndex(barkMerged.idx);
-
-  Nt.add(forestFoliageMesh);
-  Nt.add(forestBarkMesh);
+  const templates = ['firFoliage','firBark'].map(role => {
+    const parts = treeParts.filter(part => part.role === role).map(part => part.part);
+    const merged = mergeParts(parts);
+    const geometry = new It();
+    geometry.setAttribute('position', new Et(new Float32Array(merged.pos), 3));
+    geometry.setAttribute('normal', new Et(new Float32Array(merged.nor), 3));
+    geometry.setIndex(merged.idx);
+    return {geometry, role};
+  });
+  const chunks = [];
+  for (let i=0; i<FOREST_POOL_SIZE; i+=FOREST_CHUNK_SIZE) {
+    chunks.push(templates.map(({geometry,role}) => {
+      const mesh = new ar(geometry, roleMat(role), FOREST_CHUNK_SIZE);
+      mesh.name = `Streaming forest ${role} ${i / FOREST_CHUNK_SIZE}`;
+      mesh.castShadow = true;
+      mesh.receiveShadow = role === 'firFoliage';
+      mesh.count = 0;
+      mesh.visible = false;
+      Nt.add(mesh);
+      return mesh;
+    }));
+  }
+  return chunks;
 })();
 
-let lastForestCell = -999999;
+const forestMatrix = new $e();
+let lastForestCell;
 function updateForestPool(camX) {
-  if (camX > forkX + 200) {
-    forestFoliageMesh.visible = false; forestBarkMesh.visible = false;
-    return;
-  }
-  forestFoliageMesh.visible = true; forestBarkMesh.visible = true;
-  const currentCell = Math.floor(camX / 36);
+  const currentCell = camX > forkX + 200 ? null : Math.floor(camX / 36);
   if (currentCell === lastForestCell) return;
   lastForestCell = currentCell;
+  if (currentCell === null) {
+    for (const chunk of forestChunks) for (const mesh of chunk) mesh.visible = false;
+    return;
+  }
 
-  const mat = new $e();
   const half = FOREST_POOL_SIZE >> 1;
   let slot = 0;
-  for (let c = -half; c < half; c++) {
+  for (let c = -half; c < half && slot < FOREST_POOL_SIZE; c++) {
     const gx = (currentCell + c) * 36;
     if (gx > forkX + 50) continue;
-    const s = nwSFromX(gx);
     const zr = nwRoadZ(gx);
     for (const side of [-1, 1]) {
       const h1 = Un(gx * 0.071 + side * 13.5, 41.7);
@@ -9693,25 +9784,25 @@ function updateForestPool(camX) {
       const gz = zr + side * offsetLat;
       const gy = os(gx, gz);
       const scale = 0.75 + h2 * 0.55;
-      mat.makeTranslation(gx, gy, gz);
-      mat.elements[0] *= scale; mat.elements[5] *= scale; mat.elements[10] *= scale;
-      forestFoliageMesh.setMatrixAt(slot, mat);
-      forestBarkMesh.setMatrixAt(slot, mat);
+      forestMatrix.makeTranslation(gx, gy, gz);
+      forestMatrix.elements[0] = forestMatrix.elements[5] = forestMatrix.elements[10] = scale;
+      const chunk = forestChunks[Math.floor(slot / FOREST_CHUNK_SIZE)];
+      for (const mesh of chunk) mesh.setMatrixAt(slot % FOREST_CHUNK_SIZE, forestMatrix);
       slot++;
-      if (slot >= FOREST_POOL_SIZE) break;
     }
-    if (slot >= FOREST_POOL_SIZE) break;
   }
-  while (slot < FOREST_POOL_SIZE) {
-    mat.makeTranslation(0, -999, 0);
-    forestFoliageMesh.setMatrixAt(slot, mat);
-    forestBarkMesh.setMatrixAt(slot, mat);
-    slot++;
+  for (const chunk of forestChunks) {
+    const count = Math.min(FOREST_CHUNK_SIZE, slot);
+    slot -= count;
+    for (const mesh of chunk) {
+      mesh.count = count;
+      mesh.visible = count > 0;
+      if (mesh.visible) {
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.computeBoundingSphere();
+      }
+    }
   }
-  forestFoliageMesh.instanceMatrix.needsUpdate = true;
-  forestBarkMesh.instanceMatrix.needsUpdate = true;
-  forestFoliageMesh.computeBoundingSphere();
-  forestBarkMesh.computeBoundingSphere();
 }
 
 // Continuous Mileposts & Deterministic Turnout Signs along SR 14
@@ -10807,7 +10898,6 @@ function findInteractionTarget() {
     item.mesh.position.distanceToSquared(Nn.position)<11);
   if(!nearCar && !nearStation && !nearMotel && !nearDiner && !nearFernBend && !nearCargo)return null;
   Nn.updateMatrixWorld(true);
-  coupe.updateMatrixWorld(true);
   if(cursorMode) {
     aimRay.set(cursorX/innerWidth*2-1,1-cursorY/innerHeight*2,.4)
       .unproject(Nn).sub(Nn.position).normalize();
@@ -11185,7 +11275,8 @@ function animateCar(dt) {
       tireDustPos[3*i+1]=-40;
     }
   }
-  tireDustGeo.attributes.position.needsUpdate=true;
+  tireDust.visible=activeDust>0;
+  if(tireDust.visible)tireDustGeo.attributes.position.needsUpdate=true;
   tireDustMat.opacity=activeDust*.38;
 
   if(motelDoorHinge) {
@@ -11237,11 +11328,121 @@ function animateCar(dt) {
   }
 }
 
+function collectLocalLights(root, lights = []) {
+  root.traverse(object => {
+    if (object.isPointLight || object.isSpotLight) lights.push(object);
+  });
+  return lights;
+}
+const localLightGroups = [
+  {position:new P(0,0,-12), range:64, lights:[$n,Sc,bc,Ec,Tc,Vsp,sillLight,benchLight]},
+  {position:motelGroup.position, range:64, lights:collectLocalLights(motelGroup,[motelSignLight,motelTurqLight,motelPorchLight,motelRoomLamp,motelDoorSpill])},
+  {position:dinerGroup.position, range:64, lights:collectLocalLights(dinerGroup,[dinerSignLight,dinerTurqLight,dinerPorchLight,dinerCounterLight,dinerBarWindowLight,dinerBarLight,dinerBarLamp])},
+  {position:fernBendGroup.position, range:64, lights:collectLocalLights(fernBendGroup,[fernSignLight,fernWindowLight,fernCanopyLight1,fernCanopyLight2,fernCounterLamp])},
+  {position:coupe.position, range:185, lights:collectLocalLights(coupe)}
+];
+function fogCornerDistance(camera) {
+  const halfHeight = Math.tan(camera.fov * Math.PI / 360);
+  return Nt.fog.far * Math.hypot(1, halfHeight, halfHeight * camera.aspect);
+}
+function updateLocalLightVisibility() {
+  // Three compiles every visible light into each lit material. Keep the full light
+  // rig of each site until its influence cannot reach either view inside the fog.
+  const viewRange = Math.max(fogCornerDistance(Nn), seated ? fogCornerDistance(mirrorCamera) : 0) + 12;
+  for (const {position, range, lights} of localLightGroups) {
+    const nearby = Nn.position.distanceToSquared(position) < (viewRange + range) ** 2;
+    for (const light of lights) light.visible = nearby && (!light.isSpotLight || light.intensity > 0);
+  }
+}
+
+const shadowCasters = [];
+Nt.traverse(object => {
+  if (object.castShadow && object.geometry) {
+    shadowCasters.push({object, matrix:new Float64Array(16), visible:false, vertices:-1, instances:-1});
+  }
+});
+Qt.shadow.autoUpdate = false;
+const lastShadowCenter = new P(Infinity,0,Infinity);
+const lastShadowDirection = new P();
+const shadowDirection = new P();
+let lastShadowTime = -Infinity;
+function casterChanged(caster) {
+  const {object, matrix} = caster;
+  if (object.visible !== caster.visible) return true;
+  if (!object.visible) return false;
+  if (object.geometry.attributes.position.version !== caster.vertices ||
+      object.instanceMatrix?.version !== caster.instances) return true;
+  const current = object.matrixWorld.elements;
+  for (let axis=0; axis<16; axis++) if (Math.abs(current[axis] - matrix[axis]) > .0001) return true;
+  return false;
+}
+Nt.onBeforeRender = (renderer, scene, camera) => {
+  // World transforms are ready here. Reuse the shadow map between changes, and
+  // let the rearview mirror use the last completed main-view map.
+  if (camera !== Nn) return;
+  const center = Qt.target.position;
+  const distanceMoved = center.distanceToSquared(lastShadowCenter);
+  if (distanceMoved < 144 && eg.elapsedTime - lastShadowTime < 1 / 35) return;
+  shadowDirection.subVectors(Qt.position, center).normalize();
+  if (distanceMoved === 0 && shadowDirection.distanceToSquared(lastShadowDirection) < 1e-7 &&
+      !shadowCasters.some(casterChanged)) return;
+  lastShadowTime = eg.elapsedTime;
+  lastShadowCenter.copy(center);
+  lastShadowDirection.copy(shadowDirection);
+  for (const caster of shadowCasters) {
+    const object = caster.object;
+    caster.matrix.set(object.matrixWorld.elements);
+    caster.visible = object.visible;
+    caster.vertices = object.geometry.attributes.position.version;
+    caster.instances = object.instanceMatrix?.version;
+  }
+  Qt.shadow.needsUpdate = true;
+};
+
 var ls=new yr(mn);ls.addPass(new Mr(Nt,Nn));ls.addPass(new Sr);
+let renderPixelRatio = mn.getPixelRatio();
+let minimumPixelRatio, resolutionSampleTime, resolutionFrames, resolutionSlowFrames;
+function resetResolutionSample() {
+  resolutionSampleTime = resolutionFrames = resolutionSlowFrames = 0;
+}
+function resizeGame() {
+  Nn.aspect = innerWidth / innerHeight;
+  Nn.updateProjectionMatrix();
+  renderPixelRatio = Math.min(devicePixelRatio, 2);
+  minimumPixelRatio = Math.min(1, Math.max(.5, Math.sqrt(1280 * 720 / (innerWidth * innerHeight))));
+  mn.setPixelRatio(renderPixelRatio);
+  mn.setSize(innerWidth, innerHeight);
+  ls.setPixelRatio(renderPixelRatio);
+  ls.setSize(innerWidth, innerHeight);
+  resetResolutionSample();
+}
+function adaptRenderResolution(delta) {
+  if (document.hidden || delta > .5) {
+    resetResolutionSample();
+    return;
+  }
+  if (renderPixelRatio <= minimumPixelRatio || delta <= 0) return;
+  resolutionSampleTime += delta;
+  resolutionFrames++;
+  if (delta > .021) resolutionSlowFrames++;
+  if (resolutionSampleTime < .9 || resolutionFrames < 6) return;
+  // Lower both render targets after sustained missed frames. Hold the working
+  // scale until resize so a brief light scene cannot cause repeated reallocations.
+  if (resolutionSlowFrames > resolutionFrames * .25) {
+    renderPixelRatio = Math.max(minimumPixelRatio, Math.round(renderPixelRatio * .82 * 100) / 100);
+    mn.setPixelRatio(renderPixelRatio);
+    ls.setPixelRatio(renderPixelRatio);
+  }
+  resetResolutionSample();
+}
+minimumPixelRatio = Math.min(1, Math.max(.5, Math.sqrt(1280 * 720 / (innerWidth * innerHeight))));
+resetResolutionSample();
+document.addEventListener('visibilitychange', resetResolutionSample);
 const wr = new gr(Nn,document.body);
 const overlay = document.getElementById('overlay');
 const crosshair = document.getElementById('crosshair');
 const hud = document.getElementById('hud');
+const binocularsOverlay = document.getElementById('binoculars-overlay');
 const fn = {};
 let active = false, drag = null, hovered = null, hudText = '';
 function syncAudioPlayback() {
@@ -11360,8 +11561,8 @@ function updateCarHud() {
   const gearBadge=gearState==='D'?'D'+autoSubGear:gearState;
   const surfBadge=currentSurface==='sand'?'  ·  DESERT SAND':(currentSurface==='drift'?'  ·  SAND DRIFT':(currentSurface==='shoulder'?'  ·  SHOULDER':''));
   const carExtras=(highBeams?'  ·  HI BEAM':'')+(wipersOn?'  ·  WIPERS':'')+(radioOn?'  ·  AM '+radioStations[radioIndex].freq:'')+surfBadge;
-  const binocOverlay = document.getElementById('binoculars-overlay');
-  if(binocOverlay) binocOverlay.style.display = inspection === 'binoculars' ? 'block' : 'none';
+  const binocularsDisplay = inspection === 'binoculars' ? 'block' : 'none';
+  if(binocularsOverlay.style.display !== binocularsDisplay) binocularsOverlay.style.display = binocularsDisplay;
   let text = '';
   if (inspection === 'rest' || inspection === 'dinerBooth' || inspection === 'ridgeOverlook' || inspection === 'porchBench') {
     text = hint + mode + '  ·  Move to stand';
@@ -11387,7 +11588,7 @@ function updateCarHud() {
   if(text+status!==hudText){hud.textContent=text+status;hudText=text+status;}
 }
 
-var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;let gasDipEnd=-1,gasNextDip=9+Dn(0,22),stepAcc=0;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0),fn.KeyW&&dn.add(Ni),fn.KeyS&&dn.sub(Ni),fn.KeyD&&dn.add(lo),fn.KeyA&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);let i=Math.min(eg.getDelta(),.05);animateCar(i);animateGestures(i);
+var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;let gasDipEnd=-1,gasNextDip=9+Dn(0,22),stepAcc=0;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0),fn.KeyW&&dn.add(Ni),fn.KeyS&&dn.sub(Ni),fn.KeyD&&dn.add(lo),fn.KeyA&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);const delta=eg.getDelta();adaptRenderResolution(delta);let i=Math.min(delta,.05);animateCar(i);animateGestures(i);
 if(active){
   if(seated){driveCar(i);stepAcc=0;}
   else{
@@ -11448,15 +11649,16 @@ updateRiverSurface(Nn.position.x);
 updateForestPool(Nn.position.x);
 updateMileposts(Nn.position.x);
 
+const shadowX = Math.round(Nn.position.x / 2) * 2;
+const shadowZ = Math.round(Nn.position.z / 2) * 2;
+Qt.target.position.set(shadowX, 0, shadowZ);
 if (uDay > 0.05) {
-  Qt.position.set(Nn.position.x + sunV.x * 60, Math.max(22, sunV.y * 65), Nn.position.z + sunV.z * 60);
-  Qt.target.position.set(Nn.position.x, 0, Nn.position.z);
+  Qt.position.set(shadowX + sunV.x * 60, Math.max(22, sunV.y * 65), shadowZ + sunV.z * 60);
   Qt.color.setRGB(0.99, 0.94 - 0.15 * rainFactor, 0.88 - 0.22 * rainFactor);
   Qt.intensity = (1.05 * (1 - uDay) + 1.28 * uDay) * (1.0 - 0.42 * rainFactor);
   hhem.intensity = (0.09 * (1 - uDay) + 0.65 * uDay) * (1.0 - 0.35 * rainFactor);
 } else {
-  Qt.position.set(Nn.position.x + 52, 26, Nn.position.z + 20);
-  Qt.target.position.set(Nn.position.x, 0, Nn.position.z);
+  Qt.position.set(shadowX + 52, 26, shadowZ + 20);
   Qt.color.setRGB(0.98 * (1 - uNight) + 0.72 * uNight, 0.62 * (1 - uNight) + 0.80 * uNight, 0.40 * (1 - uNight) + 0.98 * uNight);
   Qt.intensity = (0.55 * (1 - uNight) + 1.05 * uNight) * (1.0 - 0.45 * rainFactor);
   hhem.intensity = (0.45 * (1 - uNight) + 0.09 * uNight) * (1.0 - 0.35 * rainFactor);
@@ -11480,7 +11682,9 @@ const baseFar = 1400 + 90 * (Hm(t * .03, 9.2) - .5) * 2;
 Nt.fog.far = baseFar * (1.0 - 0.72 * rainFactor);
 let sk=Math.max(0,(uNight-.3)/.7);
 sk=sk*sk*(3-2*sk) * (1.0 - uDay) * (1.0 - 0.95 * rainFactor);
-Nt.userData.stars&&(Nt.userData.stars.material.opacity=.85*sk);
+Nt.userData.stars.visible = sk > 0;
+Nt.userData.stars.material.opacity = .85 * sk;
+updateLocalLightVisibility();
 
 const targetDoorRot = fernDoorOpen ? -1.65 : 0;
 fernDoorHinge.rotation.y += (targetDoorRot - fernDoorHinge.rotation.y) * Math.min(1.0, i * 7.5);
@@ -11554,19 +11758,19 @@ if(audio.windPan){
 audio.humGain.gain.setTargetAtTime(.16*(nearDinerSign?.85*(.6+.4*dfl):(nearMotelSign?.85*(.6+.4*mfl):(.3+.7*gfl)))*(blocked?.23:1)*(1-cabin*.70),now,.045);
 if (audio.hum120) audio.hum120.gain.setTargetAtTime(blocked?.12:.35,now,.045);
 if (audio.insectGain) audio.insectGain.gain.setTargetAtTime(.5*(1-muffled*.8),now,.4);
-const rivZ = nwRiverZ(x);
-const rivY = nwWaterY(x);
-const distRiv = Math.hypot(z - rivZ, Nn.position.y - rivY);
+const {riverPanner, riverGain, riverFilter, rainOpenGain, rainCabinGain, rainCanopyGain, rainInteriorGain} = audio;
 if (riverPanner) {
-  if (riverPanner.positionX) {
-    riverPanner.positionX.value = x;
-    riverPanner.positionY.value = rivY;
-    riverPanner.positionZ.value = rivZ;
-  } else {
-    riverPanner.setPosition(x, rivY, rivZ);
-  }
   let rivAudible = 0;
   if (routeS > 10500) {
+    const rivZ = nwRiverZ(x), rivY = nwWaterY(x);
+    if (riverPanner.positionX) {
+      riverPanner.positionX.value = x;
+      riverPanner.positionY.value = rivY;
+      riverPanner.positionZ.value = rivZ;
+    } else {
+      riverPanner.setPosition(x, rivY, rivZ);
+    }
+    const distRiv = Math.hypot(z - rivZ, Nn.position.y - rivY);
     const dAtten = Math.max(0, 1.0 - distRiv / 220.0);
     rivAudible = dAtten * dAtten * (1.0 - cabin * 0.65);
   }
@@ -11574,8 +11778,9 @@ if (riverPanner) {
   riverFilter.frequency.setTargetAtTime(350 + 650 * rivAudible, now, 0.15);
 }
 if (rainOpenGain) {
-  const inCounter = Math.abs(x - fernBendX) < 3.2 && Math.abs(z - (fernBendZ + 1.2)) < 2.0;
-  const underCanopy = !inCounter && Math.abs(x - fernBendX) < 4.8 && Math.abs(z - (fernBendZ - 4.5)) < 3.8;
+  const fernShelter = fernShelterAt(x,z);
+  const inCounter = fernShelter === 3;
+  const underCanopy = fernShelter === 2;
   const inCabin = seated;
   const targetOpen = (!inCabin && !inCounter && !underCanopy) ? rainFactor * 0.28 : 0;
   const targetCabin = inCabin ? rainFactor * 0.22 : 0;
@@ -11669,7 +11874,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   get motelRadioOn() { return motelRadioOn; },
   get jukeboxPlaying() { return jukeboxPlaying; },
   updateCarHud
-};Cc();addEventListener("resize",()=>{Nn.aspect=innerWidth/innerHeight,Nn.updateProjectionMatrix(),mn.setSize(innerWidth,innerHeight),ls.setSize(innerWidth,innerHeight)});})();
+};Cc();addEventListener("resize",resizeGame);})();
 /*! Bundled license information:
 
 three/build/three.module.js:

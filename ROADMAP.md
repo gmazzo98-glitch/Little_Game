@@ -2,7 +2,7 @@
 
 The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) defines the look; [ASSET_GUIDE.md](ASSET_GUIDE.md) defines asset production; [AGENTS.md](AGENTS.md) makes this plan part of the contributor workflow. Use [AGENT_PROMPT.md](AGENT_PROMPT.md) to launch implementation. Source audited on 2026-11-01 against `4eb3782`; asset guidance expanded on 2026-11-02. The G0 style decision and the G1/G2 graphical overhaul were implemented on 2026-11-02 on `vibe/neon-gas-voxel-f660eb` (PR #1); see the validation record for what is and is not verified.
 
-**Next: close the remaining G3 graphics review.** The delivered file passed the offline cycle check, and the new forecourt passed a sustained driving sample. The user confirmed the painterly direction, with continuous terrain, a world-space highway, and remote layered mountains. Preserve the Phase 1 cycle and finish the visual foundation before Phase 2.
+**Next: close the remaining G3 graphics review.** The latest performance pass restores rendering after audio starts and reduces GPU and streaming work in the painterly build. Long-tail frame spikes under the canopy and during travel remain part of G3 acceptance.
 
 **Style state:** painterly surfaces and modeled props (style B) are selected. Architecture uses hard-surface meshes; the desert has continuous heights and interpolated normals. The old voxel emitter, cube terrain grid, road-extension boxes, and rectangular mesa solids are removed. The moon remains the only shadow-caster. See the newest validation record and [actual landscape comparison](captures/landscape-comparison.jpg).
 
@@ -24,7 +24,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | G0 — Baseline and rendering-style decision | **Complete** | Style B (painterly flat-shade) selected with captures + measurements; see validation record 2026-11-02b |
 | G1 — Composition and period silhouettes | Sunset Service office, 8.1 m pole sign, drive-through forecourt, and visitable Cinder Court Motor Lodge (`x = -4600`) built | Both sites have readable highway approaches, forecourt turnoffs, and arm's-length hero fixtures. |
 | G2 — Palette, surfaces, and light hierarchy | Glazing, bench light, GAS/OIL neon, and Cinder Court coral/turquoise neon + amber room lamp implemented | Warm dusk, turquoise/cyan fascia, coral/red sign neon, and warm interior pools keep a restrained hierarchy across both sites. |
-| G3 — Graphics acceptance and performance | Offline run, Cinder Court round trip, and GPU samples verified | Remaining graphics review includes matched G0 views and full 5-minute uninterrupted run on the latest build. Static 120-interval night samples at Cinder Court and Sunset Service measured 16.6–16.7 ms median and 17.9–18.5 ms p95 on Intel Iris Xe at 960 × 540 and DPR 1. |
+| G3 — Graphics acceptance and performance | Performance regression addressed. Acceptance remains open. | See the latest matched measurements. Investigate remaining frame spikes and verify a sustained drive through route and lighting transitions. |
 | Phase 1 — Dusk-to-night cycle | Visually revalidated on the delivered offline file | Full night held at the 304- and 321-second captures; clock runs continuously across the highway trip. |
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks) and Cinder Court sign/lamp shimmer | Phase 2 acceptance; remaining role work |
@@ -212,6 +212,29 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-04 — G3 performance recovery
+
+- Starting audio on `28b980e` raised `ReferenceError: riverPanner is not defined` on every animation callback and stopped rendering. The animation loop now uses the initialized river and rain audio nodes. Fern Bend footstep and rain zones follow the modeled counter room, canopy, and timber footbridge.
+- The painterly renderer keeps complete local light rigs within reach of the visible scene and skips shadow-map redraws when the casters and light are stable. Shadow refreshes during continuous motion are spaced at least 1/35 second apart, with an immediate refresh when the shadow focus moves 12 m or more. Sky shading runs behind opaque geometry and terrain shading evaluates road, turnout, and wet-surface details where their masks contribute.
+- Terrain recentering reuses heights at shared world coordinates. A Node comparison returned identical terrain and turnout results at 36,000 sample positions and byte-identical position buffers across 15 recentered grids. The river advances its streaming window in 12.5 m steps. Spatial batches let both the main view and shadow pass cull streamed conifers while keeping their geometry and placement.
+- The internal 3D resolution starts at the display pixel ratio, capped at 2. It steps down only after sustained slow frames and holds the resulting scale until resize. This can soften fine details on high-density displays. HUD text stays at display resolution.
+- Hardware comparison used offline Chrome on a Samsung Galaxy Book (Core i7-1165G7, Intel Iris Xe, ANGLE Direct3D11, driver 32.0.101.6874). Each high-DPI view used 100 post-settle frame intervals at a 1280 × 720 CSS viewport and display DPR 2. A temporary test shim exposed the existing audio node names on the baseline so its renderer could run after the entry click. The optimized file ran directly with audio enabled. The baseline rendered all views at 2560 × 1440 internally.
+
+| View | Baseline median / p95 (ms) | Optimized median / p95 (ms) | Optimized render size |
+| --- | ---: | ---: | ---: |
+| Sunset Service approach | 33.4 / 50.2 | 16.7 / 17.2 | 1715 × 964 |
+| Sunset Service canopy | 50.0 / 66.7 | 16.7 / 33.2 | 1408 × 792 |
+| Rainy SR 14 forest | 50.0 / 50.3 | 16.7 / 16.9 | 1408 × 792 |
+| Fern Bend in rain | 66.5 / 66.8 | 16.7 / 16.9 | 1408 × 792 |
+| Active coupe driving | 66.6 / 83.4 | 16.7 / 32.7 | 1408 × 792 |
+
+- At native 1280 × 720 and DPR 1, the settled static views sampled over 100 intervals also measured a 16.7 ms median. The fresh approach reached 33.3 ms p95 in the final sample and 16.9 ms p95 in an earlier 50-interval run. Reviewed matched approach, canopy, and highway views at preset dusk, blue hour, and night.
+- A clean follow-up at native 1280 × 720 and DPR 1 measured both the Sunset Service approach and player-driven coupe at 16.7 ms median and 16.9 ms p95 over 100 intervals each, with no intervals above 33.4 ms.
+- The inline script passed `node --check`. The resource audit found zero external runtime dependencies and confirmed that the bundled Three.js and license are byte-identical to the baseline. Chrome opened the actual file offline and recorded one local document request, zero external requests, and zero runtime or shader errors with audio running.
+- Verified pointer-lock entry, release, and re-entry, walking and sprinting, jumping and landing, wall collision, office access, viewport resize, and the coupe damage and repair controls. Fern Bend's shelter buses, river gain, counter-room and canopy footsteps, door, lamp, and rest modal were also exercised.
+- The actual file ran uninterrupted from dusk to night with audio active and a fixed spawn camera. At elapsed 1, 120, 310, and 330 seconds, the clock read 18:30:38, 19:30:07, 21:05:07, and 21:15:07 respectively. The view reached full night after the 21:00 threshold and remained in night at the last capture. The run used native 1280 × 720 at DPR 1 and recorded one local document request and zero browser errors.
+- A paced camera traversal moved 274 m along SR 14 at about 25 m/s, crossing four terrain cells. Over 600 intervals at native 1280 × 720 and DPR 1 it measured 16.7 ms median, 16.8 ms p95, 17.6 ms p99, and 99.9 ms maximum. Six intervals exceeded 33.4 ms. G3 remains open for the remaining spikes and a longer player-driven run through changes in scenery and lighting.
 
 ### 2026-11-04 — Period Vehicle Damage, Roadside Repairs, and Nostalgic World Interactables
 
