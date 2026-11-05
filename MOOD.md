@@ -66,6 +66,12 @@ Ranked by fit and build cost. Each needs a mood card and a roadmap entry before 
 
 Recommended order: Great Plains, then Great Lakes off-season. Bayou last, if at all.
 
+### Great Plains — the feeling
+
+The land lies down and the sky stands up. For miles there is nothing to lean on, only the highway laid across the grass like a thread somebody forgot to pull, and above it a sky so large it makes you quiet. The last of summer's light stays long, gold on the wheat and then rose and then the colour of an old bruise, and somewhere on the rim of the world a storm is building that will never reach you. It flickers without sound, a slow white pulse behind the cloud, the way a thought does when you almost remember something. A grain elevator stands against it, dark and enormous, a cathedral built for harvests that stopped coming, and beside it a water tower with a name half washed away. Nobody is there. Nobody has been for years, and the wind going through the wheat is the only voice left that remembers how to speak. Then, small and far and impossibly steady, there is a light: one motel sign, a few letters of warm red, burning for a guest who isn't coming. You feel it before you can read it. It is the oldest kind of relief, the kind that comes with an ache, because you know the room will be kept and the road will be empty and the light will still be on when you drive away, getting smaller in the mirror until the dark closes over it like water. You are not sad exactly. You are only the one who is here, now, at the end of a long day, in a country that was made for being crossed and was never really made for staying, and for a minute, standing in the doorway with the crickets stopped and the sky going on forever, you want to stay anyway.
+
+*Build notes:* flat heightfield with long, soft swells; no lit trains or traffic; the elevator and water tower stay unlit; heat lightning is silent and rare; crickets are sparse and stop near the sign hum; the one warm light is the motel or drive-in, seen first as colour.
+
 ## Keeping mood independent of region
 
 - **Parameters, not branches.** Fog, wind bed, hum level, spill radius, tyre surface, star visibility, and grade tint are all functions of world position and blend smoothly. A region is a set of values for these, plus its own models.
