@@ -215,7 +215,7 @@
     <div class="rest-actions">
       <button type="button" class="rest-btn" id="travel-cancel">Cancel (ESC)</button>
     </div>
-    <div id="travel-hint">UP / DOWN choose  ·  ENTER go  ·  P trip card in the parked coupe  ·  ` dev warp</div>
+    <div id="travel-hint">UP / DOWN choose  ·  ENTER go  ·  Y trip card in the parked coupe  ·  ` dev warp</div>
   </div>
 </div>
 <div id="settings-modal" role="dialog" aria-label="Settings and controls">
@@ -12190,7 +12190,7 @@ addEventListener('keydown',event=>{
     return;
   }
   if(travelModalActive) {
-    if(key==='Escape' || key==='Backquote' || key==='KeyP') { closeTravelModal(); event.preventDefault(); return; }
+    if(key==='Escape' || key==='Backquote' || key==='KeyY') { closeTravelModal(); event.preventDefault(); return; }
     if(key==='Enter' || key==='Space') { confirmTravel(); event.preventDefault(); return; }
     if(key==='ArrowUp' || key==='KeyW') { travelMove(-1); event.preventDefault(); return; }
     if(key==='ArrowDown' || key==='KeyS') { travelMove(1); event.preventDefault(); return; }
@@ -12234,7 +12234,7 @@ addEventListener('keydown',event=>{
     if(inspection==='motelBed') { openRestModal('bed'); return; }
     if(seated && carSpeed===0 && cabinBlanketOpen && (parkingBrake || gearState==='P')) { openRestModal('coupe'); return; }
   }
-  if(key==='KeyP' && seated)openTravelModal(false);
+  if(key==='KeyY' && seated)openTravelModal(false);
   if(key==='KeyC' && seated)toggleDoor(driverDoor);
   if(key==='KeyF')leaveCar();
   if(key==='KeyR' && seated && carSpeed===0 && glovebox.engaged)setRoadMapOpen(!roadMap.visible);

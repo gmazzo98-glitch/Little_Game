@@ -214,9 +214,9 @@ For each `index.html` change:
 
 ## Validation and decision record
 
-### 2026-11-05 — Fast travel: trip card and dev warp (local, uncommitted)
+### 2026-11-05 — Fast travel: trip card and dev warp
 
-- **Trip card (in-world):** `P` while seated and stopped opens a Western Motor Guide card listing every stop, from the catalog plus the through-road turnouts. Each row shows miles, minutes and the arrival clock. Choosing one fades out with a title caption, then charges the true clock time at 50 mph, true gas, odometer and trip miles, and parks the coupe in the westbound lane just east of the stop with the player still seated. Rows needing more gas than the tank holds are disabled.
+- **Trip card (in-world):** `Y` while seated and stopped opens a Western Motor Guide card listing every stop, from the catalog plus the through-road turnouts. Each row shows miles, minutes and the arrival clock. Choosing one fades out with a title caption, then charges the true clock time at 50 mph, true gas, odometer and trip miles, and parks the coupe in the westbound lane just east of the stop with the player still seated. Rows needing more gas than the tank holds are disabled.
 - **Dev warp:** the backtick key opens the same list anywhere, on foot or seated, with no clock or gas cost, plus extra far through-road stops and dusk, night, first light and noon buttons. Also reachable as `_game.openTravelModal(true)` and `_game.travelTo(stop, true)`.
 - **Verified:** inline `node --check` passes; in the embedded browser the card opened by `P`, travel to Fern Bend arrived seated on level ground with the clock advanced and no errors; dev warp list opened. Not verified: on-foot warp arrival, gas-short disabled rows, keyboard navigation by hand, `file://` offline run. The browser tool's key press did not reach the page, so keys were tested by dispatched events.
 
