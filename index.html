@@ -77,6 +77,26 @@
   .rest-btn:hover, .rest-btn.active { background: #493d2e; border-color: #dab87a; color: #fff3d6; }
   .rest-actions { display: flex; gap: 12px; justify-content: center; margin-top: 12px; }
   .rest-primary { background: #4a3520; border-color: #e0b468; color: #ffe5b4; font-weight: bold; padding: 7px 18px; }
+  #travel-modal {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(8, 6, 14, 0.72); z-index: 9; font-family: Georgia, serif; color: #efe3c8; user-select: none;
+  }
+  #travel-card {
+    width: 520px; max-width: 94vw; padding: 20px 24px; background: #221d18; border: 2px solid #9e8b66;
+    box-shadow: 0 14px 42px rgba(0,0,0,0.85), inset 0 0 0 1px #524634; text-align: center;
+  }
+  #travel-card h3 { margin: 0 0 4px; font-size: 20px; letter-spacing: 3px; color: #f4dfb4; }
+  #travel-sub { font-family: "Courier New", monospace; font-size: 12px; color: #b8a888; margin-bottom: 12px; }
+  #travel-list { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .travel-row { display: flex; justify-content: space-between; gap: 14px; text-align: left; }
+  .travel-row:disabled { opacity: 0.45; cursor: default; }
+  .travel-meta { color: #c7b899; white-space: nowrap; }
+  #travel-hint { font-family: "Courier New", monospace; font-size: 11px; color: #9c8f75; margin-top: 8px; }
+  #travel-caption {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0;
+    transition: opacity 0.6s ease; z-index: 8; pointer-events: none; color: #e9d7ae; letter-spacing: 6px;
+    font-family: Georgia, serif; font-size: 20px; text-align: center; padding: 0 24px;
+  }
   #settings-modal {
     position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
     background: rgba(8, 6, 14, 0.78); z-index: 11; font-family: Georgia, serif; color: #efe3c8; user-select: none;
@@ -178,6 +198,24 @@
       <button type="button" class="rest-btn" id="rest-cancel">Cancel (ESC)</button>
       <button type="button" class="rest-btn rest-primary" id="rest-confirm">Rest until wake time</button>
     </div>
+  </div>
+</div>
+<div id="travel-caption"></div>
+<div id="travel-modal" role="dialog" aria-label="Fast travel">
+  <div id="travel-card">
+    <h3 id="travel-title">TRIP CARD</h3>
+    <div id="travel-sub"></div>
+    <div id="travel-list"></div>
+    <div class="rest-row" id="travel-time-row" style="display:none">
+      <button type="button" class="rest-btn" data-warp-hour="18.5">Dusk 6:30</button>
+      <button type="button" class="rest-btn" data-warp-hour="23">Night 11:00</button>
+      <button type="button" class="rest-btn" data-warp-hour="5.5">First light 5:30</button>
+      <button type="button" class="rest-btn" data-warp-hour="12">Noon</button>
+    </div>
+    <div class="rest-actions">
+      <button type="button" class="rest-btn" id="travel-cancel">Cancel (ESC)</button>
+    </div>
+    <div id="travel-hint">UP / DOWN choose  ·  ENTER go  ·  P trip card in the parked coupe  ·  ` dev warp</div>
   </div>
 </div>
 <div id="settings-modal" role="dialog" aria-label="Settings and controls">
@@ -4282,6 +4320,46 @@ function bridgeDeckHeight(x, z) {
   if (x >= -28322.2 && x <= -28307.8 && Math.abs(z - -6376) <= 1.38) return 4.35;
   return -Infinity;
 }
+// Regional landform for the SR 14 valley, as height above the road datum. The road sits on a calm valley
+// floor. Foothills roll on both sides, then a mountain shoulder, the gorge walls and the wide wet valley
+// rise from authored flank profiles with gullies and crest variation. Returns { h, base }: base is the
+// share of road elevation the ground keeps toward Route 66, where the plain falls back to the desert floor.
+function nwFlank(dd, W, H) {
+  const u = dd / W;
+  if (u <= 0) return 0;
+  return H * (Math.pow(Math.min(u, 1), 1.35) + 0.2 * Math.max(u - 1, 0));
+}
+function nwRelief(x, z, s, relZ, zr, dunes) {
+  const north = relZ < 0, d = Math.abs(relZ);
+  const onset = nwH(s, 5000, 6800);
+  const mount = nwH(s, 6200, 11000);
+  const gorge = nwH(s, 10200, 14800) * (1 - 0.6 * nwH(s, 20800, 25600));
+  const wide = nwH(s, 20000, 25800);
+  // The desert plain returns toward Route 66; the south flank and road elevation fade out on the way.
+  let base = 1, plain = 1;
+  if (!north) {
+    const f = relZ / Math.max(-zr, 1);
+    base = 1 - xc(Math.min(Math.max((f - 0.2) / 0.8, 0), 1));
+    plain = 1 - xc(Math.min(Math.max((f - 0.3) / 0.6, 0), 1));
+  }
+  const calm = xc(Math.min(d / 70, 1));
+  const roll = ((2 * Hm(x * .0034 + 3.1, z * .0034) - 1) * (5 + 6 * onset) + (2 * ao(x * .011 + 7, z * .011 + 19) - 1) * 2.2) * calm * onset;
+  const floorHalf = 22 + 26 * gorge + 40 * wide;
+  const dd = Math.max(d - floorHalf, 0);
+  const H = north ? 12 + 60 * mount + 88 * gorge + 20 * wide : 10 + 30 * mount + 70 * gorge + 10 * wide;
+  const W = north ? 640 - 260 * gorge + 120 * wide : 560 - 200 * gorge + 100 * wide;
+  const crest = 1 + 0.35 * (2 * Hm(x * .0018 + 5, z * .0018 + 2) - 1);
+  const u = dd / W, frac = Math.pow(Math.min(u, 1.2), 0.8);
+  let flank = nwFlank(dd, W, H * crest);
+  // Ridged gullies cut the flanks; the floor and the crest stay calm.
+  const ridge = 1 - Math.abs(2 * Hm(x * .0062 + 11, z * .0062 + 3) - 1);
+  flank += frac * H * (0.2 * (ridge - 0.5) + 0.06 * (2 * ao(x * .017, z * .017) - 1)) * Math.min(dd / 30, 1);
+  let h = dunes * (1 - 0.65 * mount) + (roll + flank * onset) * plain;
+  // Wooded knoll behind the Fern Bend lot, carrying the ridge footpath to the overlook.
+  const kd = Math.hypot(x + 28405, z + 6452) / 85;
+  if (kd < 1) h += 26 * xc(1 - kd);
+  return { h, base };
+}
 function os(x, z, forTerrainMesh = false) {
   // The widest forecourt distance blend saturates at 89 meters.
   let distance = Math.min(89, Math.max(Math.abs(z) - 3.5, 0));
@@ -4316,29 +4394,19 @@ function os(x, z, forTerrainMesh = false) {
   const roadDistance = onGorgeSpan
     ? Math.max(perp - 3.6, (33 - Math.abs(x - -22546.4)) * 0.45)
     : Math.max(perp - 3.6, 0);
-  let dPad = sr14TurnoutDist(x, z, zr, Math.min(roadDistance, 22));
-  if (x >= -9660) dPad = Math.min(dPad, distance);
-  const padBlend = xc(Math.min(dPad / 22, 1));
   const relZ = z - zr;
-  const foothill = nwH(s, 4800, 9500) * (1 - 0.35 * nwH(s, 18500, 23500));
-  const gorge = nwH(s, 11500, 16500);
-  const valley = nwH(s, 22500, 25600);
-  let relief = dunes * (1 - 0.65 * nwH(s, 5500, 14000));
-  relief += foothill * (14 * Hm(x * .0032, z * .0032) + 5.5 * ao(x * .009 + 7, z * .009 + 19) - 2.4 * Math.sin(x * .012 + z * .015));
-  if (gorge > 0) {
-    const northSide = xc(Math.min(Math.max((-relZ - 14) / 85, 0), 1));
-    const southSide = xc(Math.min(Math.max((relZ - 18) / 95, 0), 1));
-    const ridgeHeight = 28 + 38 * valley;
-    if (northSide > 0) relief += gorge * northSide * (ridgeHeight * (0.45 + 0.55 * Hm(x * .0028, z * .0028)) + 8 * ao(x * .008, z * .008));
-    if (southSide > 0) relief += gorge * southSide * ((22 - 8 * valley) * Hm(x * .003, z * .003));
-  }
-  let h = yr + relief * padBlend;
+  const rel = nwRelief(x, z, s, relZ, zr, dunes);
+  // The cut or fill blend widens with the height difference, so road banks stay below about 30 degrees.
+  let dPad = sr14TurnoutDist(x, z, zr, Math.min(roadDistance, 600));
+  if (x >= -9660) dPad = Math.min(dPad, distance);
+  const padBlend = xc(Math.min(dPad / (14 + 2.3 * Math.abs(rel.h)), 1));
+  let h = yr * rel.base + rel.h * padBlend;
   if (s > 13200) {
     const zRiv = nwRiverZ(x), dRiv = Math.abs(z - zRiv);
     const wY = nwWaterY(x), bedY = wY - 1.35;
     const bankT = xc(Math.min(Math.max((dRiv - 6.5) / 14, 0), 1));
     const rivCarve = nwH(s, 13200, 15200) * (onGorgeSpan ? 1 : padBlend);
-    h = h * (1 - rivCarve * (1 - bankT)) + (bedY + (h - bedY) * bankT) * rivCarve;
+    h = h * (1 - rivCarve) + (bedY + (h - bedY) * bankT) * rivCarve;
   }
   if (x >= -28326 && x <= -28304 && z >= -6426 && z <= -6358) {
     const creekX = -28315 + 2.4 * Math.sin((z + 6376) * 0.11);
@@ -4525,9 +4593,11 @@ var desertMaterial = new Lm({ color: 0xffffff });
 desertMaterial.flatShading = false;
 const coupeFootprint = {value:new Float32Array(4)};
 const terrainWetnessUniform = {value: 0};
+const terrainSkyTone = {value: new Me(0, 0, 0)};
 desertMaterial.onBeforeCompile = shader => {
   shader.uniforms.coupeFootprint = coupeFootprint;
   shader.uniforms.uWetness = terrainWetnessUniform;
+  shader.uniforms.uSkyTone = terrainSkyTone;
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vDesertWorld;\nvarying vec3 vDesertWorldNormal;')
     .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDesertWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvDesertWorldNormal = normalize(mat3(modelMatrix) * objectNormal);');
@@ -4537,6 +4607,7 @@ desertMaterial.onBeforeCompile = shader => {
       varying vec3 vDesertWorldNormal;
       uniform vec4 coupeFootprint;
       uniform float uWetness;
+      uniform vec3 uSkyTone;
       float sandHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float sandNoise(vec2 p) {
         vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -4601,6 +4672,31 @@ desertMaterial.onBeforeCompile = shader => {
       vec3 natGround = mix(basinGround, foothillGround, nwH(bioS, 4800.0, 10800.0));
       natGround = mix(natGround, gorgeGround, nwH(bioS, 11200.0, 16800.0));
       natGround = mix(natGround, valleyFloor, nwH(bioS, 19500.0, 24800.0));
+      if (bioS > 5200.0) {
+        // Slope decides rock; moisture decides grass or conifer forest on the soil between.
+        float steep = 1.0 - clamp(vDesertWorldNormal.y, 0.0, 1.0);
+        float rockMask = smoothstep(0.24, 0.48, steep + 0.10 * (n - 0.5));
+        float perpE = abs(p.y - zr);
+        float verge = smoothstep(6.5, 24.0, perpE);
+        float moist = nwH(bioS, 8500.0, 20500.0);
+        float bands = 0.5 + 0.5 * sin(vDesertWorld.y * 1.35 + sandNoise(p * 0.045) * 7.0);
+        float seep = smoothstep(0.58, 0.92, sandNoise(vec2((p.x + p.y) * 0.5, vDesertWorld.y * 0.085)));
+        vec3 rockDry = mix(vec3(.31,.24,.175), vec3(.42,.33,.235), bands * 0.65 + 0.35 * n);
+        vec3 rockWet = mix(vec3(.145,.14,.135), vec3(.235,.215,.185), bands * 0.65 + 0.35 * n);
+        vec3 rock = mix(rockDry, rockWet, moist);
+        rock *= 1.0 - 0.42 * seep * moist;
+        rock = mix(rock, vec3(.085,.14,.065), seep * moist * 0.28);
+        float crown = sandNoise(p * 0.07) * 0.55 + sandNoise(p * 0.19) * 0.30 + sandNoise(p * 0.52) * 0.15;
+        vec3 tawny = mix(vec3(.30,.255,.150), vec3(.42,.35,.21), n);
+        vec3 conifer = mix(vec3(.050,.088,.056), vec3(.115,.165,.085), crown);
+        vec3 soil = mix(tawny, conifer, smoothstep(0.26, 0.70, moist + 0.30 * (sandNoise(p * 0.0035) - 0.5)));
+        soil = mix(soil, vec3(.060,.092,.054), smoothstep(0.64, 0.80, crown) * (1.0 - moist) * 0.55);
+        vec3 slopeGround = mix(soil, rock, rockMask);
+        vec3 roadside = mix(vec3(.25,.215,.145), vec3(.105,.140,.075), moist) * (0.88 + 0.24 * n);
+        float hillStart = nwH(bioS, 5200.0, 8200.0);
+        natGround = mix(natGround, roadside, hillStart * (1.0 - verge) * 0.85);
+        natGround = mix(natGround, slopeGround, hillStart * verge);
+      }
       if (bioS > 13200.0) {
         float dRiv = abs(p.y - nwRiverZ(sVal, zr));
         float rivCobble = 1.0 - smoothstep(6.0, 13.5, dRiv);
@@ -4706,11 +4802,13 @@ desertMaterial.onBeforeCompile = shader => {
       ground = mix(ground, vec3(.185,.174,.157), apron);
       ground = mix(ground, vec3(.145,.138,.128) * mix(1.0, 0.60, wetFactor), pavedApron);
       if (asphaltMask > 0.0) {
-        vec3 asphalt = vec3(.025,.026,.032) * (.93 + .14 * n);
+        vec3 asphalt = vec3(.040,.042,.050) * (.93 + .14 * n);
         float tarSeam = (1.0 - smoothstep(.035, .075, abs(mod(p.x + 4.2 + .18 * sin(latCoord * 1.7), 18.0) - 9.0))) * road;
         float wheelTrack = (1.0 - smoothstep(.18, .72, abs(abs(latCoord) - 1.55))) * road;
         asphalt *= 1.0 - .22 * tarSeam - .09 * wheelTrack;
         asphalt *= mix(1.0, 0.54 - 0.14 * puddle, wetFactor);
+        // Wet asphalt picks up the sky tone, so lane edges stay readable under cloud.
+        asphalt += uSkyTone * wetFactor * (0.20 + 0.50 * puddle) * (0.30 + 0.70 * smoothstep(0.55, 1.0, sandNoise(p * 0.9)));
         ground = mix(ground, asphalt, asphaltMask);
       }
       if (puddle > 0.01 && max(road, fbApron) > 0.2) {
@@ -4889,8 +4987,8 @@ var PAL = {
   dinerAmber: 0xffa858, dinerLampShade: 0xe6b87a, dinerVinyl: 0x45867e,
   bottleAmber: 0x9e5422, bottleEmerald: 0x286846, bottleClear: 0xb8b09c,
   cedarBark: 0x5c3e2b, firBark: 0x3b2d26, alderBark: 0x8d887d,
-  pineFoliage: 0x3c5236, firFoliage: 0x263f2c, hemlockFoliage: 0x223b2c,
-  cedarFoliage: 0x314a32, alderFoliage: 0x4b633c, fernGreen: 0x3d5c35,
+  pineFoliage: 0x57703f, firFoliage: 0x3b5e43, hemlockFoliage: 0x355a42,
+  cedarFoliage: 0x46644a, alderFoliage: 0x65804a, fernGreen: 0x4d7340,
   mossGreen: 0x4c6138, riverRock: 0x52575c,
   fernSignGreen: 0x38e898, fernConeGold: 0xffb85c,
 };
@@ -5052,6 +5150,7 @@ function roleMat(role, opts) {
     if (base === 'dinerLampShade') { m.emissive = new Me(PAL.dinerAmber); m.emissiveIntensity = .95; }
     if (base === 'fernSignGreen') { m.emissive = new Me(PAL.fernSignGreen); m.emissiveIntensity = 1.45; }
     if (base === 'fernConeGold') { m.emissive = new Me(PAL.fernConeGold); m.emissiveIntensity = 1.25; }
+    if (/Foliage$/.test(base)) { m.emissive = new Me(PAL[base]); m.emissiveIntensity = 0; }
     if (base === 'canopyLamp') { m.emissive = new Me(PAL.warmGlow); m.emissiveIntensity = 1.0; }
     if (base === 'windowGlow') { m.emissive = new Me(PAL.windowGlow); m.emissiveIntensity = .55; }
     if (base === 'wallCream') { m.emissive = new Me(0x30291e); m.emissiveIntensity = .13; }
@@ -6356,7 +6455,8 @@ let wipersOn = false, wiperPhase = 0, wiperDir = 1, windshieldDust = 0;
 carMesh(coupe,'leather',[boxPart(0,1.025,.65,1.75,.13,.26)]);
 carMesh(coupe,'wood',[boxPart(0,.966,.552,1.74,.13,.045)]);
 carMesh(coupe,'chrome',[boxPart(0,1.006,.525,1.70,.013,.012),
-  boxPart(-.52,.949,.523,.47,.07,.015),boxPart(0,1.505,.565,.016,.068,.016)]);
+  boxPart(-.52,.949,.523,.47,.07,.015),boxPart(0,1.43,.43,.23,.079,.025)]);
+carMesh(coupe,'black',[boxPart(0,1.43,.413,.204,.058,.012)]);
 const steering = new xi();
 steering.position.set(.49,.986,.28);
 steering.rotation.x=-.22;
@@ -9944,79 +10044,132 @@ function makeConiferParts(species, height, seed) {
   for (const r in parts) addRoleMesh(Nt, r, parts[r]);
 })();
 
-// Bounded Instanced Streaming Forest Pool along SR 14 (s >= 4800, through road to km 80+)
-const FOREST_POOL_SIZE = 120;
-const FOREST_CHUNK_SIZE = 12;
-const forestChunks = (function initForestMeshTemplates() {
+// Streaming SR 14 forest. Every road cell owns a deterministic tree list, so the same trees return from either
+// direction. Crowns near the player use the full conifer model; the wooded flanks use a cheap three-tier
+// silhouette. Density follows moisture, slope, clearings, the river and the authored places.
+const FOREST_CELL = 40;
+const FOREST_NEAR_CELLS = 3;
+const FOREST_FAR_CELLS = 28;
+const FOREST_NEAR_MAX = 420;
+const FOREST_FAR_MAX = 3200;
+const FOREST_CANDIDATES = 34;
+const forestMeshes = (function initForestMeshes() {
   const treeParts = makeConiferParts('dougFir', 18.0, 77);
-  const templates = ['firFoliage','firBark'].map(role => {
-    const parts = treeParts.filter(part => part.role === role).map(part => part.part);
-    const merged = mergeParts(parts);
+  const near = ['firFoliage', 'firBark'].map(role => {
+    const merged = mergeParts(treeParts.filter(part => part.role === role).map(part => part.part));
     const geometry = new It();
     geometry.setAttribute('position', new Et(new Float32Array(merged.pos), 3));
     geometry.setAttribute('normal', new Et(new Float32Array(merged.nor), 3));
     geometry.setIndex(merged.idx);
-    return {geometry, role};
+    const mesh = new ar(geometry, roleMat(role), FOREST_NEAR_MAX);
+    mesh.name = `Streaming forest near ${role}`;
+    mesh.castShadow = true;
+    mesh.receiveShadow = role === 'firFoliage';
+    mesh.frustumCulled = false;
+    mesh.count = 0;
+    Nt.add(mesh);
+    return mesh;
   });
-  const chunks = [];
-  for (let i=0; i<FOREST_POOL_SIZE; i+=FOREST_CHUNK_SIZE) {
-    chunks.push(templates.map(({geometry,role}) => {
-      const mesh = new ar(geometry, roleMat(role), FOREST_CHUNK_SIZE);
-      mesh.name = `Streaming forest ${role} ${i / FOREST_CHUNK_SIZE}`;
-      mesh.castShadow = true;
-      mesh.receiveShadow = role === 'firFoliage';
-      mesh.count = 0;
-      mesh.visible = false;
-      Nt.add(mesh);
-      return mesh;
-    }));
-  }
-  return chunks;
+  const cone = mergeParts([latheGeom([[0.45, 0], [0.45, 2.2], [5.2, 2.2], [1.7, 7.6], [4.0, 7.6], [1.2, 13.2], [2.6, 13.2], [0, 19.5]], 6)]);
+  const farGeometry = new It();
+  farGeometry.setAttribute('position', new Et(new Float32Array(cone.pos), 3));
+  farGeometry.setAttribute('normal', new Et(new Float32Array(cone.nor), 3));
+  farGeometry.setIndex(cone.idx);
+  const far = new ar(farGeometry, roleMat('hemlockFoliage'), FOREST_FAR_MAX);
+  far.name = 'Streaming forest flank silhouettes';
+  far.frustumCulled = false;
+  far.count = 0;
+  Nt.add(far);
+  return { near, far };
 })();
 
-const forestMatrix = new $e();
-let lastForestCell;
-function updateForestPool(camX) {
-  const currentCell = camX > forkX + 200 ? null : Math.floor(camX / 36);
-  if (currentCell === lastForestCell) return;
-  lastForestCell = currentCell;
-  if (currentCell === null) {
-    for (const chunk of forestChunks) for (const mesh of chunk) mesh.visible = false;
-    return;
-  }
-
-  const half = FOREST_POOL_SIZE >> 1;
-  let slot = 0;
-  for (let c = -half; c < half && slot < FOREST_POOL_SIZE; c++) {
-    const gx = (currentCell + c) * 36;
-    if (gx > forkX + 50) continue;
-    const zr = nwRoadZ(gx);
-    for (const side of [-1, 1]) {
-      const h1 = Un(gx * 0.071 + side * 13.5, 41.7);
-      const h2 = Un(gx * 0.133, side * 29.1);
-      const offsetLat = 14 + h1 * 48;
-      const gz = zr + side * offsetLat;
-      const gy = os(gx, gz);
-      const scale = 0.75 + h2 * 0.55;
-      forestMatrix.makeTranslation(gx, gy, gz);
-      forestMatrix.elements[0] = forestMatrix.elements[5] = forestMatrix.elements[10] = scale;
-      const chunk = forestChunks[Math.floor(slot / FOREST_CHUNK_SIZE)];
-      for (const mesh of chunk) mesh.setMatrixAt(slot % FOREST_CHUNK_SIZE, forestMatrix);
-      slot++;
+// Share of ground that carries trees at this position along the route (dry pine, then wet conifer).
+function forestDensity(s) {
+  const dryPine = nwH(s, 5800, 8200) * (1 - nwH(s, 9500, 15500));
+  const wet = nwH(s, 9000, 15500);
+  return 0.16 * dryPine + wet * (0.5 + 0.5 * nwH(s, 13000, 23000));
+}
+function forestCellTrees(c) {
+  const list = [];
+  const x0 = c * FOREST_CELL;
+  if (x0 > forkX - 120) return list;
+  for (const side of [-1, 1]) {
+    for (let k = 0; k < FOREST_CANDIDATES; k++) {
+      const hx = Un(c * 7.13 + k * 1.91, side * 5.7 + 1.3);
+      const hl = Un(c * 3.71 + k * 2.37, side * 9.1 + 4.2);
+      const hd = Un(c * 11.3 + k * 0.77, side * 2.9 + 8.8);
+      const x = x0 + hx * FOREST_CELL;
+      const s = nwSFromX(x);
+      const density = forestDensity(s);
+      if (density <= 0.01) continue;
+      const lat = 13 + 256 * Math.pow(hl, 1.5);
+      const zr = nwRoadZ(x), z = zr + side * lat;
+      // Groves and openings, so the forest has rhythm rather than a regular fringe.
+      const grove = 0.30 + 0.70 * xc(Math.min(Math.max((Hm(x * 0.0065 + 2, z * 0.0065) - 0.30) / 0.3, 0), 1));
+      if (hd > density * grove * (lat < 16 ? 0.55 : 1)) continue;
+      if (sr14TurnoutDist(x, z, zr, 6) < 5.5) continue;
+      if (s > 13200 && Math.abs(z - nwRiverZ(x)) < 13) continue;
+      if (Math.abs(x + 22546.4) < 48 && lat < 40) continue;
+      const wp = fernWalkPathInfo(x, z);
+      if (wp && wp.d < 5) continue;
+      const y = os(x, z);
+      const grade = Math.hypot(os(x + 3, z) - y, os(x, z + 3) - y) / 3;
+      if (grade > 0.8) continue;
+      const sc = 0.55 + 0.72 * Un(x * 0.37, z * 0.41);
+      list.push(x, y - 0.25, z, sc * (0.78 + 0.26 * Un(z * 0.13, x * 0.29)), sc, Un(x * 0.77, z * 0.31) * 6.2832);
     }
   }
-  for (const chunk of forestChunks) {
-    const count = Math.min(FOREST_CHUNK_SIZE, slot);
-    slot -= count;
-    for (const mesh of chunk) {
-      mesh.count = count;
-      mesh.visible = count > 0;
-      if (mesh.visible) {
-        mesh.instanceMatrix.needsUpdate = true;
-        mesh.computeBoundingSphere();
+  return list;
+}
+const forestCellCache = new Map();
+const forestMatrix = new $e();
+let lastForestCell;
+function setForestInstance(mesh, i, x, y, z, sx, sy, rot) {
+  const c = Math.cos(rot), sn = Math.sin(rot), e = forestMatrix.elements;
+  e[0] = c * sx; e[1] = 0; e[2] = -sn * sx; e[3] = 0;
+  e[4] = 0; e[5] = sy; e[6] = 0; e[7] = 0;
+  e[8] = sn * sx; e[9] = 0; e[10] = c * sx; e[11] = 0;
+  e[12] = x; e[13] = y; e[14] = z; e[15] = 1;
+  mesh.setMatrixAt(i, forestMatrix);
+}
+function updateForestPool(camX) {
+  const currentCell = camX > forkX + 200 ? null : Math.floor(camX / FOREST_CELL);
+  if (currentCell === lastForestCell) return;
+  lastForestCell = currentCell;
+  const [nearFoliage, nearBark] = forestMeshes.near, far = forestMeshes.far;
+  if (currentCell === null) {
+    nearFoliage.visible = nearBark.visible = far.visible = false;
+    return;
+  }
+  for (const key of forestCellCache.keys()) if (Math.abs(key - currentCell) > FOREST_FAR_CELLS + 8) forestCellCache.delete(key);
+  let nearCount = 0, farCount = 0, built = 0, pending = false;
+  for (let step = 0; step <= 2 * FOREST_FAR_CELLS; step++) {
+    // Nearest cells first; one new cell per frame keeps passing the fork or a teleport free of a long stall.
+    const c = currentCell + (step & 1 ? (step + 1) >> 1 : -(step >> 1));
+    let list = forestCellCache.get(c);
+    if (!list) {
+      if (built >= 1) { pending = true; continue; }
+      list = forestCellTrees(c); forestCellCache.set(c, list); built++;
+    }
+    const isNear = Math.abs(c - currentCell) <= FOREST_NEAR_CELLS;
+    for (let i = 0; i < list.length; i += 6) {
+      if (isNear) {
+        if (nearCount >= FOREST_NEAR_MAX) continue;
+        setForestInstance(nearFoliage, nearCount, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
+        setForestInstance(nearBark, nearCount, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
+        nearCount++;
+      } else if (farCount < FOREST_FAR_MAX) {
+        setForestInstance(far, farCount, list[i], list[i + 1], list[i + 2], list[i + 3] * 0.95, list[i + 4] * 0.9, list[i + 5]);
+        farCount++;
       }
     }
   }
+  nearFoliage.count = nearBark.count = nearCount;
+  far.count = farCount;
+  nearFoliage.visible = nearBark.visible = nearCount > 0;
+  far.visible = farCount > 0;
+  nearFoliage.instanceMatrix.needsUpdate = nearBark.instanceMatrix.needsUpdate = far.instanceMatrix.needsUpdate = true;
+  if (pending) lastForestCell = undefined;
 }
 
 // Continuous Mileposts & Deterministic Turnout Signs along SR 14
@@ -10246,6 +10399,181 @@ document.querySelectorAll('.rest-btn[data-step]').forEach(btn => {
     const step = parseFloat(btn.getAttribute('data-step'));
     restTargetWakeHours = ((restTargetWakeHours + step) % 24 + 24) % 24;
     updateRestModalUI();
+    playInteractionSound('metal');
+  });
+});
+
+// ---- Fast travel: the "trip card" (in-world) and the dev warp (backtick, free, anywhere) ----
+// The trip card lives in the parked coupe. Choosing a stop rides the leg out for you at 50 mph: the clock
+// runs for the true drive time, the tank, odometer and trip meter pay for the true miles, and you arrive
+// parked in the lane, still seated. The dev warp skips every cost and also works on foot.
+const TRAVEL_SPEED = 22.4;
+const TRAVEL_FUEL_PER_MILE = 0.009;
+let travelModalActive = false, travelDevMode = false, travelPointerLockedBefore = false, travelSelected = 0, travelBusy = false;
+let travelStops = [];
+function travelStopList(dev) {
+  const list = [];
+  for (const d of ROUTE_CATALOG.desert) list.push({ name: d.fullName, route: d.route, s: d.s, mile: d.mileLabel });
+  for (const n of ROUTE_CATALOG.northwest) list.push({ name: n.name, route: n.route, s: n.s, mile: 'KM ' + n.km.toFixed(1) });
+  const throughCount = dev ? 12 : 4;
+  for (let k = 0; k < throughCount; k++) {
+    const t = throughTurnout(k);
+    list.push({ name: t.name, route: 'SR 14', s: t.s, mile: 'KM ' + (t.s / 1000).toFixed(0) });
+  }
+  if (dev) for (const km of [80, 120, 200]) list.push({ name: 'THROUGH ROAD · FAR', route: 'SR 14', s: km * 1000, mile: 'KM ' + km });
+  list.sort((a, b) => a.s - b.s);   // east to west, the way the road runs
+  return list;
+}
+function travelClock(hours) {
+  const h = ((hours % 24) + 24) % 24, hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
+  return `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'AM' : 'PM'}`;
+}
+function travelCurrentS() { return nwSFromX(coupe.position.x); }
+function travelCost(stop) {
+  const meters = Math.abs(stop.s - travelCurrentS());
+  const miles = meters / 1609.344, seconds = meters / TRAVEL_SPEED, worldHours = seconds / 120;
+  return { meters, miles, seconds, worldHours, fuel: miles * TRAVEL_FUEL_PER_MILE };
+}
+function renderTravelModal() {
+  const listEl = document.getElementById('travel-list');
+  if (!listEl) return;
+  listEl.textContent = '';
+  const hereS = travelCurrentS();
+  travelStops.forEach((stop, i) => {
+    const cost = travelCost(stop);
+    const here = cost.meters < 150;
+    const short = !travelDevMode && !here && fuelLevel - cost.fuel < 0.06;
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'rest-btn travel-row' + (i === travelSelected ? ' active' : '');
+    row.disabled = here || short;
+    const left = document.createElement('span');
+    left.textContent = stop.name + (here ? '  · you are here' : '');
+    const right = document.createElement('span');
+    right.className = 'travel-meta';
+    right.textContent = here ? stop.mile
+      : travelDevMode ? stop.mile + ' · warp'
+      : short ? 'needs gas'
+      : `${cost.miles.toFixed(1)} mi · ${Math.max(1, Math.round(cost.seconds / 60))} min · arrive ${travelClock(worldClockHours + cost.worldHours)}`;
+    row.append(left, right);
+    row.addEventListener('click', () => { travelSelected = i; confirmTravel(); });
+    listEl.appendChild(row);
+  });
+  const sub = document.getElementById('travel-sub');
+  if (sub) sub.textContent = travelDevMode
+    ? 'DEV WARP  •  FREE  •  NO CLOCK, NO GAS'
+    : `WESTERN MOTOR GUIDE  •  RIDE IT OUT AT 50  •  TANK ${Math.round(fuelLevel * 100)}%`;
+  const title = document.getElementById('travel-title');
+  if (title) title.textContent = travelDevMode ? 'WARP TO…' : 'TRIP CARD';
+  const timeRow = document.getElementById('travel-time-row');
+  if (timeRow) timeRow.style.display = travelDevMode ? 'flex' : 'none';
+  const selected = listEl.children[travelSelected];
+  if (selected && selected.scrollIntoView) selected.scrollIntoView({ block: 'nearest' });
+}
+function travelMove(delta) {
+  const n = travelStops.length;
+  for (let step = 0; step < n; step++) {
+    travelSelected = (travelSelected + delta + n) % n;
+    const stop = travelStops[travelSelected];
+    if (travelCost(stop).meters >= 150) break;
+  }
+  renderTravelModal();
+  playInteractionSound('metal');
+}
+function openTravelModal(dev) {
+  if (travelModalActive || travelBusy || restModalActive || settingsModalActive) return;
+  if (!dev && !(seated && Math.abs(carSpeed) < 0.25)) return;
+  travelDevMode = !!dev;
+  travelStops = travelStopList(travelDevMode);
+  travelSelected = 0;
+  for (let i = 0; i < travelStops.length; i++) if (travelCost(travelStops[i]).meters >= 150) { travelSelected = i; break; }
+  travelModalActive = true;
+  travelPointerLockedBefore = !!document.pointerLockElement;
+  if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) {} }
+  const modal = document.getElementById('travel-modal');
+  if (modal) modal.style.display = 'flex';
+  renderTravelModal();
+  playInteractionSound('paper');
+}
+function closeTravelModal(silent) {
+  if (!travelModalActive) return;
+  travelModalActive = false;
+  const modal = document.getElementById('travel-modal');
+  if (modal) modal.style.display = 'none';
+  if (!silent) playInteractionSound('latch');
+  if (travelPointerLockedBefore && !cursorMode) { try { wr.lock(); } catch (e) {} }
+}
+// Park the coupe in the westbound lane just east of a stop, facing along the road.
+function travelPlaceCoupe(s) {
+  const x = nwXFromS(s) + (s > 5000 ? 26 : 30);
+  const zr = nwRoadZ(x), zr2 = nwRoadZ(x - 1);
+  coupe.position.set(x, 0, zr - 1.9);
+  coupe.rotation.set(0, Math.atan2(-1, zr2 - zr), 0);
+  carSpeed = 0; lateralSlip = 0; steeringAngle = 0; virtualSteerInput = 0;
+  suspPitch = 0; suspRoll = 0; suspBounce = 0; suspBounceVel = 0;
+  recenterDesert(x, coupe.position.z, Infinity);
+  groundCoupe();
+  coupe.updateMatrixWorld(true);
+}
+function travelTo(stop, dev) {
+  const cost = travelCost(stop);
+  const wasSeated = seated;
+  travelPlaceCoupe(stop.s);
+  if (!dev) {
+    worldClockHours = (worldClockHours + cost.worldHours) % 24;
+    updateWorldClocks();
+    odometerMiles += cost.miles; tripMiles += cost.miles;
+    fuelLevel = Math.max(0.06, fuelLevel - cost.fuel);
+    engineTemp = Math.min(engineTemp, 0.62);
+  }
+  if (wasSeated) {
+    updateDriverCamera();
+    aimPoint.set(driverEye.x, 1.28, 3);
+    Nn.lookAt(coupe.localToWorld(aimPoint));
+  } else {
+    aimPoint.set(1.9, 0, -0.5);
+    coupe.localToWorld(aimPoint);
+    Nn.position.set(aimPoint.x, os(aimPoint.x, aimPoint.z) + 1.7, aimPoint.z);
+    Nn.lookAt(coupe.position.x - 40, Nn.position.y, coupe.position.z);
+  }
+  updateInstrumentCluster();
+}
+function confirmTravel() {
+  if (!travelModalActive || travelBusy) return;
+  const stop = travelStops[travelSelected];
+  if (!stop) return;
+  const cost = travelCost(stop);
+  if (cost.meters < 150) return;
+  if (!travelDevMode && fuelLevel - cost.fuel < 0.06) { playInteractionSound('metal'); return; }
+  const dev = travelDevMode;
+  closeTravelModal(true);
+  travelBusy = true;
+  const fade = document.getElementById('rest-fade');
+  const caption = document.getElementById('travel-caption');
+  if (caption) {
+    caption.textContent = dev ? stop.name : `${stop.name}  ·  ${cost.miles.toFixed(1)} MI`;
+    caption.style.opacity = '1';
+  }
+  if (fade) fade.style.opacity = '1';
+  if (audio.ctx && audio.master) audio.master.gain.setTargetAtTime(0.05, audio.ctx.currentTime, 0.12);
+  setTimeout(() => {
+    travelTo(stop, dev);
+  }, 560);
+  setTimeout(() => {
+    if (fade) fade.style.opacity = '0';
+    if (caption) caption.style.opacity = '0';
+    if (audio.ctx && audio.master && !audio.muted) {
+      audio.master.gain.setTargetAtTime((typeof gameSettings !== 'undefined' ? gameSettings.masterVolume : 0.85) * 0.9, audio.ctx.currentTime + 0.2, 0.25);
+    }
+    travelBusy = false;
+    if (travelPointerLockedBefore && !cursorMode) { try { wr.lock(); } catch (e) {} }
+  }, dev ? 900 : 1900);
+}
+document.getElementById('travel-cancel')?.addEventListener('click', () => closeTravelModal());
+document.querySelectorAll('.rest-btn[data-warp-hour]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    worldClockHours = parseFloat(btn.getAttribute('data-warp-hour'));
+    updateWorldClocks();
     playInteractionSound('metal');
   });
 });
@@ -11861,6 +12189,15 @@ addEventListener('keydown',event=>{
     if(key==='Escape' || key==='KeyO') { closeSettingsModal(); event.preventDefault(); return; }
     return;
   }
+  if(travelModalActive) {
+    if(key==='Escape' || key==='Backquote' || key==='KeyP') { closeTravelModal(); event.preventDefault(); return; }
+    if(key==='Enter' || key==='Space') { confirmTravel(); event.preventDefault(); return; }
+    if(key==='ArrowUp' || key==='KeyW') { travelMove(-1); event.preventDefault(); return; }
+    if(key==='ArrowDown' || key==='KeyS') { travelMove(1); event.preventDefault(); return; }
+    return;
+  }
+  if(travelBusy) return;
+  if(key==='Backquote') { openTravelModal(true); event.preventDefault(); return; }
   if(key==='KeyO') { openSettingsModal(); event.preventDefault(); return; }
   if(restModalActive) {
     if(key==='Escape') { closeRestModal(); event.preventDefault(); return; }
@@ -11897,6 +12234,7 @@ addEventListener('keydown',event=>{
     if(inspection==='motelBed') { openRestModal('bed'); return; }
     if(seated && carSpeed===0 && cabinBlanketOpen && (parkingBrake || gearState==='P')) { openRestModal('coupe'); return; }
   }
+  if(key==='KeyP' && seated)openTravelModal(false);
   if(key==='KeyC' && seated)toggleDoor(driverDoor);
   if(key==='KeyF')leaveCar();
   if(key==='KeyR' && seated && carSpeed===0 && glovebox.engaged)setRoadMapOpen(!roadMap.visible);
@@ -12021,12 +12359,18 @@ Xm.material.uniforms.moonDir.value.copy(moonV);
 
 const routeS = nwSFromX(Nn.position.x);
 const nwBiome = Math.max(0, Math.min(1, (forkX - Nn.position.x) / 12000));
-const rainFactor = routeS > 14000 ? Math.min(1.0, (routeS - 14000) / 7000) : 0;
-terrainWetnessUniform.value = Math.max(0, Math.min(1, (routeS - 11000) / 8000));
+// Climate follows the watershed by position. A separate, 24-hour-periodic weather timeline moves cloud and rain through it.
+const wetRegion = nwH(routeS, 11500, 21500);
+const weatherHour = ((worldClockHours % 24) + 24) % 24 / 24 * Math.PI * 2;
+const weatherSwing = Math.max(0, Math.min(1, 0.5 + 0.30 * Math.sin(weatherHour * 5 + 1.1) + 0.22 * Math.sin(weatherHour * 3 + 2.4)));
+const nwCloud = wetRegion * (0.55 + 0.45 * weatherSwing);
+const rainFactor = wetRegion * nwH(weatherSwing, 0.40, 0.78);
+const gloom = Math.min(1, nwCloud * 0.72 + rainFactor * 0.28);
+terrainWetnessUniform.value = Math.max(0, Math.min(1, wetRegion * (0.45 + 0.35 * weatherSwing + 0.35 * rainFactor)));
 
 Xm.material.uniforms.uNight.value = uNight;
 Xm.material.uniforms.uDay.value = uDay;
-Xm.material.uniforms.uOvercast.value = rainFactor;
+Xm.material.uniforms.uOvercast.value = nwCloud;
 Xm.material.uniforms.uForestSkyline.value = nwBiome;
 
 Xm.position.copy(Nn.position);
@@ -12042,23 +12386,28 @@ const shadowZ = Math.round(Nn.position.z / 2) * 2;
 Qt.target.position.set(shadowX, 0, shadowZ);
 if (uDay > 0.05) {
   Qt.position.set(shadowX + sunV.x * 60, Math.max(22, sunV.y * 65), shadowZ + sunV.z * 60);
-  Qt.color.setRGB(0.99, 0.94 - 0.15 * rainFactor, 0.88 - 0.22 * rainFactor);
-  Qt.intensity = (1.05 * (1 - uDay) + 1.28 * uDay) * (1.0 - 0.42 * rainFactor);
-  hhem.intensity = (0.09 * (1 - uDay) + 0.65 * uDay) * (1.0 - 0.35 * rainFactor);
+  Qt.color.setRGB(0.99, 0.94 - 0.15 * gloom, 0.88 - 0.22 * gloom);
+  Qt.intensity = (1.05 * (1 - uDay) + 1.28 * uDay) * (1.0 - 0.42 * gloom);
+  hhem.intensity = (0.09 * (1 - uDay) + 0.95 * uDay) * (1.0 - 0.20 * gloom);
 } else {
   Qt.position.set(shadowX + 52, 26, shadowZ + 20);
   Qt.color.setRGB(0.98 * (1 - uNight) + 0.72 * uNight, 0.62 * (1 - uNight) + 0.80 * uNight, 0.40 * (1 - uNight) + 0.98 * uNight);
-  Qt.intensity = (0.55 * (1 - uNight) + 1.05 * uNight) * (1.0 - 0.45 * rainFactor);
-  hhem.intensity = (0.45 * (1 - uNight) + 0.09 * uNight) * (1.0 - 0.35 * rainFactor);
+  Qt.intensity = (0.55 * (1 - uNight) + 1.05 * uNight) * (1.0 - 0.45 * gloom);
+  hhem.intensity = (0.45 * (1 - uNight) + 0.09 * uNight) * (1.0 - 0.35 * gloom);
 }
 
+// Foliage keeps a little life on its shadowed side in daylight, and none at night.
+const foliageLift = (0.24 * uDay + 0.05 * (1 - uNight) * (1 - uDay)) * (1.0 - 0.35 * gloom);
+for (const role of ['firFoliage', 'pineFoliage', 'hemlockFoliage', 'cedarFoliage', 'alderFoliage']) {
+  if (ROLE_MATS[role]) ROLE_MATS[role].emissiveIntensity = foliageLift;
+}
 let t=eg.elapsedTime;
 const duskFogR = .400 * (1 - uNight) + .026 * uNight;
 const duskFogG = .270 * (1 - uNight) + .031 * uNight;
 const duskFogB = .290 * (1 - uNight) + .050 * uNight;
-const dayFogR = .585 * (1 - rainFactor) + .340 * rainFactor;
-const dayFogG = .540 * (1 - rainFactor) + .370 * rainFactor;
-const dayFogB = .480 * (1 - rainFactor) + .395 * rainFactor;
+const dayFogR = .585 * (1 - gloom) + .340 * gloom;
+const dayFogG = .540 * (1 - gloom) + .370 * gloom;
+const dayFogB = .480 * (1 - gloom) + .395 * gloom;
 Nt.fog.color.setRGB(
   duskFogR * (1 - uDay) + dayFogR * uDay,
   duskFogG * (1 - uDay) + dayFogG * uDay,
@@ -12067,9 +12416,11 @@ Nt.fog.color.setRGB(
 let fb=1+.035*(Hm(t*.045,5.5)-.5)*2;
 Nt.fog.color.multiplyScalar(fb);
 const baseFar = 1400 + 90 * (Hm(t * .03, 9.2) - .5) * 2;
-Nt.fog.far = baseFar * (1.0 - 0.72 * rainFactor);
+Nt.fog.far = baseFar * (1.0 - 0.74 * gloom);
+Nt.fog.near = 70 - 38 * gloom;
+terrainSkyTone.value.setRGB(Nt.fog.color.r, Nt.fog.color.g, Nt.fog.color.b).multiplyScalar(0.55);
 let sk=Math.max(0,(uNight-.3)/.7);
-sk=sk*sk*(3-2*sk) * (1.0 - uDay) * (1.0 - 0.95 * rainFactor);
+sk=sk*sk*(3-2*sk) * (1.0 - uDay) * (1.0 - 0.95 * gloom);
 Nt.userData.stars.visible = sk > 0;
 Nt.userData.stars.material.opacity = .85 * sk;
 updateLocalLightVisibility();
@@ -12192,7 +12543,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   updateTelephoneLine, fn, driverDoor, glovebox, roadMap,
   get worldClockHours() { return worldClockHours; },
   set worldClockHours(v) { worldClockHours = v; updateWorldClocks(); },
-  openRestModal, closeRestModal, confirmRest,
+  openRestModal, closeRestModal, confirmRest, openTravelModal, travelTo, travelStopList, confirmTravel,
   get restModalActive() { return restModalActive; },
   get restTargetWakeHours() { return restTargetWakeHours; },
   set restTargetWakeHours(v) { restTargetWakeHours = v; updateRestModalUI(); },
