@@ -744,6 +744,15 @@ For each `index.html` change:
 - **Fix:** tufts are now nine thin tapered blades with upward normals, random yaw and height per instance, colours toned down, and a daylight-scaled emissive lift (`grassMat.emissive` from `uDay`) so they read as straw by day and stay dim at night; density per cell raised from 45 to 100.
 - **Seen (embedded browser, noon, dusk, night at Harvest Moon and the windmill):** blades read as grass tufts, no console errors. **Still open:** ground is a flat pale beige by day and near-black at dusk (no straw/green variation or wind streaks), tufts are still a bit bright at night, the Harvest Moon pylon neon is faint from the road, and nothing of this has a named-laptop frame-time measurement. Visual acceptance of the Plains stays open.
 
+### 2026-11-06 — Great Plains thunderstorm (replaces the funnel-shaped storm cloud)
+
+- **Report:** The storm cloud on the plains horizon looked bad (a hard-edged column that read as a funnel or tornado), and the plains needed real weather with the region's lightning storms.
+- **Cloud:** Rewrote the rim storm in the sky shader as a soft thunderhead: dark haze-dissolved base, billowing tower, thin lit anvil, and a slanted rain curtain under the base. It grows with `uStormPower`.
+- **Weather timeline:** `plainsStormPower(t)` runs an 8-minute cycle; about 30% of cycles stay dry, and a storm builds, peaks and fades inside a cycle. It scales with the plains biome blend, so nothing changes outside the Plains.
+- **Lightning:** During a storm, strikes arrive every 1-9 s (busier at peak). 60% are sheet flashes that light the cloud interior in lobes; 40% are branched bolts to the ground. Each is a return stroke plus two weaker flickers at least 0.12 s apart (never strobes). `prefers-reduced-motion` cuts intensity to 40%. The diner's screen panel picks up the flash. The silent heat-lightning pulse every ~85 s stays as the background flicker.
+- **Thunder:** `playThunder()` adds a low rolling rumble 3-10 s after each strike, when audio is running.
+- **Checks:** Inline script passed `node --check`. The sky fragment shader compiled and rendered in a standalone WebGL page (dusk, night, and a bolt frame) in the in-app browser. **Not verified:** the storm from inside the game (pointer lock is refused in that browser), thunder audio by ear, and frame-time cost. Acceptance stays open.
+
 ### 2026-11-06 — Scenery placement cleanup (river, road, telephone poles)
 
 - **Report:** Trees could stand in the river, bushes on the road, telephone poles on the road or in the river, and trees or bushes on top of poles.

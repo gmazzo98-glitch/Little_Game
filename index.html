@@ -4605,7 +4605,7 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
           // Low-frequency billow noise: soft lobes, not stripes.
           float en = 0.5 * sin(a * 31.0 + vv * 37.0) + 0.3 * sin(a * 67.0 - vv * 71.0) + 0.2 * sin(a * 19.0 + vv * 113.0);
           float tower = 0.078 + 0.034 * smoothstep(0.0, 0.07, vv) - 0.040 * smoothstep(0.08, 0.15, vv);
-          float anvilW = 0.23 * smoothstep(0.095, 0.135, vv) * (1.0 - smoothstep(0.128, 0.165, vv));
+          float anvilW = 0.19 * smoothstep(0.095, 0.135, vv) * (1.0 - smoothstep(0.128, 0.165, vv));
           float colWidth = max(tower, anvilW) + 0.012 * en;
           float cloudEdge = 1.0 - smoothstep(colWidth - 0.035, colWidth + 0.030, dAz);
           float cloudTop = 1.0 - smoothstep(topH - 0.022, topH + 0.006 + 0.006 * en, vv);
