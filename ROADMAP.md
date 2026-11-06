@@ -623,6 +623,13 @@ For each `index.html` change:
 - **Wiring state:** Harvest Moon is the only Plains stop on the trip card; the silo, elevator, water tower, windmill and mailboxes are dev-warp only, by design.
 - **Not verified:** screenshot review of the arrival (capture timed out in the hidden pane), `file://` run, gas-short disabled rows, driving back west across the hinge after a card trip.
 
+### 2026-11-06 — Fuel stops, map zoom, controls list
+
+- **Why fast travel looked missing:** it was pushed (`f6743fe` on the playable branch) but never listed in the controls reference. The trip card needs the coupe seated (door open, `C`, then in) and stopped, then `Y`. The Settings controls list now shows `Y`, the backtick dev warp and map scroll.
+- **Gas elsewhere:** `FUEL_ISLANDS` adds one vintage pump (same model, meters, hose physics and nozzle/flap interaction as Sunset) at Cinder Court, Starlite Diner and Harvest Moon. `buildPumpHose` takes a position; interaction uses a per-pump proximity test (`nearPump`) instead of the Sunset-only box. The trip card tags stops with `· GAS` (`GAS_STOP_IDS`); the glovebox map lists GAS on those stops. Fern Bend has no pump (SR 14 lot geometry not checked).
+- **Map:** canvas drawn at 2x (1920x1200) so it stays sharp when zoomed. With the map unfolded, mouse wheel narrows the field of view (76 to 12 degrees) and mouse look pans; folding resets it.
+- **Checks:** inline `node --check` passes; in the embedded browser no console errors, trip card shows GAS tags, wheel events took the field of view from 76 to 33 and folding restored it, a pump rendered at Harvest Moon. **Not verified:** picking up a nozzle and filling at the new pumps, the zoomed map visually (hidden-pane screenshots were stale), pump placement against the Starlite and Cinder Court buildings, `file://`.
+
 ### 2026-11-06 — Scenery placement cleanup (river, road, telephone poles)
 
 - **Report:** Trees could stand in the river, bushes on the road, telephone poles on the road or in the river, and trees or bushes on top of poles.

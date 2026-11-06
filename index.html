@@ -289,6 +289,9 @@
         <div class="settings-key-item"><kbd>K</kbd><span>Horn ring</span></div>
         <div class="settings-key-item"><kbd>R</kbd><span>Glovebox / Road map</span></div>
         <div class="settings-key-item"><kbd>T</kbd><span>Rest until…</span></div>
+        <div class="settings-key-item"><kbd>Y</kbd><span>Trip card: fast travel (seated, parked)</span></div>
+        <div class="settings-key-item"><kbd>`</kbd><span>Dev warp (free, anywhere)</span></div>
+        <div class="settings-key-item"><kbd>SCROLL</kbd><span>Zoom the road map (unfolded)</span></div>
         <div class="settings-key-item"><kbd>G</kbd><span>Set down cargo</span></div>
         <div class="settings-key-item"><kbd>O</kbd> / <kbd>ESC</kbd><span>Settings menu</span></div>
         <div class="settings-key-item"><kbd>M</kbd><span>Toggle sound mute</span></div>
@@ -5478,9 +5481,9 @@ const hoseDelta=new P(), hoseHand=new P(), hoseTangent=new P();
 const hoseRight=new P(), hoseUp=new P(), hoseNormal=new P();
 const hoseAxis=new P(0,0,1), hoseFallback=new P(0,1,0);
 let heldPump=null;
-function buildPumpHose(x,yaw) {
+function buildPumpHose(x,yaw,z=-9.5,y=0) {
   const root=new xi();
-  root.position.set(x,0,-9.5);root.rotation.y=yaw;Nt.add(root);
+  root.position.set(x,y,z);root.rotation.y=yaw;Nt.add(root);
   const outlet=root.localToWorld(new P(.455,1.07,-.185));
   const dock=root.localToWorld(new P(.477,.66,.18));
   const nozzle=new xi();
@@ -5544,7 +5547,7 @@ function stepPumpHose(pump,dt) {
     for(let i=1;i<=(pinned?last-1:last);i++){
       const p=points[i];
       p.y=Math.max(p.y,hoseFloor(p)+(i===last?.075:.031));
-      if(p.y<1.35 && Math.abs(p.x-pump.root.position.x)<.433 && Math.abs(p.z+9.5)<.35)
+      if(p.y<1.35 && Math.abs(p.x-pump.root.position.x)<.433 && Math.abs(p.z-pump.root.position.z)<.35)
         p.x=pump.root.position.x+Math.sign(p.x-pump.root.position.x || 1)*.433;
     }
   }
@@ -5566,6 +5569,35 @@ function updateHoseMesh(pump) {
   positions.needsUpdate=true;normals.needsUpdate=true;
 }
 const pumpHoses=[buildPumpHose(-3,.05),buildPumpHose(3,-.07)];
+// Extra fuel islands: the same vintage pump, hose and meter, standing alone at the other stops so a long
+// drive can be refuelled. Each entry is also listed on the trip card and the glovebox map as GAS.
+const FUEL_ISLANDS = [
+  { id: 'cinder_court', x: motelX + 13.5, z: -8.2, yaw: .04 },
+  { id: 'starlite_diner', x: dinerX + 13.5, z: -8.2, yaw: -.05 },
+  { id: 'harvest_moon', x: 64656, z: -8.6, yaw: .03 }
+];
+const GAS_STOP_IDS = new Set(['sunset_service', ...FUEL_ISLANDS.map(f => f.id)]);
+for (const f of FUEL_ISLANDS) {
+  const y = os(f.x, f.z), m = matMul(matTranslate(f.x, y, f.z), matRotY(f.yaw));
+  for (const role in pumpParts0)
+    addRoleMesh(Nt, 'pump_' + role, pumpParts0[role].map(p => ({ ...p, matrix: matMul(m, p.matrix || matIdentity()) })));
+  const galMesh = paintedSurface(.425,.265,pumpMeterPaint,matMul(m,matTranslate(0,.99,.341)),
+    {width:384,height:224,emissive:0x403a29,intensity:.16,name:'Vintage gallon meter'});
+  const saleMesh = paintedSurface(.295,.205,pumpSalePaint,matMul(m,matTranslate(0,.60,.332)),
+    {width:320,height:192,emissive:0x352d20,intensity:.12,name:'Frozen sale meter'});
+  pumpMeters.push({
+    gallons: 0,
+    setReading(gal) {
+      this.gallons = gal;
+      const galTex = galMesh.material.map, saleTex = saleMesh.material.map;
+      pumpMeterPaint(galTex.image.getContext('2d'), galTex.image.width, galTex.image.height, gal.toFixed(1).padStart(5, '0'));
+      pumpSalePaint(saleTex.image.getContext('2d'), saleTex.image.width, saleTex.image.height, (gal * .299).toFixed(2));
+      galTex.needsUpdate = true; saleTex.needsUpdate = true;
+    }
+  });
+  Dt(f.x - .5, f.z - .45, f.x + .5, f.z + .45);
+  pumpHoses.push(buildPumpHose(f.x, f.yaw, f.z, y));
+}
 
 function takePumpNozzle(pump) {
   if(heldPump || carriedCargo || seated)return;
@@ -11035,10 +11067,10 @@ let travelModalActive = false, travelDevMode = false, travelPointerLockedBefore 
 let travelStops = [];
 function travelStopList(dev) {
   const list = [];
-  for (const d of ROUTE_CATALOG.desert) list.push({ name: d.fullName, route: d.route, s: d.s, mile: d.mileLabel });
+  for (const d of ROUTE_CATALOG.desert) list.push({ name: d.fullName, route: d.route, s: d.s, mile: d.mileLabel, gas: GAS_STOP_IDS.has(d.id) });
   if (ROUTE_CATALOG.plains) {
     for (const p of ROUTE_CATALOG.plains) {
-      if (dev || p.kind === 'stop') list.push({ name: p.fullName, route: p.route, s: p.s, mile: p.mileLabel });
+      if (dev || p.kind === 'stop') list.push({ name: p.fullName, route: p.route, s: p.s, mile: p.mileLabel, gas: GAS_STOP_IDS.has(p.id) });
     }
   }
   for (const n of ROUTE_CATALOG.northwest) list.push({ name: n.name, route: n.route, s: n.s, mile: 'KM ' + n.km.toFixed(1) });
@@ -11080,7 +11112,7 @@ function renderTravelModal() {
     row.className = 'rest-btn travel-row' + (i === travelSelected ? ' active' : '');
     row.disabled = here || short;
     const left = document.createElement('span');
-    left.textContent = stop.name + (here ? '  · you are here' : '');
+    left.textContent = stop.name + (stop.gas ? '  · GAS' : '') + (here ? '  · you are here' : '');
     const right = document.createElement('span');
     right.className = 'travel-meta';
     right.textContent = here ? stop.mile
@@ -12246,8 +12278,9 @@ const mirrorAnchor=new P(), mirrorLook=new P();
 let rearMirror, mirrorYaw=0, mirrorDelay=0;
 function buildRoadMap() {
   const canvas = document.createElement('canvas');
-      canvas.width = 960; canvas.height = 600;
+      canvas.width = 1920; canvas.height = 1200;
       const ctx = canvas.getContext('2d');
+      ctx.scale(2, 2);
 
       // Base parchment
       ctx.fillStyle = '#d7cca7';
@@ -12341,9 +12374,9 @@ function buildRoadMap() {
 
       // Three Desert Stops
       const desertStops = [
-        { id: 'cinder_court', x: 485, name: 'CINDER COURT', sub: 'MOTOR LODGE', miles: 'MI 18 WEST', amen: 'UNITS 1–3 • SHOW ROOM • REST', above: false },
+        { id: 'cinder_court', x: 485, name: 'CINDER COURT', sub: 'MOTOR LODGE', miles: 'MI 18 WEST', amen: 'GAS • UNITS 1–3 • SHOW ROOM • REST', above: false },
         { id: 'sunset_service', x: 655, name: 'SUNSET SERVICE', sub: 'STATION', miles: 'MILE 0 (CENTER)', amen: 'GAS • OIL • WATER • AIR • 24 HR', above: true },
-        { id: 'starlite_diner', x: 835, name: 'STARLITE DINER', sub: '& BAR', miles: 'MI 18 EAST', amen: 'DINER • FOUNTAIN • COCKTAIL LOUNGE', above: false }
+        { id: 'starlite_diner', x: 835, name: 'STARLITE DINER', sub: '& BAR', miles: 'MI 18 EAST', amen: 'GAS • DINER • FOUNTAIN • COCKTAIL LOUNGE', above: false }
       ];
 
       for (const st of desertStops) {
@@ -12373,7 +12406,7 @@ function buildRoadMap() {
         { x: 760, name: 'WATER TOWER', sub: 'MP 48 • PRAIRIE VIEW', above: true },
         { x: 805, name: 'WINDMILL', sub: 'MP 51 • STOCK TANK', above: true },
         { x: 845, name: 'MAILBOX ROW', sub: 'MP 53 • RURAL POST', above: false },
-        { x: 885, name: 'HARVEST MOON', sub: 'DRIVE-IN • MP 55', above: true, dest: true }
+        { x: 885, name: 'HARVEST MOON', sub: 'DRIVE-IN • GAS • MP 55', above: true, dest: true }
       ];
 
       for (const pst of plainsStops) {
@@ -12438,7 +12471,7 @@ function buildRoadMap() {
       ctx.font = '9px Arial,sans-serif'; ctx.fillStyle = '#4a4233';
       ctx.fillText('■ U.S. 66 (Paved Highway)', lgX + 8, lgY + 33);
       ctx.fillText('■ State Route 14 (Scenic Route)', lgX + 8, lgY + 48);
-      ctx.fillText('★ Gas Station & 24 Hr Service', lgX + 8, lgY + 63);
+      ctx.fillText('★ Gas Station & 24 Hr Service  (also "GAS")', lgX + 8, lgY + 63);
       ctx.fillText('■ Motor Hotel & Visitable Room', lgX + 8, lgY + 78);
       ctx.fillText('♨ Diner, Counter & Lounge', lgX + 8, lgY + 93);
       ctx.fillText('🍦 Soft-Serve Drive-In Stand', lgX + 8, lgY + 108);
@@ -12669,8 +12702,20 @@ function buildRoadMap() {
   return {open,folded:new dt(panel,material)};
 }
 const {open:roadMap,folded:foldedRoadMap}=buildRoadMap();
+// Scroll to zoom the unfolded map (narrower field of view; mouse look pans across it).
+let mapFov = 76;
+function setMapZoom(fov) {
+  mapFov = Math.max(12, Math.min(76, fov));
+  Nn.fov = mapFov; Nn.updateProjectionMatrix();
+}
+addEventListener('wheel', e => {
+  if (!roadMap.visible || !seated) return;
+  e.preventDefault();
+  setMapZoom(mapFov * (e.deltaY > 0 ? 1.15 : 1 / 1.15));
+}, { passive: false });
 function setRoadMapOpen(open) {
   if(roadMap.visible===open)return;
+  if(!open && mapFov!==76 && Nn.fov===mapFov)setMapZoom(76);
   roadMap.visible=open;
   foldedRoadMap.visible=!open;
   setDomeLight(open || controls.find(control=>control.kind==='dome').on);
@@ -12976,9 +13021,10 @@ function findInteractionTarget() {
   const nearDiner=Math.abs(Nn.position.x-dinerX)<18 && Nn.position.z>-24 && Nn.position.z<-2;
   const nearFernBend=Math.abs(Nn.position.x-fernBendX)<140 && Nn.position.z<-6340 && Nn.position.z>-6465;
   const nearPlains=(Nn.position.x > 45000 && Nn.position.x < 85000);
+  const nearPump=!seated && pumpHoses.some(p=>Math.abs(Nn.position.x-p.root.position.x)<7 && Math.abs(Nn.position.z-p.root.position.z)<7);
   const nearCargo=!seated && !heldPump && !carriedCargo && cargoItems.some(item=>item.slot<0 &&
     item.mesh.position.distanceToSquared(Nn.position)<11);
-  if(!nearCar && !nearStation && !nearMotel && !nearDiner && !nearFernBend && !nearPlains && !nearCargo)return null;
+  if(!nearCar && !nearStation && !nearMotel && !nearDiner && !nearFernBend && !nearPlains && !nearPump && !nearCargo)return null;
   Nn.updateMatrixWorld(true);
   if(cursorMode) {
     aimRay.set(cursorX/innerWidth*2-1,1-cursorY/innerHeight*2,.4)
@@ -13101,7 +13147,7 @@ function findInteractionTarget() {
     target(Nt, 2.15, 1.13, -15.39, .25, 'Read linen postcard', inspectPostcard, true);
     target(Nt, 2.60, 1.16, -15.23, .22, 'Ring service bell', () => playInteractionSound('bell'), true);
   }
-  if(!seated && nearStation)for(const pump of pumpHoses) {
+  if(!seated && (nearStation || nearPump))for(const pump of pumpHoses) {
     if(Nn.position.distanceToSquared(pump.dock)>5.3)continue;
     if(heldPump===pump)target(pump.root,.477,.66,.18,.23,'Hang up nozzle',()=>putDownNozzle(true),true);
     else if(!heldPump && !carriedCargo)target(pump.nozzle,0,0,-.09,.19,'Pick up fuel nozzle',()=>takePumpNozzle(pump),true);
@@ -13749,7 +13795,7 @@ function updateCarHud() {
   } else if (inspection === 'motelBed') {
     text = hint + mode + '  ·  E / CLICK / T rest until wake time  ·  Move to stand';
   } else if (seated) {
-    text = hint + (roadMap.visible ? 'Parked  ·  R fold map to drive' : Math.round(Math.abs(carSpeed) * 2.237) + ' MPH [' + gearBadge + ']  ·  WASD/ARROWS drive  ·  SPACE brake  ·  V gear  ·  O settings') + (carSpeed === 0 && glovebox.engaged && !roadMap.visible ? '  ·  R unfold map' : '') + carExtras + '  ·  C door  ·  F get out';
+    text = hint + (roadMap.visible ? 'Parked  ·  SCROLL zoom map  ·  R fold map to drive' : Math.round(Math.abs(carSpeed) * 2.237) + ' MPH [' + gearBadge + ']  ·  WASD/ARROWS drive  ·  SPACE brake  ·  V gear  ·  O settings') + (carSpeed === 0 && glovebox.engaged && !roadMap.visible ? '  ·  R unfold map' : '') + carExtras + '  ·  C door  ·  F get out';
   } else {
     const locName = Math.abs(Nn.position.x - motelX) < 120 ? 'Cinder Court Motor Lodge' : (Math.abs(Nn.position.x - dinerX) < 120 ? 'Starlite Diner & Bar' : (Math.abs(Nn.position.x - fernBendX) < 140 ? 'Fern Bend Drive-In & Gorge Trail' : 'Coupe by the station'));
     text = hint + 'WASD/ARROWS walk  ·  ' + mode + '  ·  SHIFT run  ·  O settings  ·  ' + locName;
