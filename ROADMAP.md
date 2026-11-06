@@ -648,6 +648,15 @@ For each `index.html` change:
 - **Map (reworked after the first pass was still cramped):** the canvas is now 1440x600 drawn at 2.8x (4032x1680), with U.S. 66 widened so the desert stops (Cinder Court, Sunset, Starlite), an "open steppe" break, and the six Plains stops no longer overlap; Plains labels stagger over four tiers; small text raised 2 px; the legend moved into the Plains panel. With the map unfolded, a full-screen map reader opens: scroll zooms (1x to 6x, about the cursor when free, else the centre), mouse movement or a drag pans, double-click resets, `R` folds it. Gas stops show GAS.
 - **Checks:** inline `node --check` passes; in the embedded browser no console errors; trip card shows GAS tags; taking the nozzle and refuelling (via exported `takePumpNozzle`/`refuelCoupeAtPump`) worked at Cinder Court, Starlite, Harvest Moon and Sunset; the map reader opened and zoomed and screenshots showed the Plains labels legible. **Not verified:** the aim-and-click nozzle prompt at the new pumps by hand, pump placement against the Starlite and Cinder Court buildings, the folded in-cab map's look (its texture is now wider), `file://`.
 
+### 2026-11-06 — Plains pass 2: ground, sign, storm, trip card, build stamp
+
+- **Trip card and map:** every Plains stop (silo, elevator, water tower, windmill, mailboxes, Harvest Moon) is now on the normal trip card, not just the dev warp. The title screen shows a build stamp (`BUILD 2026-11-06c`) so a stale download is easy to spot.
+- **Ground:** Plains terrain colour now has large-scale patches (green-gold swales against straw), bare scuffs, fine speckle, and long wind-aligned ribbons that drift with the gust field (the old streak was a near-invisible 35 percent sine).
+- **Harvest Moon sign:** the slab "neon" boxes are replaced by a painted, emissive sign face (red crescent, red script, cyan DRIVE-IN, tube border) whose glow follows the flicker.
+- **Storm:** the rim storm was a hard-edged rectangle with a flat anvil; it is now a noisy-edged tower and spreading, rounded anvil whose base meets the haze, still rim-lit after dusk.
+- **Tufts at night:** colour multiplier scales with daylight so they stay dim after dark.
+- **Seen in the embedded browser:** sign at night, ground and storm at dusk, no console errors. **Not verified:** frame time, driving the whole Plains leg, `file://`.
+
 ### 2026-11-06 — Plains grass fix and honest status
 
 - **Finding:** the Plains grass tufts were crossed quads with no normals on a Lambert material, so every tuft rendered as a black slab; the earlier "Plains screenshots" in `captures/plains_*.jpg` show the title overlay over the scene and do not demonstrate the region. Those captures and the Plains visual claims above should be treated as unverified.

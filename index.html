@@ -304,6 +304,7 @@
   </div>
 </div>
 <div id="overlay">
+  <div id="build-stamp" style="position:absolute;left:12px;bottom:10px;font:11px 'Courier New',monospace;color:#8f8366;opacity:.85">BUILD 2026-11-06c · Trip card Y · gas at 4 stops · Great Plains east of Starlite</div>
   <h1>NEON GAS</h1>
   <h2>ROUTE 66 &nbsp;·&nbsp; DUSK</h2>
   <p>A lone 1960s gas station in the desert dark.</p>
@@ -4585,29 +4586,33 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
           col = mix(col, midColor, 1.0 - smoothstep(midRidge - .0010, midRidge + .0010, direction.y));
           col = mix(col, nearColor, 1.0 - smoothstep(nearRidge - .0008, nearRidge + .0008, direction.y));
         }
-        // Distant storm silhouette on the rim:
+        // Distant storm on the rim: a billowing tower under a spreading anvil, rim-lit from below the horizon.
         if (uPlains > 0.05 && direction.y > -0.01 && direction.y < 0.28) {
           float a = atan(direction.z, direction.x);
           float stormAz = -0.65 + uStormDrift * 0.35;
           float dAz = abs(mod(a - stormAz + 3.14159, 6.28318) - 3.14159);
-          float baseH = 0.025, topH = 0.22;
-          if (dAz < 0.42 && direction.y >= baseH && direction.y <= topH) {
-            float colWidth = direction.y > 0.14 ? mix(0.18, 0.38, (direction.y - 0.14) / 0.08) : 0.18;
-            float cloudEdge = smoothstep(colWidth, colWidth - 0.04, dAz);
-            float cloudTop = smoothstep(topH, topH - 0.02, direction.y);
-            float cloudMask = cloudEdge * cloudTop * uPlains * (1.0 - 0.75 * uOvercast);
-            if (cloudMask > 0.005) {
-              vec3 stormBaseCol = mix(vec3(.12, .08, .14), vec3(.012, .014, .022), uNight);
-              vec3 anvilGlow = mix(vec3(1.0, .68, .35), vec3(.75, .32, .55), clamp(uNight * 1.8, 0.0, 1.0));
-              anvilGlow = mix(anvilGlow, vec3(.35, .20, .45), clamp((uNight - 0.5) * 2.0, 0.0, 1.0));
-              float topCatch = smoothstep(0.12, 0.21, direction.y) * (1.0 - smoothstep(0.7, 0.95, uNight));
-              vec3 stormCol = mix(stormBaseCol, anvilGlow, topCatch * 0.85);
-              if (uHeatLightning > 0.001) {
-                float interior = smoothstep(colWidth - 0.02, 0.0, dAz) * smoothstep(baseH, baseH + 0.04, direction.y) * smoothstep(topH, topH - 0.04, direction.y);
-                stormCol += vec3(0.9, 0.92, 1.0) * uHeatLightning * interior * 1.8;
-              }
-              col = mix(col, stormCol, cloudMask * 0.92);
+          float baseH = 0.004, topH = 0.22;
+          float vv = direction.y;
+          float en = 0.5 * sin(a * 53.0 + vv * 41.0) + 0.3 * sin(a * 127.0 - vv * 83.0) + 0.2 * sin(a * 9.0 + vv * 197.0);
+          float tower = mix(0.13, 0.17, smoothstep(0.03, 0.12, vv));
+          float anvil = mix(tower, 0.36, smoothstep(0.12, 0.19, vv));
+          float colWidth = anvil * (1.0 - 0.55 * smoothstep(0.195, topH + 0.012, vv)) + 0.014 * en;
+          float cloudEdge = smoothstep(colWidth, colWidth - 0.05, dAz);
+          float cloudTop = smoothstep(topH + 0.012 * en, topH - 0.03, vv);
+          float cloudBase = smoothstep(baseH - 0.008, baseH + 0.012, vv);
+          float cloudMask = cloudEdge * cloudTop * cloudBase * uPlains * (1.0 - 0.75 * uOvercast);
+          if (cloudMask > 0.003) {
+            float billow = 0.5 + 0.5 * en;
+            vec3 stormBaseCol = mix(vec3(.12, .08, .14), vec3(.012, .014, .022), uNight) * (0.75 + 0.5 * billow);
+            vec3 anvilGlow = mix(vec3(1.0, .68, .35), vec3(.75, .32, .55), clamp(uNight * 1.8, 0.0, 1.0));
+            anvilGlow = mix(anvilGlow, vec3(.35, .20, .45), clamp((uNight - 0.5) * 2.0, 0.0, 1.0));
+            float topCatch = smoothstep(0.10, 0.21, vv + 0.015 * en) * (1.0 - smoothstep(0.7, 0.95, uNight));
+            vec3 stormCol = mix(stormBaseCol, anvilGlow * (0.8 + 0.3 * billow), topCatch * 0.85);
+            if (uHeatLightning > 0.001) {
+              float interior = smoothstep(colWidth - 0.02, 0.0, dAz) * smoothstep(baseH, baseH + 0.04, vv) * smoothstep(topH, topH - 0.04, vv);
+              stormCol += vec3(0.9, 0.92, 1.0) * uHeatLightning * interior * 1.8;
             }
+            col = mix(col, stormCol, cloudMask * 0.92);
           }
         }
         // A shallow haze band joins the distant silhouettes to the ground fog.
@@ -4804,16 +4809,24 @@ desertMaterial.onBeforeCompile = shader => {
         float steppeRamp = nwH(p.x, 4600.0, 42000.0);
         float pNoise1 = sandNoise(p * 0.008);
         float pNoise2 = sandNoise(p * 0.028);
-        float grassMix = 0.65 * pNoise1 + 0.35 * pNoise2;
-        vec3 straw = mix(vec3(.72, .65, .42), vec3(.78, .60, .34), pNoise2);
-        vec3 greenGold = mix(vec3(.55, .60, .32), vec3(.30, .33, .19), pNoise2 * 0.7);
-        vec3 plainsBase = mix(straw, greenGold, smoothstep(0.25, 0.75, grassMix));
+        float pPatch = sandNoise(p * 0.0017 + 31.0);
+        float grassMix = smoothstep(0.30, 0.70, 0.45 * pNoise1 + 0.25 * pNoise2 + 0.55 * pPatch - 0.12);
+        vec3 straw = mix(vec3(.66, .56, .31), vec3(.74, .54, .26), pNoise2);
+        vec3 greenGold = mix(vec3(.40, .48, .22), vec3(.24, .30, .13), pNoise2 * 0.8);
+        vec3 plainsBase = mix(straw, greenGold, grassMix);
+        // dry bare scuffs and darker swale patches
+        plainsBase = mix(plainsBase, vec3(.55, .46, .30), smoothstep(0.72, 0.9, sandNoise(p * 0.011 + 7.0)) * 0.5);
+        plainsBase *= 0.86 + 0.28 * sandNoise(p * 0.09);
         float dRoad = abs(p.y);
         float vergeMask = smoothstep(3.4, 12.0, dRoad);
         vec3 vergeColor = mix(vec3(.61, .56, .42), plainsBase, vergeMask);
         float gustPhase = (p.x * 0.72 + p.y * 0.69) / 420.0 - uTime * 0.0333;
         float gustStreak = sin(gustPhase * 6.28318) * 0.5 + 0.5;
-        vergeColor = mix(vergeColor * 0.92, vergeColor * 1.08, gustStreak * 0.35);
+        // wind streaks: long ribbons stretched along the gust direction, drifting with the gust field
+        vec2 gd = vec2(0.72, 0.69), gp = vec2(-0.69, 0.72);
+        float ribbon = sandNoise(vec2(dot(p, gd) * 0.006 - uTime * 0.0333 * 2.3, dot(p, gp) * 0.0045));
+        float streak = 0.5 * gustStreak + 0.9 * (ribbon - 0.5);
+        vergeColor = mix(vergeColor * 0.84, vergeColor * 1.16, clamp(streak + 0.5, 0.0, 1.0) * vergeMask + (1.0 - vergeMask) * 0.5);
         vec3 steppeGround = mix(basinGround, vergeColor, 0.5 + 0.5 * steppeRamp);
         natGround = mix(steppeGround, vergeColor, plainsBiome);
       }
@@ -11074,7 +11087,7 @@ function travelStopList(dev) {
   for (const d of ROUTE_CATALOG.desert) list.push({ name: d.fullName, route: d.route, s: d.s, mile: d.mileLabel, gas: GAS_STOP_IDS.has(d.id) });
   if (ROUTE_CATALOG.plains) {
     for (const p of ROUTE_CATALOG.plains) {
-      if (dev || p.kind === 'stop') list.push({ name: p.fullName, route: p.route, s: p.s, mile: p.mileLabel, gas: GAS_STOP_IDS.has(p.id) });
+      list.push({ name: p.fullName, route: p.route, s: p.s, mile: p.mileLabel, gas: GAS_STOP_IDS.has(p.id) });
     }
   }
   for (const n of ROUTE_CATALOG.northwest) list.push({ name: n.name, route: n.route, s: n.s, mile: 'KM ' + n.km.toFixed(1) });
@@ -11458,6 +11471,7 @@ Nt.add(harvestLampLight);
 
 // Interactive state variables
 let harvestLampOn = true;
+let harvestSignFace = null;
 let plainsSpeakerHung = false;
 let harvestSwingAngle = 0, harvestSwingVel = 0;
 let windmillAngle = 0;
@@ -11743,11 +11757,26 @@ function makeCylinderParts(rTop, rBot, height, segs, role, opts = {}) {
     const a = -Math.PI * 0.45 + (i / 10) * Math.PI * 0.9;
     moonPts.push([1.1 * Math.cos(a), 1.1 * Math.sin(a)]);
   }
-  add('harvestNeonRed', { ...tubeGeom(moonPts.map(p => [p[0] - 1.4, p[1], 0.3]), 0.04, 4, false), matrix: matTranslate(px, py + 7.5, pz) });
   // Script neon tubes: "HARVEST MOON"
-  add('harvestNeonRed', boxPart(px + 0.4, py + 7.8, pz + 0.3, 3.2, 0.55, 0.08));
   // Cyan neon accent underline: "DRIVE-IN"
-  add('harvestNeonCyan', boxPart(px + 0.4, py + 6.9, pz + 0.3, 2.6, 0.32, 0.08));
+  // Painted sign face: crescent, script and underline in glowing tube colours on a dark cabinet. The
+  // emissive map is the same canvas, so only the tubes light up; intensity follows the flicker each frame.
+  harvestSignFace = paintedSurface(5.0, 2.2, (ctx, w, h) => {
+    ctx.fillStyle = '#1a0b0e'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#ff3a2e'; ctx.shadowColor = '#ff2418'; ctx.shadowBlur = 16; ctx.lineCap = 'round';
+    ctx.lineWidth = 9; ctx.strokeRect(22, 22, w - 44, h - 44);
+    // crescent moon
+    ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(190, h * .5, 130, -1.25, 1.25, false); ctx.stroke();
+    ctx.beginPath(); ctx.arc(235, h * .5, 118, 1.2, -1.2, true); ctx.stroke();
+    // script
+    ctx.fillStyle = '#ff4a3c'; ctx.shadowBlur = 20; ctx.textAlign = 'center';
+    ctx.font = 'italic bold 128px "Brush Script MT","Segoe Script","Snell Roundhand",cursive';
+    ctx.fillText('Harvest', 620, h * .43);
+    ctx.fillText('Moon', 640, h * .74);
+    ctx.fillStyle = '#35d8ff'; ctx.shadowColor = '#18c8ff'; ctx.shadowBlur = 12;
+    ctx.font = 'bold 44px Arial,sans-serif'; ctx.fillText('DRIVE-IN', 850, h * .90);
+  }, matMul(matTranslate(px, py + 7.5, pz + 0.29), matIdentity()),
+  { width: 1024, height: 450, emissive: 0xffffff, intensity: 0.6, name: 'Harvest Moon sign face' });
   Dt(px - 2.2, pz - 0.4, px + 2.2, pz + 0.4, py, py + 9.5);
 
   // -------------------------------------------------------------
@@ -13919,6 +13948,7 @@ terrainWetnessUniform.value = Math.max(0, Math.min(1, wetRegion * (0.45 + 0.35 *
 
 Xm.material.uniforms.uNight.value = uNight;
 Xm.material.uniforms.uDay.value = uDay;
+grassMat.color.setScalar(.34 + .66 * uDay);
 grassMat.emissive.setRGB(.13*uDay+.008, .11*uDay+.007, .06*uDay+.004);  // Lambert tufts read too dark in daylight; fade the lift out at dusk and night
 Xm.material.uniforms.uOvercast.value = nwCloud;
 Xm.material.uniforms.uForestSkyline.value = nwBiome;
@@ -14074,6 +14104,7 @@ let hwfk = 1 + .007 * Math.sin(t * 1.1 + 0.4);
 if(harvestSignLight) harvestSignLight.intensity = 12 * hfl;
 if(harvestCyanLight) harvestCyanLight.intensity = 3.8 * hfl;
 if(harvestLampLight) harvestLampLight.intensity = harvestLampOn ? 8.5 * hwfk : 0;
+if(harvestSignFace) harvestSignFace.material.emissiveIntensity = .35 + 1.9 * hfl;
 if(ROLE_MATS.harvestNeonRed) ROLE_MATS.harvestNeonRed.emissiveIntensity = 0.5 + 1.8 * hfl;
 if(ROLE_MATS.harvestNeonCyan) ROLE_MATS.harvestNeonCyan.emissiveIntensity = 0.4 + 1.4 * hfl;
 if(ROLE_MATS.harvestLampWarm) ROLE_MATS.harvestLampWarm.emissiveIntensity = harvestLampOn ? 1.1 * hwfk : 0.05;
