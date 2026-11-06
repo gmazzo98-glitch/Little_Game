@@ -19,6 +19,10 @@ The playable branch is [`vibe/neon-gas-voxel-f660eb`](https://github.com/gmazzo9
 - Keep the repository small: the playable file, project documentation, this contributor guide, and the existing concept illustration. Selected authoring sources, license records, or a reproducible preparation script are allowed only when genuinely needed for an implemented asset; see `ASSET_GUIDE.md`. Verification can use temporary files outside the repository.
 - Preserve the bundled Three.js code and license. The game begins at `function Vm(i)` with `var pn=Vm(1966)` inside the existing IIFE. The license notice is at the **end** of the script, not before the game. Locate these by structure if names change.
 
+## User-requested exception: the saucer and the asteroid outpost
+
+The user asked for a hidden player-flyable saucer in the desert and, above the atmosphere, an asteroid outpost (landing strip, fuel stop, food truck, motel) lit in neon. This is a deliberate exception to "no other buildings" and the quiet-highway rule. Keep it contained: the ground game stays as written, the outpost exists only in space mode, and the saucer stays a single parked object until boarded. See the 2026-11-06 record in [ROADMAP.md](ROADMAP.md).
+
 ## Choose work from the roadmap
 
 1. Start with the earliest unfinished dependency. G0 selected the painterly direction; finish G1/G2 visual quality and G3 verification. Sky effects, sound, and micro-life wait until the visual foundation passes.

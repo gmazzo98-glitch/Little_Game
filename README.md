@@ -39,6 +39,10 @@ While stopped, use **Open glovebox** on the passenger side. Aim at the folded pa
 
 [See the coupe's cabin at night](captures/coupe-cabin.jpg).
 
+## A little saucer in the dunes
+
+There is something parked about 90 m west of Sunset Service, off the road, with a lamp lit in its cabin. Walk up to the side hatch and press **E**. Once aboard, the mouse points the craft, **W/S/A/D** fly along your view, **Space** climbs, **C** descends, and **1–6** (or the mouse wheel) change speed from a 8 m/s drift to 9,000 m/s. Climb past roughly 3 km and the sky goes black; look for the asteroid beside the planet and land on its runway. **E** at a pump refuels, **F** or **E** steps out when landed.
+
 ## Development direction
 
 **The graphics are a prototype. The next work is the graphics foundation, before additional atmosphere features.** More stars, particles, and audio cannot substitute for convincing station silhouettes, an expansive empty horizon, deliberate materials, and believable neon lighting.

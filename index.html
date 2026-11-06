@@ -6777,7 +6777,7 @@ function breakSkidMarks() {
   lastSkidLeft = null;
   lastSkidRight = null;
 }
-const _skidL = new Ut(), _skidR = new Ut();
+const _skidL = new P(), _skidR = new P();
 
 const wheelGroups=[];
 const frontPivots=[];
@@ -14192,7 +14192,7 @@ const localLightGroups = [
 // Cn Box, lr Sphere, ba Plane, or Points, Qi PointsMaterial, ar InstancedMesh,
 // rt ShaderMaterial, qt Texture.
 // ============================================================================
-const UFO_HOME = {x: -268, z: 150};
+const UFO_HOME = {x: -72, z: 48};
 const UFO_TIERS = [8, 35, 140, 600, 2500, 9000];
 const UFO_TIER_NAMES = ['DRIFT', 'CRUISE', 'FAST', 'HYPER', 'WARP', 'LUDICROUS'];
 const SP = {ex: UFO_HOME.x, ez: UFO_HOME.z, earthR: 9000, earthY: -9900,
@@ -14285,10 +14285,13 @@ function ufoSign(parent, text, w, h, color, x, y, z, ry = 0, sub = '') {
     c.strokeStyle = color; c.lineWidth = 8; c.shadowColor = color; c.shadowBlur = 22;
     c.strokeRect(14, 14, cw - 28, ch - 28);
     c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.shadowBlur = 26; c.font = 'bold ' + Math.round(ch * (sub ? .46 : .56)) + 'px "Arial Black",Impact,sans-serif';
+    let fs0 = Math.round(ch * (sub ? .46 : .56));
+    c.font = 'bold ' + fs0 + 'px "Arial Black",Impact,sans-serif';
+    const tw = c.measureText(text).width; if (tw > cw * .8) fs0 = Math.floor(fs0 * cw * .8 / tw);
+    c.shadowBlur = 26; c.font = 'bold ' + fs0 + 'px "Arial Black",Impact,sans-serif';
     c.fillStyle = color; c.fillText(text, cw / 2, ch * (sub ? .4 : .52));
     c.shadowBlur = 8; c.fillStyle = '#fff'; c.fillText(text, cw / 2, ch * (sub ? .4 : .52));
-    if (sub) { c.shadowBlur = 14; c.fillStyle = '#ffe7a8'; c.font = 'bold ' + Math.round(ch * .18) + 'px Arial,sans-serif'; c.fillText(sub, cw / 2, ch * .78); }
+    if (sub) { c.shadowBlur = 14; c.fillStyle = '#ffe7a8'; let f2 = Math.round(ch * .18); c.font = 'bold ' + f2 + 'px Arial,sans-serif'; const w2 = c.measureText(sub).width; if (w2 > cw * .86) { f2 = Math.floor(f2 * cw * .86 / w2); c.font = 'bold ' + f2 + 'px Arial,sans-serif'; } c.fillText(sub, cw / 2, ch * .78); }
   });
   const m = new dt(new ba(w, h), new wi({map: tex, side: 2, fog: false}));
   m.position.set(x, y, z); m.rotation.y = ry; parent.add(m); return m;
@@ -14300,7 +14303,7 @@ const ufoM = {
   hullDark: new ji({color: 0x56706a, roughness: .62, metalness: .2, emissive: 0x15221f, emissiveIntensity: .8}),
   patch: new ji({color: 0xc9783b, roughness: .6, metalness: .3, emissive: 0x2a1408, emissiveIntensity: .5}),
   trim: new ji({color: 0xd2dad2, roughness: .4, metalness: .25, emissive: 0x2a3030, emissiveIntensity: .6}),
-  glass: new wi({color: 0xd6fbff, transparent: true, opacity: .07, depthWrite: false, side: 1, fog: false}),
+  glass: new wi({color: 0xd6fbff, transparent: true, opacity: .022, depthWrite: false, side: 1, fog: false}),
   floor: new Lm({color: 0x4c3428}),
   seat: new ji({color: 0xb4552f, roughness: .85, emissive: 0x2a0f06, emissiveIntensity: .5}),
   seatDark: new ji({color: 0x5b2d1f, roughness: .9}),
@@ -14377,10 +14380,10 @@ const ufoBlink = [], ufoRimBulbs = [], ufoFlames = [];
   // Bubble canopy and its ribs.
   const dome = ufoAdd(ufoCabin, new lr(1.35, 36, 20, 0, Math.PI * 2, 0, Math.PI / 2), ufoM.glass, 0, .4, -.1);
   dome.scale.set(1, 1.1, 1.1);
-  for (let i = 0; i < 6; i++) {
-    const a = i / 6 * Math.PI * 2, pts = [];
+  for (const a of [0, Math.PI / 2, Math.PI]) {
+    const pts = [];
     for (let k = 0; k <= 12; k++) { const e = k / 12 * Math.PI / 2; pts.push([Math.cos(a) * Math.cos(e) * 1.36, .4 + Math.sin(e) * 1.49, -.1 + Math.sin(a) * Math.cos(e) * 1.5]); }
-    ufoAdd(ufoCabin, ufoTubeGeo(pts, .016, 5), ufoM.trim);
+    ufoAdd(ufoCabin, ufoTubeGeo(pts, .011, 5), ufoM.trim);
   }
   ufoAdd(ufoCabin, ufoTubeGeo(ufoCircle(0, .42, -.1, 1.36, 'y', 36), .05, 6, true), ufoM.trim);
 
@@ -14411,15 +14414,16 @@ const ufoBlink = [], ufoRimBulbs = [], ufoFlames = [];
   ufoBox(ufoCabin, .06, .06, .06, ufoM.dice, .62, 1.54, -.68).rotation.set(.2, .3, .5);
   ufoAdd(ufoCabin, ufoTubeGeo([[-.4, 1.86, -.3], [-.4, 1.62, -.3]], .006, 4), ufoM.trim);
   ufoBall(ufoCabin, .1, ufoM.warm, -.4, 1.56, -.3, 1, 1.15, 1);
-  ufoBall(ufoCabin, .2, new wi({color: 0xffb25a, transparent: true, opacity: .16, blending: 2, depthWrite: false}), -.4, 1.56, -.3);
+  ufoBall(ufoCabin, .15, new wi({color: 0xffb25a, transparent: true, opacity: .09, blending: 2, depthWrite: false}), -.4, 1.56, -.3);
   for (let i = 0; i < 26; i++) {
     const a = i / 26 * Math.PI * 2, sag = .1 * Math.abs(Math.sin(i / 26 * Math.PI * 6));
     ufoBall(ufoCabin, .028, [ufoM.warm, ufoM.pink, ufoM.cyan, ufoM.hot][i % 4], Math.cos(a) * 1.15, 1.08 - sag, -.1 + Math.sin(a) * 1.22);
   }
   // Warm amber lamp, console glow, magenta underglow, engine light.
+  ufoAdd(ufoCabin, new lr(1.2, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), new wi({color: 0xffa550, transparent: true, opacity: .035, blending: 2, depthWrite: false, side: 1, fog: false}), 0, .45, -.1).scale.set(1, 1.05, 1.1);
   const lamp = new Pn(0xffb05a, 7.5, 9, 1.7); lamp.position.set(-.4, 1.56, -.3); ufoCabin.add(lamp);
   const glow = new Pn(0x62ffd8, 1.0, 3.4, 2); glow.position.set(0, 1.0, -.7); ufoCabin.add(glow);
-  const under2 = new Pn(0xff4fd8, 4.5, 11, 2); under2.position.set(0, -1.0, 0); ufoHull.add(under2);
+  const under2 = new Pn(0xff4fd8, 2.2, 8, 2); under2.position.set(0, -1.0, 0); ufoHull.add(under2);
   const eng2 = new Pn(0x68f0ff, 0, 16, 2); eng2.position.set(0, .05, 3.2); ufoHull.add(eng2);
   ufoShip.userData.engineLight = eng2;
 })();
@@ -14428,7 +14432,7 @@ Nt.add(ufoShip);
 // ---- game state --------------------------------------------------------------
 var ufoSpace = ufoSpace || false;
 const ufo = {flying: false, landed: true, vel: new P(), tier: 1, fuel: 100, speed: 0, braking: false,
-  yaw: -2.2, note: '', noteUntil: 0, throttle: 0, dockedNote: 0};
+  yaw: Math.PI / 2, note: '', noteUntil: 0, throttle: 0, dockedNote: 0};
 const ufoCollider = {minX: 1e9, maxX: 1e9, minZ: 1e9, maxZ: 1e9, minY: 0, maxY: 0};
 Mc.push(ufoCollider);
 function ufoNote(text, secs = 4) { ufo.note = text; ufo.noteUntil = eg.elapsedTime + secs; }
@@ -14440,7 +14444,7 @@ function ufoGroundAt(x, z) {
 function ufoHome() {
   const g = os(UFO_HOME.x, UFO_HOME.z);
   ufoShip.position.set(UFO_HOME.x, g + .97, UFO_HOME.z);
-  ufo.yaw = -2.2; ufoShip.rotation.set(0, ufo.yaw, 0);
+  ufo.yaw = Math.PI / 2; ufoShip.rotation.set(0, ufo.yaw, 0);
   ufo.vel.set(0, 0, 0); ufo.speed = 0; ufo.landed = true;
 }
 ufoHome();
@@ -14456,14 +14460,14 @@ function spBuild() {
   if (spBuilt) return; spBuilt = true;
   const rnd = Vm(5150);
   // Nebula dome.
-  const neb = new dt(new lr(100000, 32, 20), new rt({side: 1, depthWrite: false, depthTest: false, fog: false,
+  const neb = new dt(new lr(100000, 32, 20), new rt({side: 1, depthWrite: false, depthTest: true, fog: false,
     vertexShader: 'varying vec3 vD; void main(){ vD=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
     fragmentShader: `varying vec3 vD;
       float h(vec3 p){ p=fract(p*.3183099+.1); p*=17.; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
       float n(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
         return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),
                    mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x),mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x),f.y),f.z); }
-      float fbm(vec3 p){ float s=0., a=.5; for(int k=0;k<5;k++){ s+=a*n(p); p=p*2.03+7.1; a*=.5; } return s; }
+      float fbm(vec3 p){ float s=0., a=.5; for(int k=0;k<3;k++){ s+=a*n(p); p=p*2.03+7.1; a*=.5; } return s*1.14; }
       void main(){ vec3 d=normalize(vD);
         float a=fbm(d*2.2+3.), b=fbm(d*3.1+19.), c=fbm(d*1.4-8.);
         vec3 col=vec3(.008,.008,.022);
@@ -14471,7 +14475,7 @@ function spBuild() {
         col+=vec3(.05,.42,.62)*smoothstep(.52,.9,b)*.38;
         col+=vec3(.9,.25,.28)*smoothstep(.62,.95,c)*.2;
         gl_FragColor=vec4(col,1.); }`}));
-  neb.renderOrder = -100; neb.frustumCulled = false; spFollow.add(neb);
+  neb.renderOrder = 5; neb.frustumCulled = false; spFollow.add(neb);
   // Dense coloured stars.
   const sp = new Float32Array(6000 * 3), sc = new Float32Array(6000 * 3);
   for (let i = 0; i < 6000; i++) {
@@ -14482,40 +14486,47 @@ function spBuild() {
   }
   const sg = new It(); sg.setAttribute('position', new Et(sp, 3)); sg.setAttribute('color', new Et(sc, 3));
   const stars = new or(sg, new Qi({size: 2.4, sizeAttenuation: false, vertexColors: true, fog: false, depthWrite: false}));
-  stars.frustumCulled = false; stars.renderOrder = -90; spFollow.add(stars);
+  stars.frustumCulled = false; stars.renderOrder = 6; spFollow.add(stars);
   // The sun.
   const sunP = spSun.clone().multiplyScalar(60000);
   ufoAdd(spFollow, new lr(560, 20, 12), new wi({color: 0xfff1cf, fog: false}), sunP.x, sunP.y, sunP.z);
   ufoAdd(spFollow, new lr(1300, 20, 12), new wi({color: 0xffc27a, transparent: true, opacity: .22, blending: 2, depthWrite: false, fog: false}), sunP.x, sunP.y, sunP.z);
 
-  // Earth, painted into the vertices: continents, ice caps, clouds and city lights on the night side.
-  const eg2 = new lr(1, 160, 80), ep = eg2.attributes.position, ec = new Float32Array(ep.count * 3);
-  const mixc = (a, b, t) => a + (b - a) * t;
-  for (let i = 0; i < ep.count; i++) {
-    const x = ep.getX(i), y = ep.getY(i), z = ep.getZ(i);
-    const h = .5 * Hm(x * 1.7 + 3.1, y * 1.7 + z * 1.1 + 7.7) + .3 * Hm(y * 3.4 + z * 2.1 + 1.3, x * 3.4 + 5.5) + .2 * Hm(z * 7 + x * 4, y * 7 + 2);
-    const land = ufoSmooth(.5, .54, h), ice = ufoSmooth(.8, .9, Math.abs(y) + (h - .5) * .25);
-    const cl = ufoSmooth(.57, .75, .6 * Hm(x * 5 + y * 3 + 11, z * 5 - y * 2 + 4) + .4 * Hm(x * 11 + z * 7, y * 11 + 5)) * .85;
-    let r = mixc(.04, .1, ufoSmooth(.3, .5, h)), g = mixc(.16, .42, ufoSmooth(.3, .5, h)), b = mixc(.4, .62, ufoSmooth(.3, .5, h));
-    const dry = ufoSmooth(.3, .1, Math.abs(y)) * ufoSmooth(.45, .7, Hm(x * 2 + 9, z * 2 + 4));
-    const lr2 = mixc(.2, .62, dry), lg = mixc(.44, .5, dry), lb = mixc(.2, .3, dry);
-    r = mixc(r, lr2, land); g = mixc(g, lg, land); b = mixc(b, lb, land);
-    r = mixc(r, .95, ice); g = mixc(g, .97, ice); b = mixc(b, 1, ice);
-    r = mixc(r, .96, cl); g = mixc(g, .97, cl); b = mixc(b, .98, cl);
-    const lit = x * spSun.x + y * spSun.y + z * spSun.z, day = ufoSmooth(-.12, .3, lit);
-    const city = (1 - day) * land * (1 - cl) * ufoSmooth(.66, .78, Hm(x * 40 + 5, z * 40 + y * 40)) * .9;
-    const warm = ufoSmooth(-.1, .12, lit) * (1 - ufoSmooth(.12, .35, lit)) * .18;
-    ec[i * 3] = r * (.05 + .95 * day) + city + warm; ec[i * 3 + 1] = g * (.06 + .94 * day) + city * .7 + warm * .5; ec[i * 3 + 2] = b * (.1 + .9 * day) + city * .25;
-  }
-  eg2.setAttribute('color', new Et(ec, 3));
-  const earthMat = new wi({vertexColors: true, fog: false, transparent: true, opacity: 0});
-  const earth = new dt(eg2, earthMat); earth.scale.setScalar(SP.earthR);
+  // Earth: a procedural planet in the fragment shader (continents, ice, clouds, terminator, city lights).
+  // The planet is tipped so the view from above is mid-latitude, and lit by the fixed sun direction.
+  const eg2 = new lr(1, 96, 48);
+  const earthMat = new rt({transparent: true, depthWrite: true, fog: false, uniforms: {uA: {value: 0}, uSun: {value: spSun.clone()}},
+    vertexShader: 'varying vec3 vP; void main(){ vP=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader: `varying vec3 vP; uniform vec3 uSun; uniform float uA;
+      float h3(vec3 p){ p=fract(p*.3183099+.1); p*=17.; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+      float n3(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
+        return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),
+                   mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z); }
+      float fb(vec3 p){ float s=0., a=.5; for(int k=0;k<4;k++){ s+=a*n3(p); p=p*2.02+3.7; a*=.5; } return s*1.07; }
+      void main(){
+        vec3 n=normalize(vP);
+        vec3 q=vec3(n.x, n.y*.45-n.z*.89, n.y*.89+n.z*.45);
+        float h=fb(q*2.6+4.);
+        float land=smoothstep(.5,.54,h);
+        float lat=abs(q.y);
+        float ice=smoothstep(.78,.88,lat+(h-.5)*.25);
+        float cl=smoothstep(.5,.72,fb(q*4.5+vec3(11.)))*.82;
+        vec3 ocean=mix(vec3(.03,.16,.45),vec3(.09,.42,.7),smoothstep(.35,.5,h));
+        vec3 dry=mix(vec3(.16,.42,.13),vec3(.7,.56,.32),smoothstep(.34,.08,lat)*smoothstep(.4,.62,h*1.2));
+        vec3 c=mix(ocean,dry,land); c=mix(c,vec3(.94,.96,1.),ice); c=mix(c,vec3(.97),cl);
+        float lit=dot(n,uSun), day=smoothstep(-.12,.3,lit);
+        vec3 city=vec3(0.);
+        if(day<.5 && land>.5) city=vec3(1.,.72,.34)*(1.-day)*(1.-cl)*smoothstep(.62,.75,n3(q*70.))*.9;
+        float term=smoothstep(-.1,.12,lit)*(1.-smoothstep(.12,.35,lit))*.16;
+        vec3 col=c*(.07+.93*day)+city+vec3(.9,.45,.2)*term;
+        gl_FragColor=vec4(col,uA); }`});
+  const earth = new dt(eg2, earthMat); earth.scale.setScalar(SP.earthR); earth.renderOrder = 1;
   earth.position.set(SP.ex, SP.earthY, SP.ez); spGroup.add(earth);
   const atmoMat = new rt({side: 1, transparent: true, blending: 2, depthWrite: false, fog: false, uniforms: {uA: {value: 0}},
     vertexShader: 'varying vec3 vN; void main(){ vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
-    fragmentShader: 'varying vec3 vN; uniform float uA; void main(){ float i=pow(max(0.,.74-dot(vN,vec3(0.,0.,1.))),3.); gl_FragColor=vec4(.35,.62,1.,1.)*i*1.6*uA; }'});
+    fragmentShader: 'varying vec3 vN; uniform float uA; void main(){ float d=-dot(vN,vec3(0.,0.,1.)); float i=pow(clamp(1.0-d/.4,0.,1.),2.)*step(d,.4); gl_FragColor=vec4(.25,.5,1.,1.)*i*.55*uA; }'});
   const atmo = new dt(new lr(1.045, 96, 48), atmoMat); atmo.scale.setScalar(SP.earthR);
-  atmo.position.copy(earth.position); spGroup.add(atmo);
+  atmo.position.copy(earth.position); atmo.renderOrder = 2; spGroup.add(atmo);
   spGroup.userData.earthMat = earthMat; spGroup.userData.atmoMat = atmoMat;
 
   // ---- the asteroid ----
@@ -14533,7 +14544,7 @@ function spBuild() {
     ac[i * 3] = (.34 + .12 * t + .08 * low) * v; ac[i * 3 + 1] = (.27 + .08 * t) * v; ac[i * 3 + 2] = (.4 + .1 * t + .12 * low) * v;
   }
   ag.setAttribute('color', new Et(ac, 3)); ag.computeVertexNormals();
-  ufoAdd(A, ag, new Lm({vertexColors: true, emissive: 0x1a1226}));
+  ufoAdd(A, ag, new ji({vertexColors: true, roughness: 1, metalness: 0, emissive: 0x2a1c3a, emissiveIntensity: .55}));
   // Deck skirt so the plateau reads as a cut slab, and the tarmac disc itself.
   const skirt = ufoAdd(A, ufoLatheGeo([[SP.plR - 2, SP.cut - 70], [SP.plR, SP.cut - 60], [SP.plR, SP.cut - 2], [SP.plR + .5, SP.cut]], 72), new Lm({color: 0x4a3f55, emissive: 0x1a1426}), 0, 0, 0);
   skirt.material.side = 2;
@@ -14549,7 +14560,7 @@ function spBuild() {
     const a = 1 + (r - 1) * SS + s, b = 1 + (r - 1) * SS + (s + 1) % SS, c = 1 + r * SS + s, d = 1 + r * SS + (s + 1) % SS;
     didx.push(a, b, c, b, d, c);
   }
-  const deck = ufoAdd(A, ufoGeo(dpos, didx, duv), new Lm({map: pTex, emissive: 0xffffff, emissiveMap: pTex, emissiveIntensity: .6}), 0, SP.cut, 0);
+  const deck = ufoAdd(A, ufoGeo(dpos, didx, duv), new ji({map: pTex, roughness: 1, metalness: 0, emissive: 0xffffff, emissiveMap: pTex, emissiveIntensity: .7}), 0, SP.cut, 0);
   deck.geometry.computeVertexNormals();
   spGroup.userData.deck = deck;
   spBuildOutpost(spGroup, rnd);
@@ -14574,7 +14585,7 @@ function spPaintDeck(c, W, H) {
   const hexPatch = (x0, z0, x1, z1, col) => {
     c.save(); c.beginPath(); c.rect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S); c.clip();
     c.fillStyle = 'rgba(70,56,100,.55)'; c.fillRect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S);
-    c.strokeStyle = col; c.lineWidth = 1.5; c.globalAlpha = .45;
+    c.strokeStyle = col; c.lineWidth = 1.2; c.globalAlpha = .26;
     const q = 2.6 * S;
     for (let yy = Z(z0); yy < Z(z1); yy += q * .87) for (let xx = X(x0) + ((Math.round(yy / (q * .87)) % 2) ? q / 2 : 0); xx < X(x1); xx += q) {
       c.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; c.lineTo(xx + Math.cos(a) * q * .55, yy + Math.sin(a) * q * .55); } c.closePath(); c.stroke();
@@ -14611,12 +14622,12 @@ function spBuildOutpost(parent, rnd) {
   const O = new xi(); O.position.set(SP.ax, SP.py, SP.az); parent.add(O);
   const lights = [];
   const sm = {
-    mint: new ji({color: 0x7fe8d0, roughness: .45, metalness: .3, emissive: 0x143a34, emissiveIntensity: .6}),
-    plum: new ji({color: 0x5a3a86, roughness: .5, metalness: .3, emissive: 0x1a0f2e, emissiveIntensity: .7}),
-    teal: new ji({color: 0x2fb5b5, roughness: .45, metalness: .35, emissive: 0x0b3a3a, emissiveIntensity: .7}),
+    mint: new ji({color: 0x8ff0d8, roughness: .45, metalness: .15, emissive: 0x1f5a50, emissiveIntensity: .8}),
+    plum: new ji({color: 0x8a5cc0, roughness: .5, metalness: .15, emissive: 0x4a2a80, emissiveIntensity: .95}),
+    teal: new ji({color: 0x3fd0cc, roughness: .45, metalness: .15, emissive: 0x126a66, emissiveIntensity: .9}),
     cream: new ji({color: 0xf0e2c4, roughness: .55, emissive: 0x3a3220, emissiveIntensity: .5}),
     dark: new ji({color: 0x241d33, roughness: .6, metalness: .3, emissive: 0x0c0916, emissiveIntensity: .8}),
-    orange: new ji({color: 0xff8a3c, roughness: .5, metalness: .2, emissive: 0x3a1a08, emissiveIntensity: .7}),
+    orange: new ji({color: 0xff9a4c, roughness: .5, metalness: .1, emissive: 0x7a3010, emissiveIntensity: .9}),
     wl: new wi({color: 0xffd9a0}),
   };
   const col = (c, i, d, x, y, z) => { const l = new Pn(c, i, d, 2); l.position.set(x, y, z); O.add(l); lights.push(l); return l; };
@@ -14709,7 +14720,7 @@ function spBuildOutpost(parent, rnd) {
   ufoNeon(M, [[-10, 3.7, 10], [-5, 3.7, 10]], 0xff4fd8, .08);
   Dt(SP.ax + 80 - 4.4, SP.az - 14 - 4.4, SP.ax + 80 + 4.4, SP.az - 14 + 4.4, SP.py, SP.py + 28);
   Dt(SP.ax + 80 - 11.4, SP.az - 14 + 2.8, SP.ax + 80 - 3.6, SP.az - 14 + 10.2, SP.py, SP.py + 4);
-  col(0xc06bff, 42, 85, 80, 12, -14); col(0xff4fd8, 26, 50, 80, 29, -14); col(0xffa23a, 16, 30, 72, 3, -2);
+  col(0xc06bff, 80, 110, 80, 12, -14); col(0xff4fd8, 40, 70, 80, 29, -14); col(0xffa23a, 22, 36, 72, 3, -2); col(0x4df3ff, 30, 60, 90, 6, 4);
   spBell = new P(SP.ax + 72.5, SP.py, SP.az - 4);
 
   // ---------- runway lights and the radio mast ----------
@@ -14745,7 +14756,8 @@ function spBuildOutpost(parent, rnd) {
   }
   spLights.push({position: new P(SP.ax, SP.py, SP.az), range: 520, cull: 1100, lights, space: 'only'});
 }
-localLightGroups.push({position: ufoShip.position, range: 60, cull: 140, lights: collectLocalLights(ufoShip), space: 'both'});
+const ufoLightGroup = {position: ufoShip.position, range: 60, cull: 75, lights: collectLocalLights(ufoShip), space: 'both'};
+localLightGroups.push(ufoLightGroup);
 
 // ---- interaction -------------------------------------------------------------
 function ufoBoard() {
@@ -14875,6 +14887,13 @@ function ufoAudioStop() {
   a.g.gain.setTargetAtTime(0, c.currentTime, .3); a.ng.gain.setTargetAtTime(0, c.currentTime, .3);
   setTimeout(() => { try { a.o1.stop(); a.o2.stop(); a.ns.stop(); } catch (e) {} }, 1500);
 }
+// Called last in the frame so it overrides the desert's own wind and insect levels: there is no air up here.
+function ufoLateAudio() {
+  if (!ufoSpace || !audio.ctx) return;
+  const t = audio.ctx.currentTime;
+  if (audio.windGain) audio.windGain.gain.setTargetAtTime(.0001, t, .15);
+  if (audio.insectGain) audio.insectGain.gain.setTargetAtTime(.0001, t, .15);
+}
 function ufoAudioUpdate() {
   if (!ufoAud) return;
   const c = audio.ctx, t = c.currentTime, f = Math.min(1, ufo.speed / 2500);
@@ -14885,13 +14904,13 @@ function ufoAudioUpdate() {
 }
 
 // ---- stars-and-dust field that sells speed -----------------------------------------
-const ufoDustN = 420, ufoDustBase = new Float32Array(ufoDustN * 3), ufoDustPos = new Float32Array(ufoDustN * 3);
+const ufoDustN = 240, ufoDustBase = new Float32Array(ufoDustN * 3), ufoDustPos = new Float32Array(ufoDustN * 3);
 (function () { const r = Vm(808); for (let i = 0; i < ufoDustN * 3; i++) ufoDustBase[i] = r(); })();
 const ufoDustGeo = new It(); ufoDustGeo.setAttribute('position', new Et(ufoDustPos, 3));
-const ufoDust = new or(ufoDustGeo, new Qi({color: 0xcfe9ff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: .55, fog: false, depthWrite: false}));
+const ufoDust = new or(ufoDustGeo, new Qi({color: 0xcfe9ff, size: 1.1, sizeAttenuation: false, transparent: true, opacity: .4, fog: false, depthWrite: false}));
 ufoDust.frustumCulled = false; ufoDust.visible = false; Nt.add(ufoDust);
 function ufoUpdateDust() {
-  const show = ufo.flying && (ufoSpace || Nn.position.y > 1800) && ufo.speed > 6;
+  const show = ufo.flying && (ufoSpace || Nn.position.y > 1800) && ufo.speed > 40;
   ufoDust.visible = show; if (!show) return;
   const L = 60 + Math.min(400, ufo.speed * .06), c = Nn.position;
   for (let i = 0; i < ufoDustN; i++) for (let a = 0; a < 3; a++) {
@@ -14924,6 +14943,7 @@ function ufoFrame(dt, t) {
   if (!ufo.flying && !ufoSpace && p.y > 3000) ufoHome();
   // Space mode with hysteresis, keyed to where the player's eyes are.
   const fl = ufo.flying;
+  ufoLightGroup.cull = fl ? 800 : 75;
   if (camY > 1800 && fl) spBuild();
   ufoSetSpace(ufoSpace ? camY > 3100 : camY > 3200);
   if (fl && !ufoSpace) {
@@ -14952,7 +14972,7 @@ function ufoFrame(dt, t) {
     Qt.position.copy(Qt.target.position).addScaledVector(spSun, 60);
     hhem.color.setRGB(.25, .22, .45); hhem.groundColor.setRGB(.12, .08, .2); hhem.intensity = .5;
     const fadeIn = ufoSmooth(3300, 5200, camY);
-    spGroup.userData.earthMat.opacity = fadeIn; spGroup.userData.atmoMat.uniforms.uA.value = fadeIn;
+    spGroup.userData.earthMat.uniforms.uA.value = fadeIn; spGroup.userData.earthMat.transparent = fadeIn < .99; spGroup.userData.atmoMat.uniforms.uA.value = fadeIn;
     spGroup.userData.earthMat.visible = fadeIn > .01;
     const pulse = .75 + .25 * Math.sin(t * 2.4);
     for (const b of spNeonPulse) b.scale.setScalar(.85 + .3 * pulse);
@@ -14964,9 +14984,6 @@ function ufoFrame(dt, t) {
       db.mesh.setMatrixAt(i, m.matrix);
     }
     db.mesh.instanceMatrix.needsUpdate = true;
-    const wg = audio.windGain, ig = audio.insectGain;
-    if (audio.ctx && wg) { wg.gain.setTargetAtTime(.0001, audio.ctx.currentTime, .15); }
-    if (audio.ctx && ig) { ig.gain.setTargetAtTime(.0001, audio.ctx.currentTime, .15); }
   }
   // Ship: flame, blink, parked collider, hull tilt.
   const eng = ufoShip.userData.engineLight;
@@ -15667,7 +15684,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
     gasSign.userData.tubeCenter+seed.h+strike*.15+.08*Math.sin(angle*17.3),
     .52+Math.sin(angle)*radius*.5+.10*Math.sin(angle*11.7));
   gasSign.localToWorld(gasMothPoint).toArray(mothPos,mi*3);
-}mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);renderWithInspection()}document.getElementById("app")._game = {
+}mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);ufoLateAudio();renderWithInspection()}document.getElementById("app")._game = {
   ufo, ufoShip, spGroup, SP, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt,
   Nt, Nn, coupe, os, nwRoadZ, nwRoadSlopeZ, nwRoadY, nwSFromX, nwXFromS, carSurfaceAt,
   ROUTE_CATALOG, throughTurnout, sitInCar, leaveCar, setRoadMapOpen, driveCar, groundCoupe, recenterDesert,
