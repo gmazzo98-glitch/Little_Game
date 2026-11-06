@@ -13625,7 +13625,7 @@ document.getElementById('cursor-entry').addEventListener('click',event=>{
 });
 overlay.addEventListener('click',()=>wr.lock());
 wr.addEventListener('lock',()=>setActive(false,true));
-wr.addEventListener('unlock',()=>{ if(!cursorMode && !restModalActive && !settingsModalActive)setActive(false,false); });
+wr.addEventListener('unlock',()=>{ if(!cursorMode && !restModalActive && !settingsModalActive && !travelModalActive)setActive(false,false); });
 document.addEventListener('pointerlockerror',()=>{ if(!active)setActive(true,true); });
 addEventListener('blur',()=>{ for(const key in fn)delete fn[key];drag=null; });
 addEventListener('keydown',event=>{
