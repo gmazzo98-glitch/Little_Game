@@ -128,6 +128,8 @@ The desert is about being exposed to dryness and distance. The Plains are about 
 
 Each entry gives the feeling in one line, what it does to the player, what carries it (light, sound, trace), what it inverts from its neighbour, and a guardrail. None of this is authorization to build. Regions beyond the ones in `index.html` remain reserved ground.
 
+For the structures, interactables, ground traces and sound events that carry each of these moods, see [REGION_FIXTURES.md](REGION_FIXTURES.md).
+
 ### The emotional route in one table
 
 | Region | Feeling | What it misses |

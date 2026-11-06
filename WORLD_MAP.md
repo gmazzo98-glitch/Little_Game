@@ -64,7 +64,7 @@ A single trip from the western sea to the lake is about 178 km, roughly two hour
 
 ## 3. The biomes
 
-Each entry gives the place, what holds it together, and the one destination it would earn. For what each region should make the player *feel*, see "Region moods across the atlas" in [MOOD.md](MOOD.md). Destinations follow the lore rule: only one new visitable place per region, and none is authorized until it is commissioned.
+Each entry gives the place, what holds it together, and the one destination it would earn. For what each region should make the player *feel*, see "Region moods across the atlas" in [MOOD.md](MOOD.md), and for the structures and interactables that carry it, see [REGION_FIXTURES.md](REGION_FIXTURES.md). Destinations follow the lore rule: only one new visitable place per region, and none is authorized until it is commissioned.
 
 ### West
 
