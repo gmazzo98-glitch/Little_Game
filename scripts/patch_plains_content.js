@@ -64,3 +64,4 @@ console.log('Audio init patched.');
 // Write back intermediate to ensure safety
 fs.writeFileSync(indexPath, html);
 console.log('Step 1 complete.');
+

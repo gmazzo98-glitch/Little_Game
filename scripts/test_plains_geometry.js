@@ -37,3 +37,4 @@ console.log('Merged vertices:', merged.pos.length / 3, 'triangles:', merged.idx.
 if (merged.idx.length !== 72) throw new Error('Expected 24 quads = 72 indices');
 
 console.log('Geometry helpers verified!');
+

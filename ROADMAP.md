@@ -553,6 +553,15 @@ For each `index.html` change:
 - **Authentic Counter Room Props:** Furnished the interior with a vintage Hamilton Beach triple-spindle malt/milkshake mixer with fluted stainless cups and jade-green cowl, a 4-well stainless steel crushed fruit & syrup pump rail with porcelain flavor knobs, a countertop glass/chrome straw dispenser, stamped metal napkin dispensers, a vintage mechanical cash register, two heavy timber storage shelves with bulk "CASCADE JOY CONES" cartons and gallon glass syrup jugs, two chrome pedestal red vinyl counter stools, and an electric Westclox wall clock.
 - **Checks:** Inline script extracted and passed `node --check` with 0 errors (965,435 bytes). Zero external runtime dependencies or network requests.
 
+### 2026-11-06c — Pre-load tool case and canvas roll into coupe trunk
+
+- **User Request:** Place the canvas roll and tool case already inside the coupe's trunk rather than starting on the ground near the station.
+- **Change:** Updated `addCargo('tool case', ...)` and `addCargo('canvas roll', ...)` in `index.html` to initialize into trunk `slot: 1` (`[0, 0.53, -2.06]`) and `slot: 2` (`[0.44, 0.53, -2.04]`), alongside the existing tire iron in `slot: 0` (`[-0.44, 0.53, -2.04]`). All three trunk cargo slots now start pre-loaded in the vehicle.
+- **Purpose Audit:**
+  - *Canvas roll:* Resting bedroll/cushion. When carried and sitting on the bench under the station awning (`inspection === 'rest'`), it automatically spreads out beside the seat.
+  - *Tool case:* Atmospheric roadside equipment that can be carried, stowed in the trunk, and placed down anywhere in the world. (Unlike the tire iron, which pries bent bumpers, and the service water can, which refills punctured radiators, the tool case has no required repair gate.)
+- **Verification:** Tested in headless Chrome via CDP (`scripts/test_trunk_cargo.js`). Confirmed `allInTrunk: true`, `toolCaseSlot: 1`, `canvasRollSlot: 2`, `tireIronSlot: 0`. Syntax validated with `node --check` (0 errors).
+
 ### 2026-11-06 — Great Plains region and Harvest Moon Drive-In implementation
 
 - **Scope & Context:** Implemented the Great Plains region (`T` +46 to +84 km, world $x = 46000..84000$) and its sole authorized destination, the **Harvest Moon Drive-In** ($x = 64600, z = -14$, `T` +64.6), as real, playable game code in `index.html` on branch `vibe/neon-gas-voxel-f660eb`.

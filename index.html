@@ -12831,11 +12831,11 @@ addCargo('tool case',{
   wood:[boxPart(0,.085,0,.34,.17,.24)],
   chrome:[boxPart(0,.174,0,.115,.028,.034),boxPart(-.10,.123,-.123,.034,.044,.014),
     boxPart(.10,.123,-.123,.034,.044,.014)]
-},-16.15,-8.55);
+},0,0,1);
 addCargo('canvas roll',{
   ivory:[boxPart(0,.068,0,.31,.136,.20)],
   leather:[boxPart(-.094,.07,0,.025,.14,.206),boxPart(.094,.07,0,.025,.14,.206)]
-},-16.65,-8.42);
+},0,0,2);
 
 function takeCargo(item) {
   if(carriedCargo || heldPump || seated || (item.slot>=0 && !trunkAccessible()))return;
@@ -14143,6 +14143,8 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   carryingBlanket, toggleCabinBlanket,
   get cabinBlanketOpen() { return cabinBlanketOpen; },
   set cabinBlanketOpen(v) { cabinBlanketOpen = v; },
+  cargoItems, takeCargo, stowCargo, trunkAccessible, toggleTrunk,
+  get carriedCargo() { return carriedCargo; },
   get gearState() { return gearState; },
   set gearState(v) { gearState = v; },
   get autoSubGear() { return autoSubGear; },

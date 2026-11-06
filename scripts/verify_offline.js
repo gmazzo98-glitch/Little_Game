@@ -12,3 +12,4 @@ if (netCalls.length > 0) {
 }
 
 console.log('Offline check passed! Zero runtime network requests.');
+

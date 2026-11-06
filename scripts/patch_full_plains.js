@@ -414,3 +414,4 @@ console.log('6. travelStopList and game exports updated.');
 
 fs.writeFileSync(indexPath, html);
 console.log('Full Great Plains integration successfully written to index.html!');
+
