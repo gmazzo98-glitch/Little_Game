@@ -55,6 +55,8 @@ PACIFIC_NORTHWEST.md covers the engineering. This section is the missing emotion
 
 ## Candidate future regions
 
+[WORLD_MAP.md](WORLD_MAP.md) places every region on one map and says how each one connects. Use it with the table below.
+
 Ranked by fit and build cost. Each needs a mood card and a roadmap entry before work starts.
 
 | Biome | Emotional key | Neon payoff | Notes |

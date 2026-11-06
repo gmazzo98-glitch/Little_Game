@@ -214,6 +214,10 @@ For each `index.html` change:
 
 ## Validation and decision record
 
+### 2026-11-06 — World atlas written (documentation only)
+
+- Added [WORLD_MAP.md](WORLD_MAP.md): one map for every region, with the ring and spine layout, kilometre and drive-time tables, hinge devices for each boundary, per-biome climate targets, dependencies on the glovebox map, fast travel, gas and sound, a build order, and open decisions. No change to `index.html`; nothing in it is authorized to build yet. The kilometre and minute figures are plans computed from the coupe's 50 mph reference, not measured drives.
+
 ### 2026-11-06 — Pacific Northwest mood, biome transition and dense forest (local until pushed)
 
 - **Reference reading:** the Olympic and western Cascade accounts agree on what sells the region: marine cloud that sits on the ground, drizzle and standing wet, moss and lichen on bark, nurse logs, sword fern and salal under Douglas fir, western hemlock and red cedar, grey broadleaf alder and maple along water, and a hard rain shadow that turns the east side to ponderosa and sage within a few miles. These were taken from text sources (NPS, regional travel and photography pages), not from viewing photographs.

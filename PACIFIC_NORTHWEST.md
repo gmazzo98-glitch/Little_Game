@@ -1,6 +1,6 @@
 # Pacific Northwest expansion proposal
 
-This is the target brief for the Pacific Northwest region and continuous world clock. The current prototype implements Fern Bend, the connecting road, and the clock. Visual acceptance is open following the user's review. [AESTHETIC.md](AESTHETIC.md) governs mood and lighting, [WORLD_LORE.md](WORLD_LORE.md) describes the existing stops, and [ROADMAP.md](ROADMAP.md) tracks delivery and acceptance. The feasibility review below recommends a tunnel connection and authored regional terrain as the next design to prototype.
+This is the target brief for the Pacific Northwest region and continuous world clock. The current prototype implements Fern Bend, the connecting road, and the clock. Visual acceptance is open following the user's review. [AESTHETIC.md](AESTHETIC.md) governs mood and lighting, [WORLD_LORE.md](WORLD_LORE.md) describes the existing stops, and [ROADMAP.md](ROADMAP.md) tracks delivery and acceptance. [WORLD_MAP.md](WORLD_MAP.md) places this spur in the wider world, including where SR 14 ends at the sea. The feasibility review below recommends a tunnel connection and authored regional terrain as the next design to prototype.
 
 ## Feasibility review — 2026-11-05
 

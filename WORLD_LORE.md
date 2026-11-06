@@ -2,6 +2,8 @@
 
 ## What the game aims for
 
+The long-range plan for the whole map is in [WORLD_MAP.md](WORLD_MAP.md). It is a plan only and does not authorize building anything beyond the current brief.
+
 Neon Gas is a first-person road vignette set on a fictional stretch of Route 66 in 1966. The desert should feel larger than the places people built in it. The pleasure is in finding a warm pool of light after a long dark drive, touching something someone once used, and deciding whether to stay a little longer. Keep the horizon quiet, the colors weathered, and the player alone. The existing one-way descent from dusk to night continues throughout travel, visits, and the return.
 
 This brief authorizes a future expansion beyond Sunset Service. Start with one visitable destination, Cinder Court. It supersedes the single-building rule in the existing art and scope documents only for the motel described here. Keep using [AESTHETIC.md](AESTHETIC.md) for mood and lighting, [ASSET_GUIDE.md](ASSET_GUIDE.md) for modeling and integration, and [ROADMAP.md](ROADMAP.md) for implementation and verification. Cinder Court is now implemented 4.6 km west along the highway (`x = -4600`), and **Starlite Diner & Bar** is implemented 4.6 km east along the highway (`x = +4600`). The antenna below is a separate later proposal.
