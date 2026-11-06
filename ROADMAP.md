@@ -29,7 +29,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 2 — Star field and sky depth | Planned | G3 passed; Phase 1 revalidated |
 | Phase 3 — Neon character | Partial: time-based GAS dips (shared with audio ticks) and Cinder Court sign/lamp shimmer | Phase 2 acceptance; remaining role work |
 | Phase 4 — Procedural audio | Wind, localized neon (Sunset Service, Cinder Court, Starlite Diner), indoor shelter muffling, multi-surface footsteps (sand, asphalt, canopy concrete, linoleum, timber bridge), shelter-aware night insects, 3-speed V8 coupe engine with tire roll and multi-surface grip, highway tar-joint thumps, dual-tone horn, turn-signal relay tick, static/beacon AM radio, and obstruction-aware hum timbre implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
-| Phase 5 — Sparse micro-life | Moths near the GAS sign + under-canopy dust motes implemented (source-level); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
+| Phase 5 — Sparse micro-life | Moths near the GAS sign implemented (source-level); under-canopy dust motes removed on 2026-11-06 at the user's request (they read as fireflies between the pumps); tumbleweed cut as an event risk; acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle refueling (`Pump fuel into coupe`), Cinder Court show room, Starlite Diner & Bar, full coupe driving & handling dynamics (highway coasting glide, speed-sensitive caster return, passing kickdown, carburetor induction moan, RWD loose-surface throttle oversteer/counter-steer, driver bench seat inertia, dual-axle joint cadence, speedometer needle quiver, and cozy amber dash illumination) | Separate glovebox/map, refueling, cabin controls, multi-surface driving, and full period land-yacht handling verified offline. Full stillness acceptance remains open. |
 | World expansion — Pacific Northwest | Implemented prototype. Visual acceptance open following user review. | The user rejected the terrain and biome transition. The source audit found a river-carving arithmetic defect and position-driven biome/weather rules. [PACIFIC_NORTHWEST.md](PACIFIC_NORTHWEST.md#feasibility-review--2026-11-05) recommends prototyping a curved mountain tunnel between authored dry and wet regions, then reviewing its terrain, trees, driving, sound, and performance before extending the route. Earlier implementation and measurement records remain below. 2026-11-05 terrain and mood pass implemented locally (see record); acceptance still open. |
 
@@ -157,7 +157,7 @@ The delivered offline file passed a full run from dusk to the night hold. The co
 
 - [ ] Pause ambient progression while the entry overlay is visible and while the tab is hidden. Resume at the same cycle position; never reset to dusk or skip ahead. Keep motion deltas bounded.
 - [ ] Clear held movement keys on blur/unlock; test pointer-lock release/re-entry, jumping, walls, doorway, and resize.
-- [x] Consider a very sparse under-canopy dust cloud only if it improves depth and stays within budget. Omit it if the existing scene already communicates stillness. *(40 motes on one Points batch inside the canopy volume; opacity 0 at dusk, ≤0.18 at night, following the canopy-lamp flicker.)*
+- [x] Consider a very sparse under-canopy dust cloud only if it improves depth and stays within budget. Omit it if the existing scene already communicates stillness. *(Implemented, then removed on 2026-11-06 at the user's request: the 40-mote Points batch read as fireflies hovering between the pumps. Only the GAS-sign moths remain.)*
 - [ ] Keep the idle camera fixed. Do not add mandatory breathing sway/head bob. Review the entry overlay and HUD so they do not dominate the scene or imply objectives.
 - [x] Coupe steering calibration & in-game settings modal: progressive tap accumulator eliminates high-speed twitchiness and enables delicate micro-trim corrections; full lock preserved for intersections and parking; period-styled bakelite/amber settings modal with sensitivity sliders, presets, highway assist damping, mouse sensitivity, volume, and comprehensive key reference (`O` key or top-right button).
 
@@ -213,6 +213,11 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-06 — Under-canopy dust motes removed (user request)
+
+- The user reported glowing particles between the gas pumps as unwanted "fireflies". They were the Phase 5 under-canopy dust-mote Points batch (40 particles, warm `0xffe0b0`, drifting slowly through the canopy volume x −4.2…4.2, z −11.2…−7.4, y .5…3.9 — directly over the pump island), not the GAS-sign moths. Removed the mote creation block and its per-frame position/opacity update; the tire-dust plume, windshield dust, and GAS-sign moths are untouched.
+- Verification: all inline scripts pass `node --check`; no remaining references to the mote system. Browser visual re-review of the canopy at night is pending (no headless browser available in this session), so the visual acceptance of the removal stays open.
 
 ### 2026-11-06 — World atlas written (documentation only)
 
