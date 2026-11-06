@@ -4503,7 +4503,7 @@ function os(x, z, forTerrainMesh = false) {
   }
   return h;
 }
-var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(s.carOnly||e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.985,.062,-.15).normalize()},moonDir:{value:new P(52,26,20).normalize()},uNight:{value:0},uDay:{value:0},uOvercast:{value:0},uForestSkyline:{value:0},uPlains:{value:0},uStormGlow:{value:0},uHeatLightning:{value:0},uStormDrift:{value:0}},vertexShader:`
+var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(s.carOnly||e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.985,.062,-.15).normalize()},moonDir:{value:new P(52,26,20).normalize()},uNight:{value:0},uDay:{value:0},uOvercast:{value:0},uForestSkyline:{value:0},uPlains:{value:0},uStormGlow:{value:0},uHeatLightning:{value:0},uStormDrift:{value:0},uStormPower:{value:0},uBoltFlash:{value:0},uBoltKind:{value:0},uBoltOff:{value:0},uBoltSeed:{value:0}},vertexShader:`
       varying vec3 vDir;
       void main(){
         vDir = normalize(position);
@@ -4521,6 +4521,11 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
       uniform float uStormGlow;
       uniform float uHeatLightning;
       uniform float uStormDrift;
+      uniform float uStormPower;
+      uniform float uBoltFlash;
+      uniform float uBoltKind;
+      uniform float uBoltOff;
+      uniform float uBoltSeed;
 
       // Periodic angular ridges close seamlessly around the entire sky.
       // Their shallow angles place them on the far horizon, never beside the station.
@@ -4586,33 +4591,76 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
           col = mix(col, midColor, 1.0 - smoothstep(midRidge - .0010, midRidge + .0010, direction.y));
           col = mix(col, nearColor, 1.0 - smoothstep(nearRidge - .0008, nearRidge + .0008, direction.y));
         }
-        // Distant storm on the rim: a billowing tower under a spreading anvil, rim-lit from below the horizon.
-        if (uPlains > 0.05 && direction.y > -0.01 && direction.y < 0.28) {
+        // Prairie thunderstorm on the rim: a thunderhead that grows with uStormPower, a rain curtain under its base,
+        // and lightning (sheet flashes inside the cloud, now and then a branched bolt to the ground).
+        if (uPlains > 0.05 && direction.y > -0.01 && direction.y < 0.40) {
           float a = atan(direction.z, direction.x);
           float stormAz = -0.65 + uStormDrift * 0.35;
-          float dAz = abs(mod(a - stormAz + 3.14159, 6.28318) - 3.14159);
-          float baseH = 0.004, topH = 0.22;
-          float vv = direction.y;
-          float en = 0.5 * sin(a * 53.0 + vv * 41.0) + 0.3 * sin(a * 127.0 - vv * 83.0) + 0.2 * sin(a * 9.0 + vv * 197.0);
-          float tower = mix(0.13, 0.17, smoothstep(0.03, 0.12, vv));
-          float anvil = mix(tower, 0.36, smoothstep(0.12, 0.19, vv));
-          float colWidth = anvil * (1.0 - 0.55 * smoothstep(0.195, topH + 0.012, vv)) + 0.014 * en;
-          float cloudEdge = smoothstep(colWidth, colWidth - 0.05, dAz);
-          float cloudTop = smoothstep(topH + 0.012 * en, topH - 0.03, vv);
-          float cloudBase = smoothstep(baseH - 0.008, baseH + 0.012, vv);
-          float cloudMask = cloudEdge * cloudTop * cloudBase * uPlains * (1.0 - 0.75 * uOvercast);
+          float sA = mod(a - stormAz + 3.14159, 6.28318) - 3.14159;
+          float P = uStormPower;
+          float sc = 1.3 + 0.75 * P;
+          float dAz = abs(sA) / sc;
+          float vv = direction.y / sc;
+          float baseH = 0.004, topH = 0.165;
+          // Low-frequency billow noise: soft lobes, not stripes.
+          float en = 0.5 * sin(a * 31.0 + vv * 37.0) + 0.3 * sin(a * 67.0 - vv * 71.0) + 0.2 * sin(a * 19.0 + vv * 113.0);
+          float tower = 0.078 + 0.034 * smoothstep(0.0, 0.07, vv) - 0.040 * smoothstep(0.08, 0.15, vv);
+          float anvilW = 0.23 * smoothstep(0.095, 0.135, vv) * (1.0 - smoothstep(0.128, 0.165, vv));
+          float colWidth = max(tower, anvilW) + 0.012 * en;
+          float cloudEdge = 1.0 - smoothstep(colWidth - 0.035, colWidth + 0.030, dAz);
+          float cloudTop = 1.0 - smoothstep(topH - 0.022, topH + 0.006 + 0.006 * en, vv);
+          float cloudBase = smoothstep(baseH - 0.004, baseH + 0.030, vv);
+          float density = cloudEdge * cloudTop * cloudBase;
+          float cloudMask = density * uPlains * (1.0 - 0.75 * uOvercast) * (0.78 + 0.16 * P);
+          // Rain curtain: slanted grey streaks hanging from the cloud base to the ground, strongest under a mature storm.
+          float shaftW = (tower - 0.01) * (0.55 + 0.35 * P);
+          float shaft = (1.0 - smoothstep(shaftW - 0.03, shaftW + 0.02, dAz)) * (1.0 - smoothstep(0.0, 0.034, vv)) * smoothstep(-0.004, 0.006, vv);
+          float streak = 0.55 + 0.45 * sin(sA * 260.0 + vv * 90.0 + 2.0 * en);
+          float shaftMask = shaft * streak * P * uPlains * (1.0 - 0.6 * uOvercast) * 0.55;
+          vec3 rainCol = mix(vec3(.17, .14, .19), vec3(.012, .014, .022), uNight);
+          col = mix(col, rainCol, shaftMask);
+          float F = uBoltFlash;
           if (cloudMask > 0.003) {
             float billow = 0.5 + 0.5 * en;
-            vec3 stormBaseCol = mix(vec3(.12, .08, .14), vec3(.012, .014, .022), uNight) * (0.75 + 0.5 * billow);
+            vec3 stormBaseCol = mix(vec3(.12, .08, .14), vec3(.012, .014, .022), uNight) * (0.75 + 0.5 * billow) * (1.0 - 0.35 * P);
             vec3 anvilGlow = mix(vec3(1.0, .68, .35), vec3(.75, .32, .55), clamp(uNight * 1.8, 0.0, 1.0));
             anvilGlow = mix(anvilGlow, vec3(.35, .20, .45), clamp((uNight - 0.5) * 2.0, 0.0, 1.0));
-            float topCatch = smoothstep(0.10, 0.21, vv + 0.015 * en) * (1.0 - smoothstep(0.7, 0.95, uNight));
+            float topCatch = smoothstep(0.07, 0.15, vv + 0.012 * en) * (1.0 - smoothstep(0.7, 0.95, uNight));
             vec3 stormCol = mix(stormBaseCol, anvilGlow * (0.8 + 0.3 * billow), topCatch * 0.85);
             if (uHeatLightning > 0.001) {
               float interior = smoothstep(colWidth - 0.02, 0.0, dAz) * smoothstep(baseH, baseH + 0.04, vv) * smoothstep(topH, topH - 0.04, vv);
               stormCol += vec3(0.9, 0.92, 1.0) * uHeatLightning * interior * 1.8;
             }
-            col = mix(col, stormCol, cloudMask * 0.92);
+            if (F > 0.002) {
+              // The flash lights the cloud from inside, in lobes that follow the billows.
+              float lobeW = mix(0.05, 0.14, 1.0 - uBoltKind) * sc;
+              float lq1 = (sA - uBoltOff) / lobeW, lq2 = (direction.y - 0.07 * sc) / (0.05 * sc);
+              float lobe = exp(-lq1 * lq1) * exp(-lq2 * lq2);
+              stormCol += vec3(.55, .64, 1.0) * F * (0.18 + 0.82 * lobe) * (0.5 + 0.9 * billow) * 0.95;
+            }
+            stormCol = mix(stormCol, haze, 0.55 * (1.0 - smoothstep(0.0, 0.05, vv)));   // the base dissolves into distance haze
+            col = mix(col, stormCol, cloudMask);
+          }
+          if (F > 0.002) {
+            // Pale lift across the whole rim, strongest near the storm.
+            col += vec3(.10, .12, .20) * F * exp(-(sA * sA) / 1.21) * (1.0 - smoothstep(0.0, 0.45, direction.y)) * uPlains;
+            if (uBoltKind > 0.5) {
+              float y = direction.y;
+              float seed = uBoltSeed;
+              float jag = 0.0090 * sin(y * 210.0 + seed) + 0.0050 * sin(y * 470.0 + seed * 2.3) + 0.0022 * sin(y * 930.0 + seed * 4.1);
+              float d = abs(sA - uBoltOff * sc - jag);
+              float yTop = 0.080 * sc;
+              float range = smoothstep(0.002, 0.012, y) * (1.0 - smoothstep(yTop - 0.012, yTop, y));
+              float core = 1.0 - smoothstep(0.0009, 0.0026, d);
+              float glow = exp(-(d * d) / 0.00004225);
+              // One side branch that leaves the main channel partway down.
+              float yB = 0.060 * sc;
+              float jagB = 0.006 * sin(y * 300.0 + seed * 1.7);
+              float dB = abs(sA - uBoltOff * sc - jag - (yB - y) * 0.55 * sign(sin(seed)) - jagB);
+              float rangeB = smoothstep(0.012, 0.022, y) * (1.0 - smoothstep(yB - 0.004, yB, y));
+              float coreB = (1.0 - smoothstep(0.0007, 0.0020, dB)) * rangeB * 0.6;
+              col += vec3(.82, .88, 1.0) * ((core * range + coreB) * 1.7 + glow * range * 0.30) * F * uPlains;
+            }
           }
         }
         // A shallow haze band joins the distant silhouettes to the ground fog.
@@ -6208,6 +6256,31 @@ function wireDistance(x, z, useSR14) {
   const z0 = poleWorldZ(x0, L.z, useSR14), z1 = poleWorldZ(x0 + L.spacing, L.z, useSR14);
   return Math.abs(z - (z0 + (z1 - z0) * t));
 }
+// ---- Prairie thunderstorm: timeline, lightning scheduler and delayed thunder. ---
+var plainsStormState = { timer: 4, start: -99, kind: 0, off: 0, seed: 0, dur: 0.5 };
+function playThunder(delay, strength) {
+  if (!audio.ctx || audio.ctx.state !== "running" || !audio.noiseBuf || !audio.master) return;
+  const c = audio.ctx, t0 = c.currentTime + delay, len = 3.5 + 4.5 * strength;
+  const src = c.createBufferSource(); src.buffer = audio.noiseBuf; src.loop = true; src.playbackRate.value = 0.35 + Math.random() * 0.2;
+  const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 0.7;
+  lp.frequency.setValueAtTime(320, t0); lp.frequency.exponentialRampToValueAtTime(55, t0 + len);
+  const g = c.createGain(); g.gain.setValueAtTime(0, t0);
+  const curve = new Float32Array(32);
+  for (let k = 0; k < curve.length; k++) {
+    const u = k / (curve.length - 1);
+    curve[k] = Math.pow(1 - u, 1.6) * (0.55 + 0.45 * Math.random()) * (k === 0 ? 0.3 : 1) * 0.42 * strength;   // rolling, uneven decay
+  }
+  g.gain.setValueCurveAtTime(curve, t0 + 0.04, len);
+  src.connect(lp); lp.connect(g); g.connect(audio.master);
+  src.start(t0); src.stop(t0 + len + 0.1);
+}
+// Storms come and go on a 8-minute cycle; some cycles stay dry. Returns 0..1.
+function plainsStormPower(t) {
+  const len = 480, idx = Math.floor(t / len), ph = (t % len) / len;
+  if (Un(idx * 1.7 + 3.1, 9.2) < 0.3) return 0;
+  const up = Math.min(Math.max((ph - 0.30) / 0.18, 0), 1), down = Math.min(Math.max((ph - 0.78) / 0.17, 0), 1);
+  return up * up * (3 - 2 * up) * (1 - down * down * (3 - 2 * down));
+}
 // Distance from (x,z) to the nearest telephone pole base, so scenery can keep clear of it.
 function poleDistance(x, z, useSR14) {
   const L = telephoneLine, px = L.offset + Math.round((x - L.offset) / L.spacing) * L.spacing;
@@ -7136,9 +7209,25 @@ for (const side of [-1,1]) {
   carMesh(hinge,'paint',[boxPart(0,.761,-.865,.098,.465,1.72)],true);
   carMesh(hinge,'leather',[boxPart(-side*.064,.78,-.85,.048,.35,1.58)]);
   carMesh(hinge,'ivory',[boxPart(-side*.075,.93,-.85,.05,.075,1.60)]);
-  carMesh(hinge,'chrome',[boxPart(side*.060,.906,-1.26,.031,.035,.21),
+  const doorChrome=[boxPart(side*.060,.906,-1.26,.031,.035,.21),
     boxPart(-side*.111,.89,-.79,.038,.040,.18),
-    boxPart(side*.056,.975,-.865,.023,.019,1.71)]);
+    boxPart(side*.056,.975,-.865,.023,.019,1.71)];
+  if(side===1) {
+    // Driver-side exterior round chrome side mirror (vintage 1966 die-cast aerodynamic pedestal)
+    doorChrome.push(
+      boxPart(.056,1.012,-.16,.024,.032,.085),
+      boxPart(.085,1.042,-.17,.048,.016,.022),
+      {...latheGeom([[0,-.010],[.052,-.010],[.055,.008],[0,.008]],16),
+        matrix:matMul(matTranslate(.112,1.050,-.17),matRotX(Math.PI/2))}
+    );
+  }
+  carMesh(hinge,'chrome',doorChrome);
+  if(side===1) {
+    carMesh(hinge,'headlamp',[{
+      ...latheGeom([[0,-.002],[.048,-.002],[.048,.002],[0,.002]],16),
+      matrix:matMul(matTranslate(.112,1.050,-.178),matRotX(Math.PI/2))
+    }]);
+  }
   carMesh(hinge,'wood',[boxPart(-side*.11,.78,-.83,.10,.064,.42)]);
   const glass=carMesh(hinge,'glass',[carQuad([0,.99,-1.67],[0,.99,-.015],
     [-side*.137,1.54,-.45],[-side*.137,1.54,-1.60])]);
@@ -13217,14 +13306,32 @@ function buildCabinGestures() {
       radioMaterial.emissiveIntensity=radioOn?.62*panelDim:(panelOn?.28*panelDim:.04);
     }});
   interactionPlate(dimmer,[0,0,-.023],[.014,.036,.012],'brass');
-  const mount=add('Adjust rearview mirror',[0,1.439,.58],
-    {size:[.24,.084,.025],axis:'y',motion:.23,toggle:true,radius:.15,effect:item=>{mirrorYaw=item.engaged?.24:0;mirrorDelay=0;}});
-  rearMirror=new dt(new ba(.226,.071),new wi({map:rearMirrorTarget.texture,color:0xaab6b5,side:2}));
-  rearMirror.position.z=-.014;
+  // Interior rearview mirror: mounted inside the windshield header at x=0, y=1.455, z=0.270 (cleanly 5cm behind windshield)
+  const mount=add('Adjust rearview mirror',[0, 1.455, .270],
+    {size:[.22,.068,.020],material:'steel',axis:'y',motion:.22,toggle:true,radius:.16,effect:item=>{mirrorYaw=item.engaged?.24:0;mirrorDelay=0;}});
+  interactionPlate(mount,[0,.042,-.020],[.016,.085,.018],'steel');
+  interactionPlate(coupe,[0,1.538,.232],[.046,.014,.036],'steel');
+  interactionPlate(mount,[0,-.038,-.004],[.022,.012,.014],'steel');
+  rearMirror=new dt(new ba(.208,.056),new wi({map:rearMirrorTarget.texture,color:0xaab6b5,side:2}));
+  rearMirror.position.z=-.011;
   rearMirror.rotation.y=Math.PI;
   mount.add(rearMirror);
-  const visor=add('Flip sun visor',[.46,1.511,.48],{motion:-1.68,toggle:true,radius:.20,sound:'rubber'});
-  interactionPlate(visor,[0,.013,-.12],[.53,.025,.24],'enamel');
+
+  // Driver sun visor: mounted under roof header at x=0.41, y=1.528, z=0.215 (stows flat to headliner, flips down 17cm behind glass, 10cm clear of side window)
+  const visor=add('Flip sun visor',[.41,1.528,.215],{motion:-1.52,toggle:true,radius:.20,sound:'rubber'});
+  interactionPlate(visor,[0,-.005,-.075],[.44,.014,.15],'enamel');
+  interactionPlate(visor,[0,0,0],[.45,.008,.008],'steel');
+  interactionPlate(visor,[.22,.006,0],[.025,.020,.020],'steel');
+  interactionPlate(coupe,[.19,1.534,.215],[.016,.018,.016],'steel');
+
+  // Passenger sun visor (symmetrical match on passenger side)
+  const passVisor=new xi();
+  passVisor.position.set(-.41,1.528,.215);
+  coupe.add(passVisor);
+  interactionPlate(passVisor,[0,-.005,-.075],[.44,.014,.15],'enamel');
+  interactionPlate(passVisor,[0,0,0],[.45,.008,.008],'steel');
+  interactionPlate(passVisor,[-.22,.006,0],[.025,.020,.020],'steel');
+  interactionPlate(coupe,[-.19,1.534,.215],[.016,.018,.016],'steel');
   add('Move seat one notch',[.68,.68,-.29],{size:[.087,.04,.11],motion:.73,toggle:true,radius:.13,sound:'latch',
     effect:item=>{if(Math.abs(carSpeed)<.25)driverEye.z=item.engaged?-.27:-.36;else item.engaged=driverEye.z>-.3;}});
   const glove=add('Glovebox',[-.57,.83,.51],{motion:-1.22,toggle:true,radius:.18,sound:'latch',
@@ -13431,7 +13538,7 @@ function renderInteractionMirror(dt) {
   if(mirrorDelay>0)return;
   mirrorDelay=.22;
   rearMirror.getWorldPosition(mirrorAnchor).sub(Nn.position).normalize();
-  if(Nn.getWorldDirection(mirrorLook).dot(mirrorAnchor)<.58)return;
+  if(Nn.getWorldDirection(mirrorLook).dot(mirrorAnchor)<.50)return;
   mirrorCamera.position.copy(coupe.localToWorld(mirrorAnchor.set(0,1.29,-1.28)));
   mirrorCamera.lookAt(coupe.localToWorld(mirrorLook.set(mirrorYaw*14,1.44,-15)));
   const target=mn.getRenderTarget(), shadowUpdates=mn.shadowMap.autoUpdate;
@@ -14512,19 +14619,48 @@ const plainsBiome = Math.max(0, Math.min(1, (camX - 42000) / 6000));
 // 1. Sky Uniforms: uPlains scales mountain silhouettes toward 0
 if(Xm && Xm.material && Xm.material.uniforms) {
   if(Xm.material.uniforms.uPlains) Xm.material.uniforms.uPlains.value = plainsBiome;
-  // Heat lightning: rare, silent pulse every ~85s
+  // Heat lightning: rare, silent pulse every ~85s (the background flicker between real storms)
   const stormCycle = (t % 85.0) / 85.0;
   let heatFlash = 0;
   if(stormCycle > 0.95 && stormCycle < 0.98) {
     const p = (stormCycle - 0.95) / 0.03;
     heatFlash = p < 0.25 ? (p / 0.25) : Math.max(0, 1.0 - (p - 0.25) / 0.75);
   }
+  // Prairie thunderstorm: a tall cell builds on the rim, throws sheet lightning and the odd bolt, and thunder arrives late.
+  const stormPower = plainsStormPower(t) * plainsBiome;
+  const S = plainsStormState;
+  if (stormPower > 0.12) {
+    S.timer -= i;
+    if (S.timer <= 0) {
+      S.timer = 1.2 + Math.random() * (9 - 6.5 * stormPower);
+      S.start = t; S.kind = Math.random() < 0.4 ? 1 : 0; S.off = (Math.random() - 0.5) * 0.16; S.seed = Math.random() * 100;
+      S.dur = S.kind ? 0.6 : 0.4;
+      playThunder(3 + Math.random() * 7, (S.kind ? 1 : 0.55) * (0.5 + 0.5 * stormPower));
+    }
+  }
+  const sAge = t - S.start;
+  let boltFlash = 0;
+  if (sAge >= 0 && sAge < S.dur) {
+    // return stroke plus two weaker flickers; pulses stay at least 0.12 s apart so the rim never strobes
+    for (const [t0, amp] of [[0.0, 1.0], [0.14, 0.55], [0.30, 0.35]]) {
+      const x = (sAge - t0) / 0.03;
+      boltFlash = Math.max(boltFlash, amp * Math.exp(-x * x));
+    }
+  }
+  const calm = (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 0.4 : 1;
+  boltFlash *= stormPower * calm;
+  const flashAll = Math.max(heatFlash, boltFlash * 0.8);
+  if(Xm.material.uniforms.uStormPower) Xm.material.uniforms.uStormPower.value = stormPower;
+  if(Xm.material.uniforms.uBoltFlash) Xm.material.uniforms.uBoltFlash.value = boltFlash;
+  if(Xm.material.uniforms.uBoltKind) Xm.material.uniforms.uBoltKind.value = S.kind;
+  if(Xm.material.uniforms.uBoltOff) Xm.material.uniforms.uBoltOff.value = S.off;
+  if(Xm.material.uniforms.uBoltSeed) Xm.material.uniforms.uBoltSeed.value = S.seed;
   if(Xm.material.uniforms.uHeatLightning) Xm.material.uniforms.uHeatLightning.value = heatFlash * plainsBiome;
   if(Xm.material.uniforms.uStormGlow) Xm.material.uniforms.uStormGlow.value = (0.25 + 0.45 * (1 - uNight) * (1 - uDay)) * plainsBiome;
   if(Xm.material.uniforms.uStormDrift) Xm.material.uniforms.uStormDrift.value = (weatherHour / 24.0) * 0.35;
   // Silent screen illumination during heat lightning
   if(ROLE_MATS.screenPanelWhite) {
-    ROLE_MATS.screenPanelWhite.emissiveIntensity = 0.08 + 0.38 * heatFlash * plainsBiome;
+    ROLE_MATS.screenPanelWhite.emissiveIntensity = 0.08 + 0.38 * flashAll * plainsBiome;
   }
 }
 

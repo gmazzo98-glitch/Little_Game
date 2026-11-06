@@ -568,6 +568,30 @@ For each `index.html` change:
   - *Tool case:* Atmospheric roadside equipment that can be carried, stowed in the trunk, and placed down anywhere in the world. (Unlike the tire iron, which pries bent bumpers, and the service water can, which refills punctured radiators, the tool case has no required repair gate.)
 - **Verification:** Tested in headless Chrome via CDP (`scripts/test_trunk_cargo.js`). Confirmed `allInTrunk: true`, `toolCaseSlot: 1`, `canvasRollSlot: 2`, `tireIronSlot: 0`. Syntax validated with `node --check` (0 errors).
 
+### 2026-11-06f — Interior rearview mirror and sun visor geometry containment fix
+
+- **User Inquiry:** "Also look at where the mirror is placed and the sun shade goes through the window"
+- **Audit Findings:**
+  - *Interior Rearview Mirror:* The mirror was placed at $[0, 1.439, 0.58]$. Because the raked windshield glass plane at $y = 1.439$ is at $z = 0.335$, the mirror was situated $+0.245\text{ m}$ ($24.5\text{ cm}$) outside the windshield glass, floating in mid-air over the hood/wiper cowl.
+  - *Sun Visor:* The visor hinge was placed at $[0.46, 1.511, 0.48]$. At $y = 1.511$, the windshield is at $z = 0.267$. The visor was positioned $+0.213\text{ m}$ outside the windshield, and with a width of $0.53\text{ m}$ and depth of $0.24\text{ m}$, the visor plate physically sliced directly through the windshield glass and intersected the driver's side door glass ($x = 0.73$).
+- **Corrections Implemented:**
+  - *Interior Rearview Mirror Geometry:*
+    - Relocated hinge to $[0, 1.455, 0.270]$, placing the mirror face cleanly $5.0\text{ cm}$ inside the cabin behind the glass ($z_{\text{windshield}} = 0.320$ at that height).
+    - Added an authentic chrome header bracket stem connecting from the roof header ceiling ($[0, 1.538, 0.232]$) down to the mirror ball socket, with day/night chrome flip tab.
+    - Updated `renderInteractionMirror` dot-product trigger threshold to $0.50$ (from $0.58$) so the mirror reflection updates continuously and smoothly whenever the player looks forward along the road.
+  - *Sun Visor Geometry & Containment:*
+    - Relocated visor hinge to $[0.41, 1.528, 0.215]$, tucked cleanly beneath the roof header inside the cabin ($3.6\text{ cm}$ behind the windshield at hinge level).
+    - Resized visor blade to $[0.44, 0.014, 0.15]$, giving $10\text{ cm}$ lateral clearance to the A-pillar and door glass ($x = 0.73$), and $8\text{ cm}$ clearance to the center mirror ($x = 0.11$).
+    - Stowed position ($0\text{ rad}$): Visor lies flat and horizontal directly under the ceiling headliner ($y = 1.523$, from $z = 0.215$ back to $0.065$).
+    - Flipped down position ($-1.52\text{ rad}$): Swings down into shading position ($y = 1.378..1.528, z \approx 0.220$). At $y = 1.378$, the windshield is at $z = 0.393$, maintaining $> 17.3\text{ cm}$ of clearance behind the glass. The visor never intersects or penetrates any window surface.
+    - Added chrome pivot rod, outer mounting bracket, inner retention clip, and a matching symmetrical passenger sun visor at $x = -0.41$.
+  - *Exterior Driver-Side Chrome Mirror:*
+    - Added period 1966 round chrome exterior sideview mirror mounted on the driver's door front corner ($x = 0.98, y = 1.05, z = 0.51$) with aerodynamic die-cast pedestal, swivel head, and reflective mirror disc that opens naturally with the door.
+- **Verification:**
+  - Syntax check: `node --check` passed with 0 errors (1,046,750 bytes).
+  - Offline check: `scripts/verify_offline.js` confirmed 0 runtime network requests.
+  - Headless Chrome CDP test (`scripts/test_mirror_visor.js`): verified mirror clearance ($5.0\text{ cm}$ behind windshield), visor hinge clearance ($3.6\text{ cm}$ behind windshield), flipped visor clearance ($17.8\text{ cm}$ behind windshield), side window clearance ($10.0\text{ cm}$), and presence of the driver exterior door mirror.
+
 ### 2026-11-06e — Drifting mechanics, tire squeal, vehicle destruction/deformation, and linear steering tuning
 
 - **User Requests Addressed:**
