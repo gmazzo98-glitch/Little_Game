@@ -14923,9 +14923,9 @@ function ufoFrame(dt, t) {
   // Parked ships left up in space go home when the player leaves.
   if (!ufo.flying && !ufoSpace && p.y > 3000) ufoHome();
   // Space mode with hysteresis, keyed to where the player's eyes are.
+  const fl = ufo.flying;
   if (camY > 1800 && fl) spBuild();
   ufoSetSpace(ufoSpace ? camY > 3100 : camY > 3200);
-  const fl = ufo.flying;
   if (fl && !ufoSpace) {
     // Climbing out: fog opens up with height, then the whole sky drains to black.
     const f = ufoSmooth(900, 3200, camY);
