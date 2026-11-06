@@ -607,6 +607,13 @@ For each `index.html` change:
   - Screenshots captured: `captures/plains_*_{dusk,blue_hour,night}.jpg`.
   - Gameplay & interactions verified via CDP (`scripts/cdp_test_gameplay.js`): travel, lamp, swing, speaker, marquee, map, fuel cost.
 
+### 2026-11-06 — Plains audit and fast-travel wiring
+
+- **Audit (live, localhost, embedded browser):** every Plains stop in the dev warp (Harvest Moon, mailbox row, windmill, water tower, elevator, silo on the hinge crest) arrives on the ground with the coupe level on asphalt (silo arrival at the 4.9 m crest height matches `us66RoadY` and `os`). The real trip card from Sunset lists Harvest Moon at 40.1 mi, 48 min; confirming it arrived at x 64630, seated, with no console errors. Starting tank 0.78 covers the 0.36-tank leg and the return.
+- **Finding:** the world clock runs a day in 48 real minutes, so the Harvest Moon leg is exactly one world day and the card's "arrive 6:13 PM" read as the same evening. The card now appends "(next day)" or "(+N days)" via `travelDayTag`. Clock model unchanged.
+- **Wiring state:** Harvest Moon is the only Plains stop on the trip card; the silo, elevator, water tower, windmill and mailboxes are dev-warp only, by design.
+- **Not verified:** screenshot review of the arrival (capture timed out in the hidden pane), `file://` run, gas-short disabled rows, driving back west across the hinge after a card trip.
+
 ### 2026-11-06 — Scenery placement cleanup (river, road, telephone poles)
 
 - **Report:** Trees could stand in the river, bushes on the road, telephone poles on the road or in the river, and trees or bushes on top of poles.

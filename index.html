@@ -11055,6 +11055,11 @@ function travelClock(hours) {
   const h = ((hours % 24) + 24) % 24, hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
   return `${((hh + 11) % 12) + 1}:${String(mm).padStart(2, '0')} ${hh < 12 ? 'AM' : 'PM'}`;
 }
+// The world clock runs a full day in 48 real minutes, so a long leg crosses midnight; say so on the card.
+function travelDayTag(worldHours) {
+  const days = Math.floor((((worldClockHours % 24) + 24) % 24 + worldHours) / 24);
+  return days <= 0 ? '' : days === 1 ? ' (next day)' : ` (+${days} days)`;
+}
 function travelCurrentS() { return nwSFromX(coupe.position.x); }
 function travelCost(stop) {
   const meters = Math.abs(stop.s - travelCurrentS());
@@ -11081,7 +11086,7 @@ function renderTravelModal() {
     right.textContent = here ? stop.mile
       : travelDevMode ? stop.mile + ' · warp'
       : short ? 'needs gas'
-      : `${cost.miles.toFixed(1)} mi · ${Math.max(1, Math.round(cost.seconds / 60))} min · arrive ${travelClock(worldClockHours + cost.worldHours)}`;
+      : `${cost.miles.toFixed(1)} mi · ${Math.max(1, Math.round(cost.seconds / 60))} min · arrive ${travelClock(worldClockHours + cost.worldHours)}${travelDayTag(cost.worldHours)}`;
     row.append(left, right);
     row.addEventListener('click', () => { travelSelected = i; confirmTravel(); });
     listEl.appendChild(row);
