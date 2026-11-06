@@ -562,6 +562,24 @@ For each `index.html` change:
   - *Tool case:* Atmospheric roadside equipment that can be carried, stowed in the trunk, and placed down anywhere in the world. (Unlike the tire iron, which pries bent bumpers, and the service water can, which refills punctured radiators, the tool case has no required repair gate.)
 - **Verification:** Tested in headless Chrome via CDP (`scripts/test_trunk_cargo.js`). Confirmed `allInTrunk: true`, `toolCaseSlot: 1`, `canvasRollSlot: 2`, `tireIronSlot: 0`. Syntax validated with `node --check` (0 errors).
 
+### 2026-11-06d — Coupe steering dynamics and progressive ramp rate tuning
+
+- **User Inquiry & Analysis:** "The steering still feels a little off. It is very easy to do small corrections, but when you push a little longer, it steers too abruptly. Does the steering speed accelerate exponentially?"
+  - *Audit:* Mathematical inspection of the keyboard steering accumulator revealed that steering angular velocity did indeed accelerate superlinearly (and effectively exponentially in the first ~350 ms) due to two compounding mechanisms:
+    1. A piecewise discontinuous jump in `rampRate`: `(Math.abs(virtualSteerInput) < 0.28 ? 1.75 : 3.2) * steerSens`. At $t \approx 0.18$ s of holding the key, the ramp rate abruptly jumped by +83%.
+    2. A superlinear power curve $x^{1.6}$, whose derivative $1.6 x^{0.6}$ multiplies the stepped-up ramp rate. Together, the target steering rate $\frac{d(\text{steerTarget})}{dt}$ exploded from $3.9^\circ/\text{s}$ at $t = 0.02$ s to $93.5^\circ/\text{s}$ at $t = 0.40$ s (a 24-fold surge!), reaching full lock ($21.8^\circ$) in only $0.43$ seconds.
+    3. Weak highway assist damping: at 55 mph ($24.6$ m/s), full lock was allowed to reach $12.5^\circ$, causing lateral acceleration to spike past $2.0\text{ g}$ within half a second of keypress, pitching the coupe into violent slides.
+- **Tuned Physics & Solution:**
+  - *Continuous smooth ramp rate:* Replaced the discontinuous step threshold with a unified rate: `const rampRate = isReversingInput ? (7.2 * steerSens) : (1.42 * steerSens)`. Reversing/counter-steering retains fast 7.2 rad/s clearing, while forward accumulation ramps smoothly without rate kick.
+  - *Softened progressive curve:* Updated from $x^{1.6}$ to $x^{1.35}$ (`Math.sign(virtualSteerInput) * Math.pow(Math.abs(virtualSteerInput), 1.35)`). Retains subtle 0.15°–0.3° micro-trim for straight highway lane adjustments while preventing abrupt rate surges during sustained holds.
+  - *Tuned highway assist damping:* Updated to `1.0 / (1.0 + Math.max(0, absSpd - 3.8) * 0.068)`. Maintains full $21.8^\circ$ lock for low-speed parking and fuel pump approaches ($0..8$ mph), while progressively tightening maximum authority at speed ($12.1^\circ$ at 35 mph, $9.0^\circ$ at 55 mph, $7.6^\circ$ at 70 mph), capping sustained highway lateral acceleration to a controlled, period-accurate $\approx 0.6..0.8\text{ g}$.
+  - *Smooth high-speed steering slew:* Adjusted `steerSpeed` slew rate from 6.5–7.8 to 5.8–7.2, adding hydraulic power-steering fluid damping at speed.
+- **Verification:**
+  - Offline simulation confirmed: 0.10s micro-tap yields 0.15° (lane trim); 0.30s hold yields 1.26° (gentle curve); 0.50s hold yields 3.2° (firm highway turn, ~0.7g lat acceleration); low-speed parking approaches full lock gracefully in ~0.85s.
+  - Syntax: `node --check` passed on extracted script with 0 errors.
+  - Headless Chrome CDP tests (`scripts/cdp_test_gameplay.js` and `scripts/test_steering_dynamics.js`): verified live game instance, vehicle state, travel, and interactions.
+  - Zero external runtime network requests (`scripts/verify_offline.js`).
+
 ### 2026-11-06 — Great Plains region and Harvest Moon Drive-In implementation
 
 - **Scope & Context:** Implemented the Great Plains region (`T` +46 to +84 km, world $x = 46000..84000$) and its sole authorized destination, the **Harvest Moon Drive-In** ($x = 64600, z = -14$, `T` +64.6), as real, playable game code in `index.html` on branch `vibe/neon-gas-voxel-f660eb`.
