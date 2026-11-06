@@ -568,6 +568,50 @@ For each `index.html` change:
   - *Tool case:* Atmospheric roadside equipment that can be carried, stowed in the trunk, and placed down anywhere in the world. (Unlike the tire iron, which pries bent bumpers, and the service water can, which refills punctured radiators, the tool case has no required repair gate.)
 - **Verification:** Tested in headless Chrome via CDP (`scripts/test_trunk_cargo.js`). Confirmed `allInTrunk: true`, `toolCaseSlot: 1`, `canvasRollSlot: 2`, `tireIronSlot: 0`. Syntax validated with `node --check` (0 errors).
 
+### 2026-11-06e — Drifting mechanics, tire squeal, vehicle destruction/deformation, and linear steering tuning
+
+- **User Requests Addressed:**
+  1. Drift mechanics and tire squeal fitting the period 1966 touring coupe mood.
+  2. Vehicle destruction, deformation, and roadside repairs (wrecking, crumpling bumpers, buckled hood, shattered taillights, punctured radiator, bent wheel hub).
+  3. Pre-loading cargo in the trunk (tool case in slot 1 and canvas roll in slot 2) and giving them active gameplay purpose for repairs.
+  4. Resolving steering feel: eliminating abrupt exponential turning acceleration during sustained keypresses.
+- **Analog Drifting & Power-Slide Dynamics:**
+  - Replaced binary grip thresholds with period RWD land-yacht physics:
+    - High-throttle in low gear (`gearState === 'L'`) or kickdown creates power-oversteer (`powerSlide`) that kicks the tail out progressively.
+    - Handbrake (Spacebar) unlocks rear tire traction into immediate drift initiation (`handbrakeSlide`).
+    - Counter-steering generates stabilizing front lateral torque (`counterGrip`: 5.8 on asphalt, 4.4 on loose surfaces). Catching slides with opposite lock stabilizes the coupe; failing to counter-steer induces realistic spinouts.
+    - Asphalt tire skid mark system: dynamic 128-segment circular quad mesh buffer (`skidMesh`) creating twin rubber tire tracks upon wheel lockup, burnout launch, or lateral slide.
+- **Procedural Tire Squeal & Scrub Audio:**
+  - Real-time WebAudio resonant dual bandpass synthesizer (`squealSrc`, `squealFilter` at 1150 Hz with Q=5.2, harmonic peaking filter at 2300 Hz).
+  - Dynamically modulated in `updateEngineAudio()`: screaming bias-ply rubber squeal on dry asphalt and raspy gravel/grit scrub on shoulder and sand, proportional to slip velocity and wheel load.
+  - Glass fracture sound on headlight/taillight impact and pressurized steam hiss burst on radiator puncture.
+- **Multi-Tier Vehicle Destruction & Deformation Pipeline:**
+  - **Front Collisions:**
+    - Low speed ($\ge 1.8$ m/s): bumper bends directionally, creates scraping ground friction dragging speed.
+    - Moderate speed ($\ge 4.2$ m/s): primary hood latch springs open, hood vibrates with engine idle tremor; chrome grille caves in; impact-side headlight fractures.
+    - Severe speed ($\ge 7.5$ m/s): accordion hood buckle (crushed sheet metal flutter in wind), front wheel hub bent (alignment pull to one side, rhythmic chassis thumping and visible wheel wobble in `animateCar`), and radiator puncture (steam billows from grille, coolant drains, engine overheats).
+    - Catastrophic speed ($\ge 11.0$ m/s): spiderweb windshield shatter mesh, all front lights destroyed.
+  - **Rear Collisions:**
+    - Low speed ($\ge 1.8$ m/s): rear bumper crumples inward.
+    - Moderate speed ($\ge 3.8$ m/s): trunk lid pops open.
+    - Severe speed ($\ge 5.5$ m/s / $\ge 9.0$ m/s): impact-side or both taillight lenses shatter (`brokenTaillamp` dark glass, dead bulbs in `syncTailLamps()`), rear bumper drops and caves into luggage well.
+- **Roadside Repairs & Purposeful Equipment:**
+  - Pre-loaded cargo: Tool case (`slot: 1`) and canvas roll (`slot: 2`) initialized inside the trunk alongside the tire iron (`slot: 0`).
+  - Dedicated repair interactions:
+    - `pryBumperClear()` / `pryRearBumperClear()`: pry front and rear crumpled bumpers clear using the tire iron.
+    - `hammerHoodLatch()`: straighten accordion buckled hood using the heavy tool case.
+    - `repairBentWheel()`: straighten bent wheel hub and clear alignment pull using the tire iron or tool case.
+    - `refillRadiator()`: refill water and seal punctured radiator using the full service water can.
+    - `slamHoodShut()` / `toggleTrunk`: latch popped hood and trunk shut.
+- **Linear Analog Steering Progression:**
+  - Fixed the user-reported issue where steering would abruptly accelerate and turn too aggressively when holding keys down.
+  - Replaced super-linear / quadratic power curves with a 1:1 linear progressive accumulator (`rampRate = 1.10 * steerSens`), giving steady, predictable analog build-up over 0.9s.
+  - Smoothed steering rack slew rate to 3.6–4.8 rad/s, providing authentic hydraulic damping and removing twitchiness.
+- **Verification & Checks:**
+  - Offline syntax validation: `node --check` passed on extracted script with 0 errors (1,045,746 bytes).
+  - Zero runtime network calls verified via `scripts/verify_offline.js`.
+  - Headless Chrome CDP test (`scripts/test_drift_damage.js`): verified all exports, damage tiers, deformation hinges, audio squeal, skid marks, repairs, and linear steering ramp.
+
 ### 2026-11-06d — Coupe steering dynamics and progressive ramp rate tuning
 
 - **User Inquiry & Analysis:** "The steering still feels a little off. It is very easy to do small corrections, but when you push a little longer, it steers too abruptly. Does the steering speed accelerate exponentially?"

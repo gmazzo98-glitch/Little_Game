@@ -6465,6 +6465,7 @@ const carMaterials = {
   headlamp: new Lm({color:0xb3ad97}),
   taillamp: new Lm({color:0x9e3027}),
   brokenHeadlamp: new Lm({color:0x1b1c1b, roughness:.85}),
+  brokenTaillamp: new Lm({color:0x221312, roughness:.90}),
   crackGlass: new ji({color:0xaec6c0, roughness:.70, transparent:true, opacity:.38, depthWrite:false, side:2}),
 };
 function carMesh(parent, role, parts, shadow = false) {
@@ -6553,14 +6554,23 @@ frontBumperHinge.position.set(0, .53, 2.50);
 coupe.add(frontBumperHinge);
 carMesh(frontBumperHinge, 'chrome', [boxPart(0, 0, 0, 1.94, .13, .15)]);
 
-carMesh(coupe,'chrome',[
-  boxPart(0,.53,-2.47,1.94,.13,.15),
-  boxPart(0,.70,2.48,1.46,.17,.065),
-  ...Array.from({length:6},(_,i)=>boxPart(0,.64+i*.022,2.540,1.34,.009,.018))
+// Rear bumper on dedicated crumple hinge for rear impact deformation
+const rearBumperHinge = new xi();
+rearBumperHinge.position.set(0, .53, -2.47);
+coupe.add(rearBumperHinge);
+carMesh(rearBumperHinge, 'chrome', [boxPart(0, 0, 0, 1.94, .13, .15)]);
+
+// Front grille on dedicated deformation hinge for frontal impacts
+const frontGrilleHinge = new xi();
+frontGrilleHinge.position.set(0, .70, 2.48);
+coupe.add(frontGrilleHinge);
+carMesh(frontGrilleHinge, 'chrome', [
+  boxPart(0, 0, 0, 1.46, .17, .065),
+  ...Array.from({length:6},(_,i)=>boxPart(0, -.06+i*.022, .06, 1.34, .009, .018))
 ]);
 carMesh(coupe,'black',[boxPart(0,.70,2.526,1.33,.129,.019)]);
 const headlights=[], innerHeadlights=[];
-const tailLampMats={}, reverseLampMats={}, frontTurnMats={};
+const tailLampMats={}, reverseLampMats={}, frontTurnMats={}, tailLampMeshes={};
 for (const side of [-1,1]) {
   const lens = {...latheGeom([[0,-.014],[.112,-.014],[.112,.015],[0,.015]],16),
     matrix:matMul(matTranslate(side*.74,.715,2.53),matRotX(Math.PI/2))};
@@ -6582,6 +6592,7 @@ for (const side of [-1,1]) {
   const tailMesh = carMesh(coupe,'taillamp',[boxPart(side*.70,.78,-2.462,.32,.13,.053)]);
   tailMesh.material = new Lm({color:0x9e3027, emissive:0xff2818, emissiveIntensity:0});
   tailLampMats[side] = tailMesh.material;
+  tailLampMeshes[side] = tailMesh;
   const revMesh = carMesh(coupe,'headlamp',[boxPart(side*.46,.63,-2.452,.13,.052,.042)]);
   revMesh.material = new Lm({color:0xd8d0bc, emissive:0xffe4b5, emissiveIntensity:0});
   reverseLampMats[side] = revMesh.material;
@@ -6613,14 +6624,83 @@ let steamCursor = 0;
 const carDamage = {
   bumperBent: false,
   bumperSide: 0,
+  bumperGrinding: false,
+  rearBumperBent: false,
+  rearBumperSide: 0,
   hoodPopped: false,
+  hoodBuckled: false,
+  trunkPopped: false,
   leftLightBroken: false,
   rightLightBroken: false,
+  leftTailBroken: false,
+  rightTailBroken: false,
   radiatorPunctured: false,
   windshieldCracked: false,
+  wheelBent: false,
+  bentWheelSide: 0,
+  grilleCaved: false,
   alignmentPull: 0,
   coolantLevel: 1.0
 };
+
+// Skid marks system: circular ring buffer of dynamic tire rubber tracks on asphalt
+const SKID_SEGMENTS = 128;
+const skidPos = new Float32Array(SKID_SEGMENTS * 4 * 3);
+const skidIndex = [];
+for (let i = 0; i < SKID_SEGMENTS; i++) {
+  const b = i * 4;
+  skidIndex.push(b, b + 1, b + 2, b, b + 2, b + 3);
+}
+for (let i = 0; i < skidPos.length; i++) skidPos[i] = 0;
+const skidGeo = new It();
+skidGeo.setAttribute('position', new Et(skidPos, 3));
+skidGeo.setIndex(skidIndex);
+const skidMat = new Lm({
+  color: 0x161614,
+  transparent: true,
+  opacity: 0.65,
+  depthWrite: false
+});
+const skidMesh = new dt(skidGeo, skidMat);
+skidMesh.frustumCulled = false;
+Nt.add(skidMesh);
+let skidCursor = 0;
+let lastSkidLeft = null, lastSkidRight = null;
+function addSkidSegment(p0, p1, width = 0.20) {
+  const dx = p1.x - p0.x, dz = p1.z - p0.z;
+  const len = Math.hypot(dx, dz);
+  if (len < 0.04) return;
+  const nx = -dz / len * (width * 0.5);
+  const nz = dx / len * (width * 0.5);
+  const y0 = p0.y + 0.02, y1 = p1.y + 0.02;
+  const idx = (skidCursor % SKID_SEGMENTS) * 4 * 3;
+  skidPos[idx]     = p0.x - nx; skidPos[idx + 1] = y0; skidPos[idx + 2] = p0.z - nz;
+  skidPos[idx + 3] = p0.x + nx; skidPos[idx + 4] = y0; skidPos[idx + 5] = p0.z + nz;
+  skidPos[idx + 6] = p1.x + nx; skidPos[idx + 7] = y1; skidPos[idx + 8] = p1.z + nz;
+  skidPos[idx + 9] = p1.x - nx; skidPos[idx + 10]= y1; skidPos[idx + 11]= p1.z - nz;
+  skidCursor++;
+  skidGeo.attributes.position.needsUpdate = true;
+}
+function recordSkidMarks(currLeft, currRight) {
+  if (!lastSkidLeft || !lastSkidRight) {
+    lastSkidLeft = currLeft.clone();
+    lastSkidRight = currRight.clone();
+    return;
+  }
+  if (currLeft.distanceTo(lastSkidLeft) > 0.40) {
+    addSkidSegment(lastSkidLeft, currLeft, 0.20);
+    lastSkidLeft.copy(currLeft);
+  }
+  if (currRight.distanceTo(lastSkidRight) > 0.40) {
+    addSkidSegment(lastSkidRight, currRight, 0.20);
+    lastSkidRight.copy(currRight);
+  }
+}
+function breakSkidMarks() {
+  lastSkidLeft = null;
+  lastSkidRight = null;
+}
+const _skidL = new Ut(), _skidR = new Ut();
 
 const wheelGroups=[];
 const frontPivots=[];
@@ -7144,6 +7224,26 @@ function syncHeadlampBeams() {
   }
   updateInstrumentCluster();
 }
+function syncTailLamps() {
+  const lightsOn = controls.find(c => c.kind === 'headlights')?.on;
+  const isBraking = !!(fn.Space || (fn.KeyS && carSpeed > 0.5) || (fn.ArrowDown && carSpeed > 0.5));
+  let anyTailLit = false;
+  for (const side of [-1, 1]) {
+    const isBroken = (side === -1 && carDamage.leftTailBroken) || (side === 1 && carDamage.rightTailBroken);
+    const mesh = tailLampMeshes[side], mat = tailLampMats[side];
+    if (!mesh || !mat) continue;
+    mesh.material = isBroken ? carMaterials.brokenTaillamp : mat;
+    if (isBroken) {
+      mat.emissive.setHex(0x000000);
+      mat.emissiveIntensity = 0;
+    } else {
+      mat.emissive.setHex(0xff2818);
+      mat.emissiveIntensity = (lightsOn || isBraking) ? (isBraking ? 2.8 : 1.2) : 0;
+      if (lightsOn || isBraking) anyTailLit = true;
+    }
+  }
+  rearGlowLight.intensity = anyTailLit ? (isBraking ? 3.2 : 1.5) : 0;
+}
 function toggleHighBeams() {
   const lightCtrl = controls.find(c => c.kind === 'headlights');
   if (!lightCtrl.on) toggleCarSwitch(lightCtrl);
@@ -7541,7 +7641,28 @@ function startEngineAudio() {
   inductionGain.connect(audio.master);
   indSrc.start();
 
-  engine={exhaust,tone,level,load:0,tireFilter,tireGain,wetTireFilter,wetTireGain,radioFilter,radioGain,radioOsc,radioOscGain,inductionFilter,inductionGain};
+  // Resonant tire squeal bandpass synthesizer for drifting, sliding, and hard braking
+  const squealSrc = ctx.createBufferSource();
+  squealSrc.buffer = audio.noiseBuf;
+  squealSrc.loop = true;
+  const squealFilter = ctx.createBiquadFilter();
+  squealFilter.type = 'bandpass';
+  squealFilter.frequency.value = 1150;
+  squealFilter.Q.value = 6.2;
+  const squealHarmonic = ctx.createBiquadFilter();
+  squealHarmonic.type = 'bandpass';
+  squealHarmonic.frequency.value = 2300;
+  squealHarmonic.Q.value = 5.0;
+  const squealGain = ctx.createGain();
+  squealGain.gain.value = 0;
+  squealSrc.connect(squealFilter);
+  squealFilter.connect(squealGain);
+  squealSrc.connect(squealHarmonic);
+  squealHarmonic.connect(squealGain);
+  squealGain.connect(audio.master);
+  squealSrc.start();
+
+  engine={exhaust,tone,level,load:0,tireFilter,tireGain,wetTireFilter,wetTireGain,radioFilter,radioGain,radioOsc,radioOscGain,inductionFilter,inductionGain,squealFilter,squealHarmonic,squealGain};
 }
 function playTarThump(speed) {
   const ctx=audio.ctx;
@@ -7650,7 +7771,7 @@ function playCarCrash(sev, isFront, contactSide) {
     latchOsc.start(at + .03); latchOsc.stop(at + .12);
   }
 
-  // 4. Shattered headlight / glass fracture
+  // 4. Shattered headlight / taillight / windshield glass fracture
   if (sev >= 3 && audio.noiseBuf) {
     const glassSrc = ctx.createBufferSource(), glassFilt = ctx.createBiquadFilter(), glassGain = ctx.createGain();
     glassSrc.buffer = audio.noiseBuf;
@@ -7660,6 +7781,18 @@ function playCarCrash(sev, isFront, contactSide) {
     glassGain.gain.exponentialRampToValueAtTime(.0001, at + .34);
     glassSrc.connect(glassFilt); glassFilt.connect(glassGain); glassGain.connect(audio.master);
     glassSrc.start(at + .05, Math.random(), .34); glassSrc.stop(at + .38);
+  }
+
+  // 5. High-speed radiator puncture steam burst
+  if (sev >= 3 && isFront && audio.noiseBuf) {
+    const steamBurstSrc = ctx.createBufferSource(), steamBurstFilt = ctx.createBiquadFilter(), steamBurstGain = ctx.createGain();
+    steamBurstSrc.buffer = audio.noiseBuf;
+    steamBurstFilt.type = 'bandpass';
+    steamBurstFilt.frequency.setValueAtTime(1400, at + .08);
+    steamBurstGain.gain.setValueAtTime(.07, at + .08);
+    steamBurstGain.gain.exponentialRampToValueAtTime(.0001, at + .58);
+    steamBurstSrc.connect(steamBurstFilt); steamBurstFilt.connect(steamBurstGain); steamBurstGain.connect(audio.master);
+    steamBurstSrc.start(at + .08, Math.random(), .58); steamBurstSrc.stop(at + .62);
   }
 }
 function playMetalPry() {
@@ -8042,21 +8175,42 @@ function updateEngineAudio() {
   }
 
   // Surface-dependent tire, gravel shoulder, desert sand, and slip scrub audio
-  const slipAmt=Math.min(1,Math.abs(lateralSlip)/3.5);
-  let tireFreq=220, tireLvl=Math.min(1,speedAbs/22)*.018;
-  if(currentSurface==='shoulder') {
-    tireFreq=680+180*Math.sin(now*19);
-    tireLvl=Math.min(1,speedAbs/15)*.068;
-  } else if(currentSurface==='sand' || currentSurface==='drift') {
-    tireFreq=430+90*Math.sin(now*11);
-    tireLvl=Math.min(1,speedAbs/14)*.058;
+  const scrubSpeed = Math.hypot(lateralSlip, (fn.Space && speedAbs > 1.5) ? (speedAbs * 0.45) : 0);
+  const scrubIntensity = Math.max(0, Math.min(1.0, (scrubSpeed - 0.65) / 3.0));
+
+  let tireFreq = 220, tireLvl = Math.min(1, speedAbs / 22) * 0.018;
+  if (currentSurface === 'shoulder') {
+    tireFreq = 680 + 180 * Math.sin(now * 19);
+    tireLvl = Math.min(1, speedAbs / 15) * 0.068;
+  } else if (currentSurface === 'sand' || currentSurface === 'drift') {
+    tireFreq = 430 + 90 * Math.sin(now * 11);
+    tireLvl = Math.min(1, speedAbs / 14) * 0.058;
   }
-  if(slipAmt>.12) {
-    tireFreq=mixVal(tireFreq,880,slipAmt);
-    tireLvl=Math.max(tireLvl,slipAmt*.062);
+  if (scrubIntensity > 0.05) {
+    tireFreq = mixVal(tireFreq, 840, scrubIntensity);
+    tireLvl = Math.max(tireLvl, scrubIntensity * 0.065);
   }
-  engine.tireFilter.frequency.setTargetAtTime(tireFreq,now,.09);
-  engine.tireGain.gain.setTargetAtTime(seated && speedAbs>.15 ? tireLvl : 0,now,.09);
+  engine.tireFilter.frequency.setTargetAtTime(tireFreq, now, 0.09);
+  engine.tireGain.gain.setTargetAtTime(seated && speedAbs > 0.15 ? tireLvl : 0, now, 0.09);
+
+  // Dedicated resonant tire squeal & slip synthesis
+  if (engine.squealGain) {
+    let squealVol = 0;
+    let squealFreq = 1150;
+    if (currentSurface === 'asphalt') {
+      squealFreq = 950 + Math.min(750, scrubSpeed * 135);
+      squealVol = scrubIntensity * 0.088;
+    } else if (currentSurface === 'shoulder' || currentSurface === 'gravel') {
+      squealFreq = 540 + Math.sin(now * 18) * 120;
+      squealVol = scrubIntensity * 0.072;
+    } else if (currentSurface === 'sand' || currentSurface === 'drift') {
+      squealFreq = 420 + Math.sin(now * 12) * 80;
+      squealVol = scrubIntensity * 0.062;
+    }
+    engine.squealFilter.frequency.setTargetAtTime(squealFreq, now, 0.04);
+    engine.squealHarmonic.frequency.setTargetAtTime(squealFreq * 1.95, now, 0.04);
+    engine.squealGain.gain.setTargetAtTime(seated && speedAbs > 1.2 ? squealVol : 0, now, 0.05);
+  }
   if(engine.wetTireGain) {
     const sWet=nwSFromX(coupe.position.x);
     const patchWet=sWet>15500?Math.max(Math.exp(-Math.pow((sWet-16500)/380,2))*.55,Math.exp(-Math.pow((sWet-17850)/420,2))*.68,xc(Math.max(0,Math.min(1,(sWet-18500)/3800)))*.85):0;
@@ -8228,46 +8382,101 @@ function handleCarCollision(speed, steer) {
   }
   const isFront = speed > 0;
   carSpeed = -speed * 0.22;
-  lateralSlip *= 0.4;
+  lateralSlip *= 0.35;
   
-  const jolt = Math.sign(speed) * Math.min(2.8, absSpd * 0.32);
+  const jolt = Math.sign(speed) * Math.min(3.4, absSpd * 0.36);
   suspBounceVel -= jolt;
-  suspPitch += Math.sign(speed) * Math.min(0.09, absSpd * 0.014);
-  suspRoll += (steer < 0 ? -1 : 1) * Math.min(0.06, absSpd * 0.008);
+  suspPitch += Math.sign(speed) * Math.min(0.12, absSpd * 0.016);
+  suspRoll += (steer < 0 ? -1 : 1) * Math.min(0.08, absSpd * 0.011);
   if (seated) {
-    driverHeadInertia.z += Math.sign(speed) * Math.min(0.075, absSpd * 0.011);
-    driverHeadInertia.y += Math.min(0.05, absSpd * 0.007);
-    driverHeadInertia.x += (steer < 0 ? 1 : -1) * Math.min(0.04, absSpd * 0.006);
+    driverHeadInertia.z += Math.sign(speed) * Math.min(0.09, absSpd * 0.015);
+    driverHeadInertia.y += Math.min(0.065, absSpd * 0.009);
+    driverHeadInertia.x += (steer < 0 ? 1 : -1) * Math.min(0.05, absSpd * 0.008);
   }
-  steeringAngle += (steer >= 0 ? -0.08 : 0.08);
+  steeringAngle += (steer >= 0 ? -0.09 : 0.09);
 
-  const sev = absSpd < 3.2 ? 1 : (absSpd < 7.5 ? 2 : 3);
-  const contactSide = steer < -0.05 ? -1 : (steer > 0.05 ? 1 : (Math.random() > 0.5 ? 1 : -1));
+  const sev = absSpd < 2.8 ? 1 : (absSpd < 6.5 ? 2 : (absSpd < 11.2 ? 3 : 4));
+  const contactSide = steer < -0.04 ? -1 : (steer > 0.04 ? 1 : (Math.random() > 0.5 ? 1 : -1));
   playCarCrash(sev, isFront, contactSide);
 
   if (isFront) {
-    if (absSpd >= 2.2) {
+    // 1. Mild front bumper twist
+    if (absSpd >= 2.0) {
       carDamage.bumperBent = true;
       carDamage.bumperSide = contactSide;
       carDamage.alignmentPull = contactSide * 0.014;
-      frontBumperHinge.rotation.y = contactSide * 0.12;
-      frontBumperHinge.rotation.z = contactSide * 0.04;
-      frontBumperHinge.position.z = 2.44;
+      frontBumperHinge.rotation.y = contactSide * 0.16;
+      frontBumperHinge.rotation.z = contactSide * 0.05;
+      frontBumperHinge.position.z = 2.43;
     }
-    if (absSpd >= 4.0) {
+    // 2. Safety hood latch pops open
+    if (absSpd >= 3.6) {
       carDamage.hoodPopped = true;
+      hoodHinge.rotation.x = 0.09;
     }
-    if (absSpd >= 6.2) {
+    // 3. Headlamp lens shatters & front grille header caves inward
+    if (absSpd >= 5.5) {
       if (contactSide <= 0) carDamage.leftLightBroken = true;
       if (contactSide >= 0) carDamage.rightLightBroken = true;
       syncHeadlampBeams();
+      carDamage.grilleCaved = true;
+      frontGrilleHinge.position.z = 2.40;
+      frontGrilleHinge.rotation.x = 0.11;
     }
-    if (absSpd >= 8.2) {
+    // 4. Violent front crumple: hood buckles upward, bumper drags tire, wheel hub bends, radiator punctured
+    if (absSpd >= 7.2) {
+      carDamage.hoodBuckled = true;
+      hoodHinge.rotation.x = 0.38;
+      hoodHinge.position.z = 0.63;
       carDamage.radiatorPunctured = true;
+      carDamage.bumperGrinding = true;
+      frontBumperHinge.position.z = 2.34;
+      frontBumperHinge.position.y = 0.44;
+      frontBumperHinge.rotation.z = contactSide * 0.12;
+      carDamage.wheelBent = true;
+      carDamage.bentWheelSide = contactSide;
+      carDamage.alignmentPull = contactSide * 0.038;
     }
-    if (absSpd >= 11.5) {
+    // 5. High-speed catastrophic smash: windshield fracture, all front lights dead
+    if (absSpd >= 11.0) {
       carDamage.windshieldCracked = true;
       windshieldCrackMesh.visible = true;
+      carDamage.leftLightBroken = true;
+      carDamage.rightLightBroken = true;
+      syncHeadlampBeams();
+      hoodHinge.rotation.x = 0.62;
+    }
+  } else {
+    // 1. Rear bumper crumpled inward
+    if (absSpd >= 1.8) {
+      carDamage.rearBumperBent = true;
+      carDamage.rearBumperSide = contactSide;
+      rearBumperHinge.rotation.y = -contactSide * 0.16;
+      rearBumperHinge.rotation.z = -contactSide * 0.05;
+      rearBumperHinge.position.z = -2.41;
+    }
+    // 2. Trunk lid latch pops open
+    if (absSpd >= 3.8) {
+      carDamage.trunkPopped = true;
+      trunkOpen = true;
+      trunkLid.rotation.x = 0.42;
+      playInteractionSound('latch');
+    }
+    // 3. Taillight lens shatters & rear bumper drops
+    if (absSpd >= 5.5) {
+      if (contactSide <= 0) carDamage.leftTailBroken = true;
+      if (contactSide >= 0) carDamage.rightTailBroken = true;
+      syncTailLamps();
+      rearBumperHinge.position.y = 0.44;
+      rearBumperHinge.position.z = -2.35;
+    }
+    // 4. Severe rear crush: both taillights out, rear bumper mangled
+    if (absSpd >= 9.0) {
+      carDamage.leftTailBroken = true;
+      carDamage.rightTailBroken = true;
+      syncTailLamps();
+      trunkLid.rotation.x = 0.78;
+      rearBumperHinge.position.z = -2.28;
     }
   }
 }
@@ -8352,30 +8561,29 @@ function driveCar(dt) {
   if(Math.abs(carSpeed)<.025) carSpeed=0;
 
   // Progressive keyboard steering accumulator + speed-sensitive assist:
-  // Short key taps yield subtle micro-trim lane corrections without chassis sway or twitchiness,
-  // while sustained steering builds smooth, continuous authority for curves, intersections, and parking
-  // without abrupt rate steps or exponential surges.
+  // Linear progressive response eliminates abrupt exponential rate jumps, giving
+  // smooth analog authority from fine highway lane-tracking to full-lock parking maneuvers.
   const steerLeft = !!(fn.KeyA || fn.ArrowLeft);
   const steerRight = !!(fn.KeyD || fn.ArrowRight);
   const steerRaw = (steerLeft ? 1 : 0) - (steerRight ? 1 : 0);
   const steerSens = Math.max(0.3, Math.min(2.0, (typeof gameSettings !== 'undefined' ? gameSettings.steerSensitivity : 0.9)));
   if (steerRaw !== 0) {
     const isReversingInput = Math.sign(steerRaw) !== Math.sign(virtualSteerInput) && Math.abs(virtualSteerInput) > 0.04;
-    // Continuous smooth accumulator ramp rate (eliminates the previous step-doubling at 0.28):
-    const rampRate = isReversingInput ? (7.2 * steerSens) : (1.42 * steerSens);
+    // Linear accumulator ramp: rapid response when throwing opposite lock to catch a slide, smooth predictable ramp for steering
+    const rampRate = isReversingInput ? (6.5 * steerSens) : (1.10 * steerSens);
     virtualSteerInput += Math.sign(steerRaw - virtualSteerInput) * Math.min(Math.abs(steerRaw - virtualSteerInput), rampRate * dt);
   } else {
-    const returnRate = (4.8 + Math.min(4.2, absSpd * 0.20)) * steerSens;
+    const returnRate = (4.5 + Math.min(4.0, absSpd * 0.18)) * steerSens;
     virtualSteerInput += (0 - virtualSteerInput) * Math.min(1, returnRate * dt);
     if (Math.abs(virtualSteerInput) < 0.001) virtualSteerInput = 0;
   }
-  // Soft, continuous progressive curve: gentle response for initial taps, smooth monotonic build-up
-  const steerProgressive = Math.sign(virtualSteerInput) * Math.pow(Math.abs(virtualSteerInput), 1.35);
+  // Linear response curve: 1:1 proportional feel with no exponential steepening or abrupt snap
+  const steerProgressive = virtualSteerInput;
   // High-speed assist damping: keeps low-speed maneuvers agile while stabilizing the coupe at highway speeds
   const speedDamping = (typeof gameSettings !== 'undefined' && gameSettings.highwayAssist) ? (1.0 / (1.0 + Math.max(0, absSpd - 3.8) * 0.068)) : 1.0;
   const steerTarget = steerProgressive * 0.38 * speedDamping;
   if (steerRaw !== 0 || Math.abs(virtualSteerInput) > 0.005) {
-    const steerSpeed = (currentSurface === 'sand' ? 4.8 : (absSpd > 16 ? 5.8 : 7.2)) * steerSens;
+    const steerSpeed = (currentSurface === 'sand' ? 3.6 : (absSpd > 16 ? 4.2 : 4.8)) * steerSens;
     steeringAngle += (steerTarget - steeringAngle) * Math.min(1, steerSpeed * dt);
   } else {
     const casterRate = Math.max(1.8, Math.min(8.5, 1.8 + absSpd * 0.32));
@@ -8391,20 +8599,53 @@ function driveCar(dt) {
   for(const pivot of frontPivots)pivot.rotation.y=steeringAngle;
   steering.rotation.z=-(steeringAngle+steerVib)*3.2;
 
-  // RWD power-oversteer on loose surfaces & counter-steer catch
+  // Drifting, RWD power-oversteer & counter-steering catch dynamics:
+  const isBraking = !!(fn.Space || (fn.KeyS && carSpeed > 0.5) || (fn.ArrowDown && carSpeed > 0.5));
+  const handbrake = !!fn.Space;
   const onLoose = currentSurface !== 'asphalt';
-  const throttleOversteer = (onLoose || fn.Space) ? (throttle * Math.sign(steeringAngle) * (currentSurface === 'sand' ? 2.8 : (currentSurface === 'grass' ? 2.2 : 1.7))) : 0;
-  const cornerForce = steeringAngle * carSpeed * Math.min(1, absSpd / 10) * (currentSurface === 'asphalt' ? 0.35 : 0.82) + throttleOversteer;
 
-  const isCounterSteering = lateralSlip !== 0 && Math.sign(steeringAngle) !== Math.sign(lateralSlip) && Math.abs(steeringAngle) > 0.04;
-  const counterGrip = isCounterSteering ? 4.2 : 0;
-  const slipGrip = (currentSurface==='asphalt' ? (fn.Space?2.5:6.4) : (currentSurface==='shoulder'?3.0:2.2)) + counterGrip;
+  // Power-oversteer: kicking the tail out with torque on corner exit or in low gear
+  const throttleTorque = (gearState === 'L' ? 1.7 : (kickdownCooldown > 0 ? 1.45 : 1.1));
+  const powerSlide = (throttle > 0.35 && absSpd > 2.0 && Math.abs(steeringAngle) > 0.025) 
+    ? (throttle * throttleTorque * Math.sign(steeringAngle) * (onLoose ? 3.6 : 2.2)) 
+    : 0;
+
+  // Handbrake lockup breaks rear grip instantly into a slide
+  const handbrakeSlide = (handbrake && absSpd > 2.5) 
+    ? (Math.sign(steeringAngle || (lateralSlip || (Math.random() - 0.5))) * Math.min(5.2, absSpd * 0.42)) 
+    : 0;
+
+  // Cornering force from front tire lateral grip
+  const cornerForce = steeringAngle * carSpeed * Math.min(1.2, absSpd / 8.5) * (currentSurface === 'asphalt' ? 0.44 : 0.82) + powerSlide + handbrakeSlide;
+
+  // Counter-steering balance: when the driver counters the slide, front tires generate restorative stabilizing torque
+  const isCounterSteering = lateralSlip !== 0 && Math.sign(steeringAngle) !== Math.sign(lateralSlip) && Math.abs(steeringAngle) > 0.025;
+  const counterGrip = isCounterSteering ? (currentSurface === 'asphalt' ? 5.8 : 4.4) : 0;
+
+  // Lateral grip threshold: handbrake drops grip, loose surfaces slide easier
+  const baseGrip = currentSurface === 'asphalt' ? (handbrake ? 1.6 : 5.0) : (currentSurface === 'shoulder' ? 2.5 : 1.7);
+  const slipGrip = baseGrip + counterGrip;
 
   // Open-desert crosswind nudge at high speed away from buildings
   const dSite = Math.min(Math.abs(coupe.position.x), Math.abs(coupe.position.x - motelX), Math.abs(coupe.position.x - dinerX));
   const crossWind = (dSite > 95 && absSpd > 14) ? (Hm(eg.elapsedTime * .16, coupe.position.x * .0015) - .5) * .38 * Math.min(1, (absSpd - 14) / 15) : 0;
-  lateralSlip += (cornerForce + crossWind - lateralSlip * slipGrip) * Math.min(1, dt * 5.8);
-  if(absSpd < .3 && throttle === 0) lateralSlip = 0;
+  lateralSlip += (cornerForce + crossWind - lateralSlip * slipGrip) * Math.min(1, dt * 6.2);
+  if(absSpd < .25 && throttle === 0 && !handbrake) lateralSlip = 0;
+
+  // Bumper dragging friction penalty
+  if (carDamage.bumperGrinding && absSpd > 1.0) {
+    carSpeed *= Math.exp(-0.45 * dt);
+    suspBounceVel += (Math.random() - 0.5) * 0.012;
+  }
+
+  // Bent wheel chassis rhythm thumping
+  if (carDamage.wheelBent && absSpd > 1.0) {
+    const bentIdx = (carDamage.bentWheelSide || 1) > 0 ? 1 : 0;
+    const bentPiv = frontPivots[bentIdx];
+    if (bentPiv && bentPiv.children[0]) {
+      suspBounceVel += Math.sin(bentPiv.children[0].rotation.x * 2) * 0.015 * Math.min(1, absSpd / 12);
+    }
+  }
 
   const steps=Math.max(1,Math.ceil((absSpd+Math.abs(lateralSlip))*dt/.30));
   let traveled = 0;
@@ -8491,10 +8732,27 @@ function driveCar(dt) {
     driverHeadInertia.set(0, 0, 0);
   }
 
-  // Kick up rear tire dust on sand, gravel shoulder, or highway sand drifts
+  // Kick up rear tire dust on sand, gravel shoulder, or highway sand drifts; record tire skids on asphalt
   if(currentSurface !== 'asphalt' && absSpd > 2.2) {
     if(currentSurface !== 'grass') spawnTireDust(dt, Math.min(1, absSpd / 16) * (currentSurface==='sand' ? 1.1 : .75));
     if(!wipersOn && absSpd > 8) windshieldDust = Math.min(.22, windshieldDust + dt * .012);
+    breakSkidMarks();
+  } else if (currentSurface === 'asphalt') {
+    const isSkidding = (isBraking && absSpd > 2.8) || (Math.abs(lateralSlip) > 0.65 && absSpd > 3.2) || (throttle > 0.75 && absSpd < 2.5 && engineRev > 0.6);
+    if (isSkidding) {
+      _skidL.set(-0.86, 0.02, -1.49);
+      coupe.localToWorld(_skidL);
+      _skidR.set(0.86, 0.02, -1.49);
+      coupe.localToWorld(_skidR);
+      recordSkidMarks(_skidL, _skidR);
+      if (absSpd > 2.5 && Math.random() < 0.45) {
+        spawnTireDust(dt, Math.min(0.85, (Math.abs(lateralSlip) - 0.5) * 0.7 + (isBraking ? 0.35 : 0)));
+      }
+    } else {
+      breakSkidMarks();
+    }
+  } else {
+    breakSkidMarks();
   }
 
   // Speedometer with subtle mechanical quiver over bumps
@@ -8518,11 +8776,34 @@ function slamHoodShut() {
   hoodHinge.rotation.x = 0;
   playHoodSlam();
 }
+function hammerHoodLatch() {
+  carDamage.hoodBuckled = false;
+  carDamage.hoodPopped = false;
+  hoodHinge.rotation.set(0, 0, 0);
+  hoodHinge.position.set(0, .82, .62);
+  hoodHinge.scale.set(1, 1, 1);
+  playMetalPry();
+}
 function pryBumperClear() {
   carDamage.bumperBent = false;
+  carDamage.bumperGrinding = false;
   carDamage.alignmentPull = 0;
   frontBumperHinge.rotation.set(0, 0, 0);
   frontBumperHinge.position.set(0, .53, 2.50);
+  playMetalPry();
+}
+function pryRearBumperClear() {
+  carDamage.rearBumperBent = false;
+  carDamage.rearBumperSide = 0;
+  rearBumperHinge.rotation.set(0, 0, 0);
+  rearBumperHinge.position.set(0, .50, -2.48);
+  playMetalPry();
+}
+function repairBentWheel() {
+  carDamage.wheelBent = false;
+  carDamage.bentWheelSide = 0;
+  carDamage.alignmentPull = 0;
+  for(const p of frontPivots) p.rotation.z = 0;
   playMetalPry();
 }
 function refillRadiator() {
@@ -13282,6 +13563,16 @@ function findInteractionTarget() {
           target(item.mesh,0,.085,0,.17,'Take '+item.label,()=>takeCargo(item),true);
       }
     }
+    // Rear bumper roadside repairs
+    if(aimPoint.z < -1.8 && Math.abs(aimPoint.x) < 1.48) {
+      if(carDamage.rearBumperBent) {
+        if(carriedCargo && carriedCargo.label === 'tire iron') {
+          target(coupe, (carDamage.rearBumperSide || 1) * .72, .50, -2.48, .45, 'Pry rear bumper clear with tire iron', pryRearBumperClear, true);
+        } else {
+          target(coupe, (carDamage.rearBumperSide || 1) * .72, .50, -2.48, .45, 'Mangled rear bumper (requires tire iron)', () => playInteractionSound('metal'), true);
+        }
+      }
+    }
     const door=doors.find(d=>d.side===side);
     if(door) {
       target(door.hinge,side*.077,.91,-1.26,.19,door.open?'Close door':'Open door',()=>toggleDoor(door));
@@ -13293,16 +13584,34 @@ function findInteractionTarget() {
     target(coupe,.71,1.19,-.58,.16,'Look into empty cabin',()=>{
       inspection='cabin';inspectionTime=5;
     });
-    // Front hood, radiator, and bumper roadside repairs
-    if(aimPoint.z > 1.6 && Math.abs(aimPoint.x) < 1.45) {
-      if(carDamage.hoodPopped) {
+    // Front hood, radiator, wheel, and bumper roadside repairs
+    if(aimPoint.z > 1.2 && Math.abs(aimPoint.x) < 1.45) {
+      if(carDamage.hoodBuckled) {
+        if(carriedCargo && (carriedCargo.label === 'tool case' || carriedCargo.label === 'tire iron')) {
+          target(coupe, 0, .92, 2.35, .50, 'Hammer hood latch straight', hammerHoodLatch, true);
+        } else {
+          target(coupe, 0, .92, 2.35, .50, 'Buckled hood (requires tools)', () => playInteractionSound('metal'), true);
+        }
+      } else if(carDamage.hoodPopped) {
         target(coupe, 0, .88, 2.45, .42, 'Slam hood shut', slamHoodShut, true);
       }
       if(carriedCargo && carriedCargo.label === 'service water can' && carriedCargo.full) {
         target(coupe, 0, .85, 2.30, .45, 'Refill radiator with water', refillRadiator, true);
       }
-      if(carDamage.bumperBent && carriedCargo && carriedCargo.label === 'tire iron') {
-        target(coupe, carDamage.bumperSide * .72, .53, 2.50, .45, 'Pry bumper clear with tire iron', pryBumperClear, true);
+      if(carDamage.bumperBent) {
+        if(carriedCargo && carriedCargo.label === 'tire iron') {
+          target(coupe, (carDamage.bumperSide || 1) * .72, .53, 2.50, .45, 'Pry front bumper clear with tire iron', pryBumperClear, true);
+        } else {
+          target(coupe, (carDamage.bumperSide || 1) * .72, .53, 2.50, .45, 'Front bumper grinding (requires tire iron)', () => playInteractionSound('metal'), true);
+        }
+      }
+      if(carDamage.wheelBent) {
+        const sideX = (carDamage.bentWheelSide || 1) * 0.86;
+        if(carriedCargo && (carriedCargo.label === 'tire iron' || carriedCargo.label === 'tool case')) {
+          target(coupe, sideX, .38, 1.51, .55, 'Straighten bent wheel hub', repairBentWheel, true);
+        } else {
+          target(coupe, sideX, .38, 1.51, .55, 'Bent wheel hub (requires tire iron)', () => playInteractionSound('metal'), true);
+        }
       }
     }
   }
@@ -13548,11 +13857,29 @@ function officeWallInWay(delta) {
   return false;
 }
 function animateCar(dt) {
-  if(carDamage.hoodPopped) {
+  if(carDamage.hoodBuckled) {
+    const windFlutter = Math.sin(eg.elapsedTime * 42) * Math.min(0.025, Math.abs(carSpeed) * 0.002);
+    hoodHinge.rotation.x += (0.16 + windFlutter - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
+    hoodHinge.position.y += (0.86 - hoodHinge.position.y) * Math.min(1, 14 * dt);
+    hoodHinge.position.z += (0.54 - hoodHinge.position.z) * Math.min(1, 14 * dt);
+  } else if(carDamage.hoodPopped) {
     const idleTremor = ignitionOn ? Math.sin(eg.elapsedTime * 34) * 0.0035 : 0;
     hoodHinge.rotation.x += (0.045 + idleTremor - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
+    hoodHinge.position.y += (0.82 - hoodHinge.position.y) * Math.min(1, 14 * dt);
+    hoodHinge.position.z += (0.62 - hoodHinge.position.z) * Math.min(1, 14 * dt);
   } else {
     hoodHinge.rotation.x += (0 - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
+    hoodHinge.position.y += (0.82 - hoodHinge.position.y) * Math.min(1, 14 * dt);
+    hoodHinge.position.z += (0.62 - hoodHinge.position.z) * Math.min(1, 14 * dt);
+  }
+  if(carDamage.wheelBent && carDamage.bentWheelSide !== 0) {
+    const bentIdx = (carDamage.bentWheelSide || 1) > 0 ? 1 : 0;
+    const bentPiv = frontPivots[bentIdx];
+    if (bentPiv && bentPiv.children[0]) {
+      bentPiv.rotation.z = Math.sin(bentPiv.children[0].rotation.x) * 0.12 * carDamage.bentWheelSide;
+    }
+  } else {
+    for(const p of frontPivots) p.rotation.z = 0;
   }
   if(carDamage.radiatorPunctured && carDamage.coolantLevel > 0) {
     if(Math.random() < Math.min(1, dt * 18)) {
@@ -14412,12 +14739,19 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   carDamage,
   handleCarCollision,
   slamHoodShut,
+  hammerHoodLatch,
   pryBumperClear,
+  pryRearBumperClear,
+  repairBentWheel,
   refillRadiator,
   frontBumperHinge,
+  rearBumperHinge,
+  frontGrilleHinge,
   hoodHinge,
   windshieldCrackMesh,
   radiatorSteam,
+  skidMesh,
+  syncTailLamps,
   vendCokeBottle,
   drinkCokeBottle,
   returnCokeBottle,
