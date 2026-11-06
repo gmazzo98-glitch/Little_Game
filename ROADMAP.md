@@ -539,6 +539,15 @@ For each `index.html` change:
 - Use the [1963 Chevrolet Impala Sport Coupe factory reference](https://news.chevrolet.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1963-Chevrolet.pdf) for the roof, rear seat, and deck relationship. The game coupe now has a rearward roof and backlight, fixed rear quarter glass, and a separate parcel shelf behind a reclined saddle-vinyl bench.
 - Inline JavaScript parses. The transformed rear backrest vertices above the glass sill clear the rear glass plane by at least 0.128 m. In-game visual review remains open.
 
+### 2026-11-06b — Fern Bend Drive-In comprehensive polish pass
+
+- **Report:** The Fern Bend roadside ice cream drive-in lacked period roadside details, featuring bare canopy framing, wireframe neon signage without a backing cabinet, and an empty counter room.
+- **Exterior Carhop Order Stalls:** Added four authentic 1950s/60s carhop speaker stanchions along the canopy parking bays with curb footings, tubular steel posts, cast-aluminum angled speaker heads, talkback grills, illuminated mini-menus, red carhop call buttons, tray clips, stall numbers, and physical collision bounding boxes (`Dt`). Added a heavy galvanized ribbed trash receptacle with spring flap at the walkway curb.
+- **Canopy Structural Detailing:** Added 9 exposed transverse heavy timber ceiling rafters beneath the tongue-and-groove decking, a primary longitudinal carrying header beam, steel bent tie-plates with bolt flanges, front gutter hanger brackets, and dual corner downspout pipes with cast concrete splash blocks.
+- **Refined Soft-Serve Cone Neon Sign:** Built a shaped porcelain enamel backing cabinet with tapered waffle cone backing, scalloped soft-serve cloud backing, dark cabinet rim, structural angle-iron uprights, diagonal guy braces, and a weatherproof rooftop transformer/ballast box. Refined the neon tubing with a gold diamond crosshatch waffle grid, multi-tiered mint green swirl ribbons, and a cherry red accent curl at the peak.
+- **Authentic Counter Room Props:** Furnished the interior with a vintage Hamilton Beach triple-spindle malt/milkshake mixer with fluted stainless cups and jade-green cowl, a 4-well stainless steel crushed fruit & syrup pump rail with porcelain flavor knobs, a countertop glass/chrome straw dispenser, stamped metal napkin dispensers, a vintage mechanical cash register, two heavy timber storage shelves with bulk "CASCADE JOY CONES" cartons and gallon glass syrup jugs, two chrome pedestal red vinyl counter stools, and an electric Westclox wall clock.
+- **Checks:** Inline script extracted and passed `node --check` with 0 errors (965,435 bytes). Zero external runtime dependencies or network requests.
+
 ### 2026-11-06 — Scenery placement cleanup (river, road, telephone poles)
 
 - **Report:** Trees could stand in the river, bushes on the road, telephone poles on the road or in the river, and trees or bushes on top of poles.
