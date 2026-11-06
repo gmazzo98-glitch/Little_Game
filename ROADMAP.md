@@ -648,6 +648,12 @@ For each `index.html` change:
 - **Map (reworked after the first pass was still cramped):** the canvas is now 1440x600 drawn at 2.8x (4032x1680), with U.S. 66 widened so the desert stops (Cinder Court, Sunset, Starlite), an "open steppe" break, and the six Plains stops no longer overlap; Plains labels stagger over four tiers; small text raised 2 px; the legend moved into the Plains panel. With the map unfolded, a full-screen map reader opens: scroll zooms (1x to 6x, about the cursor when free, else the centre), mouse movement or a drag pans, double-click resets, `R` folds it. Gas stops show GAS.
 - **Checks:** inline `node --check` passes; in the embedded browser no console errors; trip card shows GAS tags; taking the nozzle and refuelling (via exported `takePumpNozzle`/`refuelCoupeAtPump`) worked at Cinder Court, Starlite, Harvest Moon and Sunset; the map reader opened and zoomed and screenshots showed the Plains labels legible. **Not verified:** the aim-and-click nozzle prompt at the new pumps by hand, pump placement against the Starlite and Cinder Court buildings, the folded in-cab map's look (its texture is now wider), `file://`.
 
+### 2026-11-06 — Plains grass fix and honest status
+
+- **Finding:** the Plains grass tufts were crossed quads with no normals on a Lambert material, so every tuft rendered as a black slab; the earlier "Plains screenshots" in `captures/plains_*.jpg` show the title overlay over the scene and do not demonstrate the region. Those captures and the Plains visual claims above should be treated as unverified.
+- **Fix:** tufts are now nine thin tapered blades with upward normals, random yaw and height per instance, colours toned down, and a daylight-scaled emissive lift (`grassMat.emissive` from `uDay`) so they read as straw by day and stay dim at night; density per cell raised from 45 to 100.
+- **Seen (embedded browser, noon, dusk, night at Harvest Moon and the windmill):** blades read as grass tufts, no console errors. **Still open:** ground is a flat pale beige by day and near-black at dusk (no straw/green variation or wind streaks), tufts are still a bit bright at night, the Harvest Moon pylon neon is faint from the road, and nothing of this has a named-laptop frame-time measurement. Visual acceptance of the Plains stays open.
+
 ### 2026-11-06 — Scenery placement cleanup (river, road, telephone poles)
 
 - **Report:** Trees could stand in the river, bushes on the road, telephone poles on the road or in the river, and trees or bushes on top of poles.

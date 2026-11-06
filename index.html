@@ -11962,22 +11962,32 @@ hungSpeakerOnCoupe = (function() {
 const PLAINS_GRASS_NEAR_N = 3600;
 const PLAINS_GRASS_MID_N = 2400;
 
-// Double crossed quads with vertex colors: dark olive base to straw tip
+// A tuft of thin tapered blades, fanned and leaning, with vertex colours from dark olive at the root to
+// straw gold at the tip. Normals point up so the Lambert material lights it like the ground (without
+// normals every tuft rendered black).
 function makeGrassGeometry() {
   const geo = new It();
-  const pos = [], col = [], idx = [];
-  const addBlade = (x0, z0, x1, z1, h) => {
+  const pos = [], col = [], nor = [], idx = [];
+  const blades = 9;
+  for (let i = 0; i < blades; i++) {
+    const a = i * 2.399963 + .4;                 // golden-angle fan
+    const r = .05 + .16 * ((i * 37 % 9) / 9);    // root offset from the tuft centre
+    const h = .38 + .52 * ((i * 53 % 7) / 7);    // 0.38 to 0.90 m
+    const lean = .10 + .22 * ((i * 29 % 5) / 5);
+    const w = .045;
+    const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+    const tx = cx + Math.cos(a) * lean * h, tz = cz + Math.sin(a) * lean * h;
+    const px = -Math.sin(a) * w, pz = Math.cos(a) * w;
     const base = pos.length / 3;
-    pos.push(x0, 0, z0,   x1, 0, z1,   x1, h, z1,   x0, h, z0);
-    // Dark olive base: (0.24, 0.28, 0.14), Straw gold tip: (0.78, 0.68, 0.40)
-    col.push(0.24, 0.28, 0.14,  0.24, 0.28, 0.14,  0.78, 0.68, 0.40,  0.78, 0.68, 0.40);
-    idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
-  };
-  addBlade(-0.24, 0, 0.24, 0, 0.72);
-  addBlade(0, -0.24, 0, 0.24, 0.78);
-  addBlade(-0.16, -0.16, 0.16, 0.16, 0.65);
+    pos.push(cx - px, 0, cz - pz,  cx + px, 0, cz + pz,  tx, h, tz);
+    const tipMix = .85 + .15 * ((i * 17 % 4) / 4);
+    col.push(.15, .18, .09,  .15, .18, .09,  .56 * tipMix, .49 * tipMix, .28 * tipMix);
+    nor.push(0, 1, 0,  0, 1, 0,  0, 1, 0);
+    idx.push(base, base + 1, base + 2);
+  }
   geo.setAttribute('position', new Et(new Float32Array(pos), 3));
   geo.setAttribute('color', new Et(new Float32Array(col), 3));
+  geo.setAttribute('normal', new Et(new Float32Array(nor), 3));
   geo.setIndex(idx);
   return geo;
 }
@@ -12024,6 +12034,7 @@ Nt.add(fenceWireMesh);
 let lastPlainsGrassCell = -999999;
 let lastPlainsFenceCell = -999999;
 const plainsGrassMat = new $e();
+const plainsGrassScale = new P();
 
 function updatePlainsStreaming(camX, camZ, time) {
   if (camX < 40000) {
@@ -12085,7 +12096,7 @@ function updatePlainsStreaming(camX, camZ, time) {
         const cellZ = Math.round(camZ / 30.0) * 30.0 + cz * 30.0;
 
         // Seeded generation within cell
-        for (let k = 0; k < 45; k++) {
+        for (let k = 0; k < 100; k++) {
           const rx = Un(cellX * 0.11 + k * 13.7, cellZ * 0.17 + k * 7.1) * 30.0;
           const rz = Un(cellX * 0.19 + k * 5.3, cellZ * 0.23 + k * 11.9) * 30.0;
           const gx = cellX + rx;
@@ -12101,10 +12112,10 @@ function updatePlainsStreaming(camX, camZ, time) {
           const sc = 0.75 + 0.5 * Un(gx * 0.31, gz * 0.43);
 
           if (dist <= 85.0 && nSlot < PLAINS_GRASS_NEAR_N) {
-            plainsGrassMat.makeTranslation(gx, gy, gz);
+            plainsGrassMat.makeRotationY(Un(gx * 0.7, gz * 0.9) * 6.283).scale(plainsGrassScale.set(sc, sc * (0.8 + 0.5 * Un(gz * 0.13, gx * 0.21)), sc)).setPosition(gx, gy, gz);
             plainsNearGrassMesh.setMatrixAt(nSlot++, plainsGrassMat);
           } else if (dist <= 210.0 && mSlot < PLAINS_GRASS_MID_N) {
-            plainsGrassMat.makeTranslation(gx, gy, gz);
+            plainsGrassMat.makeRotationY(Un(gx * 0.7, gz * 0.9) * 6.283).scale(plainsGrassScale.set(sc * 1.4, sc * 1.4, sc * 1.4)).setPosition(gx, gy, gz);
             plainsMidGrassMesh.setMatrixAt(mSlot++, plainsGrassMat);
           }
         }
@@ -13908,6 +13919,7 @@ terrainWetnessUniform.value = Math.max(0, Math.min(1, wetRegion * (0.45 + 0.35 *
 
 Xm.material.uniforms.uNight.value = uNight;
 Xm.material.uniforms.uDay.value = uDay;
+grassMat.emissive.setRGB(.13*uDay+.008, .11*uDay+.007, .06*uDay+.004);  // Lambert tufts read too dark in daylight; fade the lift out at dusk and night
 Xm.material.uniforms.uOvercast.value = nwCloud;
 Xm.material.uniforms.uForestSkyline.value = nwBiome;
 
