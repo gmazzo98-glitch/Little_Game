@@ -648,6 +648,13 @@ For each `index.html` change:
 - **Map (reworked after the first pass was still cramped):** the canvas is now 1440x600 drawn at 2.8x (4032x1680), with U.S. 66 widened so the desert stops (Cinder Court, Sunset, Starlite), an "open steppe" break, and the six Plains stops no longer overlap; Plains labels stagger over four tiers; small text raised 2 px; the legend moved into the Plains panel. With the map unfolded, a full-screen map reader opens: scroll zooms (1x to 6x, about the cursor when free, else the centre), mouse movement or a drag pans, double-click resets, `R` folds it. Gas stops show GAS.
 - **Checks:** inline `node --check` passes; in the embedded browser no console errors; trip card shows GAS tags; taking the nozzle and refuelling (via exported `takePumpNozzle`/`refuelCoupeAtPump`) worked at Cinder Court, Starlite, Harvest Moon and Sunset; the map reader opened and zoomed and screenshots showed the Plains labels legible. **Not verified:** the aim-and-click nozzle prompt at the new pumps by hand, pump placement against the Starlite and Cinder Court buildings, the folded in-cab map's look (its texture is now wider), `file://`.
 
+### 2026-11-06 — Plains audit run (`scripts/cdp_plains_audit.js`)
+
+- **Offline:** the delivered `index.html` opened over `file://` in headless Chrome: game object ready, zero exceptions, zero console errors or warnings, zero non-`file:`/`data:`/`blob:` requests.
+- **Continuity:** 246 hops along U.S. 66 from x 4000 to 102000 (400 m apart): no NaN heights, carSurfaceAt reports asphalt at every hop, largest height step 2.3 m per 400 m (0.6 percent grade, on the hinge ramp at x 42400).
+- **Frame time:** Intel Iris Xe (ANGLE Direct3D11), 960x540 viewport, DPR 1, headless Chrome, 240 frames per place and time of day at the hinge crest, grain elevator, windmill, Harvest Moon, east end (x 84000) and Sunset as baseline, each at dusk, blue hour and night: mean 16.6 to 16.7 ms (vsync-bound 60 fps), p95 17.6 to 19.1 ms, worst single frame 33.4 ms (one frame at Harvest Moon at night). Not a named-laptop run at a real display size and pixel ratio.
+- **Not covered:** the hops teleport, so physics driving with the pedals across terrain recentre boundaries is still unverified; interactions by hand; visual acceptance.
+
 ### 2026-11-06 — Plains pass 2: ground, sign, storm, trip card, build stamp
 
 - **Trip card and map:** every Plains stop (silo, elevator, water tower, windmill, mailboxes, Harvest Moon) is now on the normal trip card, not just the dev warp. The title screen shows a build stamp (`BUILD 2026-11-06c`) so a stale download is easy to spot.
