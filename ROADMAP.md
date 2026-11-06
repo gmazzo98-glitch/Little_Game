@@ -555,6 +555,12 @@ For each `index.html` change:
   - Settings persist to `localStorage` (`neon_gas_settings_v1`) across sessions.
 - **Controls & Arrow key support:** Extended steering, throttle, and walk controls so Arrow keys work interchangeably with WASD. Physics and movement pause cleanly while the settings modal is active.
 - **Checks:** Single inline script extracted and passed `node --check` with 0 errors (924,157 bytes). Offline headless Edge dumped DOM verifying modal, card, presets, and controls. Steering physics simulation confirmed: 60 ms highway tap peaks at 0.00184 rad (0.11°), sustained 0.6 s turn at low speed reaches 0.335 rad (19.2°). Zero external runtime dependencies or network requests.
+### 2026-11-04d — Interior steps: grit tail cut, interior shares the outdoor voice
+
+- **Report:** the interior steps still sounded horrible — "like eggs being cracked" — and the user asked for steps that are not too different inside versus outside.
+- **Analysis:** an offline render of the synthesized step (same noise buffer, biquad, and envelope parameters as the game) showed the grit tail was the culprit: 90% of its energy above 3 kHz with a spectral centroid of ~12.4 kHz — a dry, sharp tick on every stride, precisely the egg-crack quality. The early reflection added a second hit 19 ms later, and the whole three-layer design (bandpass body + low triangle tap + high-frequency grit + reflection) diverged far from the outdoor step, against the user's preference.
+- **Fix:** the grit tail and early reflection layers are deleted entirely, and `footstep()` now remaps surface 3 (interior floors) to surface 1, so building interiors use the exact outdoor asphalt step — same ~380–500 Hz bandpass scuff, same 72→46 Hz body tap, same level. The dead interior-only parameter branches were removed. The classifier still distinguishes interiors (useful for wind muffling and future work); only the sound is shared. Timber bridge (4), canopy (2), sand (0), and asphalt (1) are unchanged.
+- **Checks:** the single inline script passes `node --check`. The offline render confirms the interior step is now bit-identical in design to the asphalt step. Listening acceptance on real speakers remains open in this sandbox.
 
 ### 2026-11-04c — Interior steps too bright: retuned and extended
 
