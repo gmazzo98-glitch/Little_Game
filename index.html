@@ -291,7 +291,7 @@
         <div class="settings-key-item"><kbd>T</kbd><span>Rest until…</span></div>
         <div class="settings-key-item"><kbd>Y</kbd><span>Trip card: fast travel (seated, parked)</span></div>
         <div class="settings-key-item"><kbd>`</kbd><span>Dev warp (free, anywhere)</span></div>
-        <div class="settings-key-item"><kbd>SCROLL</kbd><span>Zoom the road map (unfolded)</span></div>
+        <div class="settings-key-item"><kbd>SCROLL</kbd><span>Zoom the road map (when unfolded)</span></div>
         <div class="settings-key-item"><kbd>G</kbd><span>Set down cargo</span></div>
         <div class="settings-key-item"><kbd>O</kbd> / <kbd>ESC</kbd><span>Settings menu</span></div>
         <div class="settings-key-item"><kbd>M</kbd><span>Toggle sound mute</span></div>
@@ -12278,19 +12278,19 @@ const mirrorAnchor=new P(), mirrorLook=new P();
 let rearMirror, mirrorYaw=0, mirrorDelay=0;
 function buildRoadMap() {
   const canvas = document.createElement('canvas');
-      canvas.width = 1920; canvas.height = 1200;
+      canvas.width = 4032; canvas.height = 1680;
       const ctx = canvas.getContext('2d');
-      ctx.scale(2, 2);
+      ctx.scale(2.8, 2.8);
 
       // Base parchment
       ctx.fillStyle = '#d7cca7';
-      ctx.fillRect(0, 0, 960, 600);
+      ctx.fillRect(0, 0, 1440, 600);
 
       // Double margin border
       ctx.strokeStyle = '#746b4c'; ctx.lineWidth = 3;
-      ctx.strokeRect(16, 16, 928, 568);
+      ctx.strokeRect(16, 16, 1408, 568);
       ctx.strokeStyle = '#968c6a'; ctx.lineWidth = 1;
-      ctx.strokeRect(20, 20, 920, 560);
+      ctx.strokeRect(20, 20, 1400, 560);
 
       // Left panel (Pacific Northwest) tint
       ctx.fillStyle = 'rgba(52, 78, 62, 0.08)';
@@ -12299,42 +12299,42 @@ function buildRoadMap() {
       // Section divider lines for 3-panel map (x=320, 640)
       ctx.strokeStyle = '#766e4e'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(320, 21); ctx.lineTo(320, 579); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(640, 21); ctx.lineTo(640, 579); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(940, 21); ctx.lineTo(940, 579); ctx.stroke();
 
       // Right panel (Great Plains) warm straw tint
       ctx.fillStyle = 'rgba(184, 165, 106, 0.09)';
-      ctx.fillRect(641, 21, 298, 558);
+      ctx.fillRect(941, 21, 478, 558);
 
       // Headers
-      ctx.fillStyle = '#264232'; ctx.font = 'bold 26px Georgia,serif';
+      ctx.fillStyle = '#264232'; ctx.font = 'bold 21px Georgia,serif';
       ctx.textAlign = 'left';
       ctx.fillText('PACIFIC NORTHWEST', 36, 52);
-      ctx.font = 'bold 13px Georgia,serif';
-      ctx.fillText('STATE ROUTE 14  •  CEDAR GORGE & FERN BEND', 36, 70);
+      ctx.font = 'bold 12px Georgia,serif';
+      ctx.fillText('SR 14  •  CEDAR GORGE & FERN BEND', 36, 70);
 
       ctx.fillStyle = '#4c4233'; ctx.font = 'bold 22px Georgia,serif';
-      ctx.fillText('DESERT HIGHWAYS', 336, 52);
+      ctx.fillText('DESERT HIGHWAYS', 338, 52);
       ctx.font = 'bold 12px Georgia,serif';
       ctx.fillText('U.S. 66 CENTRAL • NEEDLES TO STARLITE', 338, 70);
 
       // Panel 3 Header: Great Plains
       ctx.fillStyle = '#4a3f28'; ctx.font = 'bold 22px Georgia,serif';
-      ctx.fillText('GREAT PLAINS', 658, 52);
+      ctx.fillText('GREAT PLAINS', 958, 52);
       ctx.font = 'bold 12px Georgia,serif';
-      ctx.fillText('U.S. 66 EAST • MILEPOSTS 38–55', 658, 70);
+      ctx.fillText('U.S. 66 EAST • MILEPOSTS 38–55', 958, 70);
       ctx.textAlign = 'right';
-      ctx.font = 'bold 11px Georgia,serif';
-      ctx.fillText('1963 MOTOR GUIDE', 924, 70);
+      ctx.font = 'bold 12px Georgia,serif';
+      ctx.fillText('1963 MOTOR GUIDE', 1404, 70);
 
       // Compass Rose at top right
-      const crx = 880, cry = 135;
+      const crx = 1370, cry = 135;
       ctx.strokeStyle = '#6e644b'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(crx, cry, 18, 0, Math.PI * 2); ctx.stroke();
       ctx.fillStyle = '#90534b';
       ctx.beginPath(); ctx.moveTo(crx, cry - 24); ctx.lineTo(crx - 5, cry - 4); ctx.lineTo(crx, cry); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#5c543f';
       ctx.beginPath(); ctx.moveTo(crx, cry - 24); ctx.lineTo(crx + 5, cry - 4); ctx.lineTo(crx, cry); ctx.closePath(); ctx.fill();
-      ctx.font = 'bold 11px Arial,sans-serif'; ctx.textAlign = 'center';
+      ctx.font = 'bold 13px Arial,sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('N', crx, cry - 27); ctx.fillText('W', crx - 24, cry + 4); ctx.fillText('E', crx + 24, cry + 4); ctx.fillText('S', crx, cry + 24);
 
       // Desert mesa contours
@@ -12356,27 +12356,24 @@ function buildRoadMap() {
 
       // Paved highway line
       ctx.strokeStyle = '#904e43'; ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.moveTo(416, r66Y); ctx.lineTo(920, r66Y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(416, r66Y); ctx.lineTo(1420, r66Y); ctx.stroke();
       ctx.strokeStyle = '#e2d6b4'; ctx.lineWidth = 1.2; ctx.setLineDash([8, 6]);
-      ctx.beginPath(); ctx.moveTo(416, r66Y); ctx.lineTo(920, r66Y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(416, r66Y); ctx.lineTo(1420, r66Y); ctx.stroke();
       ctx.setLineDash([]);
 
       // Route 66 East continuation
-      ctx.fillStyle = '#904e43';
-      ctx.beginPath(); ctx.moveTo(924, r66Y); ctx.lineTo(912, r66Y - 5); ctx.lineTo(912, r66Y + 5); ctx.closePath(); ctx.fill();
-      ctx.font = 'bold 11px Arial,sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = '#4a4233';
-      ctx.fillText('TO KINGMAN & FLAGSTAFF →', 920, r66Y - 14);
-
       // Mileage markers along Route 66
       ctx.fillStyle = '#5c543f'; ctx.font = 'italic 13px Georgia,serif'; ctx.textAlign = 'center';
       ctx.fillText('18 MILES', 570, r66Y + 22);
-      ctx.fillText('18 MILES', 750, r66Y + 22);
+      ctx.fillText('18 MILES', 735, r66Y + 22);
+      ctx.fillStyle = '#6b5e3e'; ctx.font = 'italic 12px Georgia,serif';
+      ctx.fillText('≈ 38 MILES OF OPEN STEPPE ≈', 975, r66Y + 24);
 
       // Three Desert Stops
       const desertStops = [
         { id: 'cinder_court', x: 485, name: 'CINDER COURT', sub: 'MOTOR LODGE', miles: 'MI 18 WEST', amen: 'GAS • UNITS 1–3 • SHOW ROOM • REST', above: false },
-        { id: 'sunset_service', x: 655, name: 'SUNSET SERVICE', sub: 'STATION', miles: 'MILE 0 (CENTER)', amen: 'GAS • OIL • WATER • AIR • 24 HR', above: true },
-        { id: 'starlite_diner', x: 835, name: 'STARLITE DINER', sub: '& BAR', miles: 'MI 18 EAST', amen: 'GAS • DINER • FOUNTAIN • COCKTAIL LOUNGE', above: false }
+        { id: 'sunset_service', x: 650, name: 'SUNSET SERVICE', sub: 'STATION', miles: 'MILE 0 (CENTER)', amen: 'GAS • OIL • WATER • AIR • 24 HR', above: true },
+        { id: 'starlite_diner', x: 815, name: 'STARLITE DINER', sub: '& BAR', miles: 'MI 18 EAST', amen: 'GAS • DINER • FOUNTAIN • COCKTAIL LOUNGE', above: false }
       ];
 
       for (const st of desertStops) {
@@ -12393,45 +12390,47 @@ function buildRoadMap() {
         ctx.fillText(st.name, st.x, ly);
         ctx.font = 'bold 12px Georgia,serif'; ctx.fillStyle = '#6e473b';
         ctx.fillText(st.sub + '  •  ' + st.miles, st.x, ly + 15);
-        ctx.font = '11px Arial,sans-serif'; ctx.fillStyle = '#5c543f';
+        ctx.font = '13px Arial,sans-serif'; ctx.fillStyle = '#5c543f';
         ctx.fillText(st.amen, st.x, ly + 28);
       }
 
       // ==========================================
       // PANEL 3: GREAT PLAINS LANDMARKS & HARVEST MOON
       // ==========================================
+      // Labels sit on four tiers so neighbours never overlap; a leader runs from the road to each.
       const plainsStops = [
-        { x: 672, name: 'CONCRETE SILO', sub: 'MP 45 • STEPPE HINGE', above: true },
-        { x: 720, name: 'GRAIN ELEVATOR', sub: 'MP 48 • DEAD SIDING', above: false },
-        { x: 760, name: 'WATER TOWER', sub: 'MP 48 • PRAIRIE VIEW', above: true },
-        { x: 805, name: 'WINDMILL', sub: 'MP 51 • STOCK TANK', above: true },
-        { x: 845, name: 'MAILBOX ROW', sub: 'MP 53 • RURAL POST', above: false },
-        { x: 885, name: 'HARVEST MOON', sub: 'DRIVE-IN • GAS • MP 55', above: true, dest: true }
+        { x: 1000, name: 'CONCRETE SILO', sub: 'MP 45 • STEPPE HINGE', tier: 0 },
+        { x: 1070, name: 'GRAIN ELEVATOR', sub: 'MP 48 • DEAD SIDING', tier: 1 },
+        { x: 1140, name: 'WATER TOWER', sub: 'MP 48 • PRAIRIE VIEW', tier: 2 },
+        { x: 1212, name: 'WINDMILL', sub: 'MP 51 • STOCK TANK', tier: 3 },
+        { x: 1285, name: 'MAILBOX ROW', sub: 'MP 53 • RURAL POST', tier: 0 },
+        { x: 1360, name: 'HARVEST MOON', sub: 'DRIVE-IN • GAS • MP 55', tier: 1, dest: true }
       ];
-
+      const tierDy = [-78, 54, -38, 94];   // label baseline offset from the road line
       for (const pst of plainsStops) {
-        ctx.strokeStyle = pst.dest ? '#b22e22' : '#7a6a42'; ctx.lineWidth = pst.dest ? 2.5 : 1.5;
-        ctx.beginPath(); ctx.moveTo(pst.x, r66Y); ctx.lineTo(pst.x, pst.above ? r66Y - 14 : r66Y + 16); ctx.stroke();
+        const dy = tierDy[pst.tier], above = dy < 0, ly = r66Y + dy;
+        ctx.strokeStyle = pst.dest ? '#b22e22' : '#7a6a42'; ctx.lineWidth = pst.dest ? 2.5 : 1.2;
+        ctx.beginPath(); ctx.moveTo(pst.x, r66Y); ctx.lineTo(pst.x, above ? ly + 18 : ly - 12); ctx.stroke();
 
         ctx.fillStyle = pst.dest ? '#b22e22' : '#6b5e3e';
         ctx.beginPath(); ctx.arc(pst.x, r66Y, pst.dest ? 5.5 : 3.5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#f2ead7';
         ctx.beginPath(); ctx.arc(pst.x, r66Y, pst.dest ? 2.2 : 1.4, 0, Math.PI * 2); ctx.fill();
 
-        const ly = pst.above ? r66Y - 32 : r66Y + 36;
         ctx.fillStyle = pst.dest ? '#7e1d15' : '#3c3526';
-        ctx.font = pst.dest ? 'bold 12px Georgia,serif' : 'bold 10px Georgia,serif';
+        ctx.font = pst.dest ? 'bold 13px Georgia,serif' : 'bold 12px Georgia,serif';
         ctx.textAlign = 'center';
-        ctx.fillText(pst.name, pst.x, ly);
-        ctx.font = '9px Arial,sans-serif'; ctx.fillStyle = '#5c523c';
-        ctx.fillText(pst.sub, pst.x, ly + 13);
+        const tx = pst.x;
+        ctx.fillText(pst.name, tx, ly);
+        ctx.font = '12px Arial,sans-serif'; ctx.fillStyle = '#5c523c';
+        ctx.fillText(pst.sub, tx, ly + 13);
       }
 
       // Continuation arrow at right edge to Farm Belt & Lakes
       ctx.fillStyle = '#904e43';
-      ctx.beginPath(); ctx.moveTo(924, r66Y); ctx.lineTo(912, r66Y - 5); ctx.lineTo(912, r66Y + 5); ctx.closePath(); ctx.fill();
-      ctx.font = 'bold 9px Arial,sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = '#4a4233';
-      ctx.fillText('TO FARM BELT & LAKES →', 922, r66Y - 10);
+      ctx.beginPath(); ctx.moveTo(1424, r66Y); ctx.lineTo(1410, r66Y - 6); ctx.lineTo(1410, r66Y + 6); ctx.closePath(); ctx.fill();
+      ctx.font = 'bold 11px Arial,sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = '#4a4233';
+      ctx.fillText('TO FARM BELT & LAKES →', 1420, r66Y - 12);
 
       // Route 66 Shield on Desert Panel
       const shX = 678, shY = 445;
@@ -12447,31 +12446,31 @@ function buildRoadMap() {
       ctx.fillText('HISTORIC U.S. ROUTE 66', shX, shY + 44);
 
       // SR 14 Through-Road Waysides Index Table (Bottom-Left of Desert Panel)
-      const tbx = 430, tby = 435, tbw = 190, tbh = 126;
+      const tbx = 400, tby = 425, tbw = 250, tbh = 142;
       ctx.fillStyle = 'rgba(238, 230, 205, 0.94)'; ctx.strokeStyle = '#6c7d71'; ctx.lineWidth = 1.2;
       ctx.fillRect(tbx, tby, tbw, tbh); ctx.strokeRect(tbx, tby, tbw, tbh);
-      ctx.fillStyle = '#1e382b'; ctx.font = 'bold 10px Arial,sans-serif'; ctx.textAlign = 'left';
+      ctx.fillStyle = '#1e382b'; ctx.font = 'bold 12px Arial,sans-serif'; ctx.textAlign = 'left';
       ctx.fillText('SR 14 THROUGH-ROAD (MI 18+)', tbx + 8, tby + 16);
-      ctx.font = '9px Arial,sans-serif'; ctx.fillStyle = '#3d5246';
+      ctx.font = '11px Arial,sans-serif'; ctx.fillStyle = '#3d5246';
       ctx.fillText('MI 19   ALDER CREEK TURNOUT', tbx + 8, tby + 33);
       ctx.fillText('MI 21   MOSSY BEND WAYSIDE', tbx + 8, tby + 48);
       ctx.fillText('MI 24   TIMBERLINE PULLOUT', tbx + 8, tby + 63);
       ctx.fillText('MI 26   HEMLOCK NARROWS', tbx + 8, tby + 78);
       ctx.fillText('MI 29   RAIN SHADOW FLATS', tbx + 8, tby + 93);
       ctx.fillText('MI 36   UPPER VALLEY OVERLOOK', tbx + 8, tby + 108);
-      ctx.font = 'italic 8px Arial,sans-serif'; ctx.fillStyle = '#5c6e62';
+      ctx.font = 'italic 10px Arial,sans-serif'; ctx.fillStyle = '#5c6e62';
       ctx.fillText('Deterministic • Exact U-Turn Return', tbx + 8, tby + 120);
 
       // Desert Legend Box (Bottom-Right of Desert Panel)
-      const lgX = 745, lgY = 435, lgW = 180, lgH = 126;
+      const lgX = 990, lgY = 425, lgW = 260, lgH = 142;
       ctx.fillStyle = 'rgba(238, 230, 205, 0.94)'; ctx.strokeStyle = '#7c7356'; ctx.lineWidth = 1.2;
       ctx.fillRect(lgX, lgY, lgW, lgH); ctx.strokeRect(lgX, lgY, lgW, lgH);
-      ctx.fillStyle = '#4a4233'; ctx.font = 'bold 10px Arial,sans-serif'; ctx.textAlign = 'left';
+      ctx.fillStyle = '#4a4233'; ctx.font = 'bold 12px Arial,sans-serif'; ctx.textAlign = 'left';
       ctx.fillText('MAP SYMBOLS & SERVICES', lgX + 8, lgY + 16);
-      ctx.font = '9px Arial,sans-serif'; ctx.fillStyle = '#4a4233';
+      ctx.font = '11px Arial,sans-serif'; ctx.fillStyle = '#4a4233';
       ctx.fillText('■ U.S. 66 (Paved Highway)', lgX + 8, lgY + 33);
       ctx.fillText('■ State Route 14 (Scenic Route)', lgX + 8, lgY + 48);
-      ctx.fillText('★ Gas Station & 24 Hr Service  (also "GAS")', lgX + 8, lgY + 63);
+      ctx.fillText('★ Gas Station & 24 Hr Service  (GAS)', lgX + 8, lgY + 63);
       ctx.fillText('■ Motor Hotel & Visitable Room', lgX + 8, lgY + 78);
       ctx.fillText('♨ Diner, Counter & Lounge', lgX + 8, lgY + 93);
       ctx.fillText('🍦 Soft-Serve Drive-In Stand', lgX + 8, lgY + 108);
@@ -12492,7 +12491,7 @@ function buildRoadMap() {
       ctx.setLineDash([]);
       ctx.fillStyle = '#904e43';
       ctx.beginPath(); ctx.moveTo(276, r66Y); ctx.lineTo(288, r66Y - 4); ctx.lineTo(288, r66Y + 4); ctx.closePath(); ctx.fill();
-      ctx.font = 'bold 10px Arial,sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#4a4233';
+      ctx.font = 'bold 12px Arial,sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#4a4233';
       ctx.fillText('← U.S. 66 WEST (NEEDLES)', 265, r66Y + 16);
 
       // Fork junction marker & callout
@@ -12501,9 +12500,9 @@ function buildRoadMap() {
       ctx.fillStyle = '#f1ecd8';
       ctx.beginPath(); ctx.arc(365, r66Y, 2.5, 0, Math.PI * 2); ctx.fill();
 
-      ctx.fillStyle = '#1e3b2b'; ctx.font = 'bold 11px Georgia,serif'; ctx.textAlign = 'left';
+      ctx.fillStyle = '#1e3b2b'; ctx.font = 'bold 12px Georgia,serif'; ctx.textAlign = 'left';
       ctx.fillText('SR 14 FORK', 376, r66Y - 8);
-      ctx.font = '9px Arial,sans-serif'; ctx.fillStyle = '#3a5445';
+      ctx.font = '11px Arial,sans-serif'; ctx.fillStyle = '#3a5445';
       ctx.fillText('MI 3 / 5 KM', 376, r66Y + 5);
 
       // ==========================================
@@ -12518,7 +12517,7 @@ function buildRoadMap() {
       ctx.lineTo(24, 264);                              // Exits west
       ctx.stroke();
 
-      ctx.fillStyle = '#325852'; ctx.font = 'italic 11px Georgia,serif'; ctx.textAlign = 'left';
+      ctx.fillStyle = '#325852'; ctx.font = 'italic 12px Georgia,serif'; ctx.textAlign = 'left';
       ctx.fillText('Cedar River (Flows West) →', 55, 276);
 
       // SR 14 Highway line: fork (365, 300) -> curves to Juniper Pass (305, 235) -> Bridge (230, 210) -> Fern Bend (120, 150) -> Through Road
@@ -12549,7 +12548,7 @@ function buildRoadMap() {
       // Through-Road Continuation Arrow
       ctx.fillStyle = '#254e38';
       ctx.beginPath(); ctx.moveTo(22, 108); ctx.lineTo(36, 102); ctx.lineTo(34, 116); ctx.closePath(); ctx.fill();
-      ctx.font = 'bold 11px Arial,sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#1b3827';
+      ctx.font = 'bold 13px Arial,sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = '#1b3827';
       ctx.fillText('← THROUGH ROAD (MI 18+ TO CASCADES)', 34, 96);
 
       // Non-overlapping Stops and Turnouts on SR 14
@@ -12558,29 +12557,29 @@ function buildRoadMap() {
       ctx.fillStyle = '#f1ecd8'; ctx.beginPath(); ctx.arc(305, 235, 2, 0, Math.PI * 2); ctx.fill();
       ctx.font = 'bold 12px Georgia,serif'; ctx.fillStyle = '#1e382b'; ctx.textAlign = 'left';
       ctx.fillText('▲ JUNIPER PASS', 318, 232);
-      ctx.font = '10px Arial,sans-serif'; ctx.fillStyle = '#475e51';
+      ctx.font = '12px Arial,sans-serif'; ctx.fillStyle = '#475e51';
       ctx.fillText('EL. 3,420 FT • MI 8', 318, 244);
 
       // 2. Cedar Gorge Bridge (at 230, 210) - label to North-East/Above
       ctx.font = 'bold 12px Georgia,serif'; ctx.fillStyle = '#1e382b'; ctx.textAlign = 'center';
       ctx.fillText('CEDAR GORGE BRIDGE', 228, 178);
-      ctx.font = '10px Arial,sans-serif'; ctx.fillStyle = '#475e51';
+      ctx.font = '12px Arial,sans-serif'; ctx.fillStyle = '#475e51';
       ctx.fillText('RIVER CROSSING • MI 12', 228, 190);
 
       // 3. Gorge Riverside Pullout (at 185, 198) - label to South/Below
       ctx.fillStyle = '#254e38'; ctx.beginPath(); ctx.arc(185, 198, 4, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#f1ecd8'; ctx.beginPath(); ctx.arc(185, 198, 1.8, 0, Math.PI * 2); ctx.fill();
-      ctx.font = 'bold 10px Georgia,serif'; ctx.fillStyle = '#1e382b'; ctx.textAlign = 'center';
+      ctx.font = 'bold 12px Georgia,serif'; ctx.fillStyle = '#1e382b'; ctx.textAlign = 'center';
       ctx.fillText('RIVER PULLOUT', 185, 218);
-      ctx.font = '9px Arial,sans-serif'; ctx.fillStyle = '#475e51';
+      ctx.font = '11px Arial,sans-serif'; ctx.fillStyle = '#475e51';
       ctx.fillText('MILE 13', 185, 228);
 
       // 4. River Access Turnout (at 150, 178) - South/Below
       ctx.fillStyle = '#254e38'; ctx.beginPath(); ctx.arc(150, 178, 4, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#f1ecd8'; ctx.beginPath(); ctx.arc(150, 178, 1.8, 0, Math.PI * 2); ctx.fill();
-      ctx.font = 'bold 10px Georgia,serif'; ctx.fillStyle = '#1e382b'; ctx.textAlign = 'center';
+      ctx.font = 'bold 12px Georgia,serif'; ctx.fillStyle = '#1e382b'; ctx.textAlign = 'center';
       ctx.fillText('RIVER ACCESS', 135, 198);
-      ctx.font = '9px Arial,sans-serif'; ctx.fillStyle = '#475e51';
+      ctx.font = '11px Arial,sans-serif'; ctx.fillStyle = '#475e51';
       ctx.fillText('MILE 16', 135, 208);
 
       // 5. Fern Bend Drive-In (at 120, 150) - Hero stop! Label to Right
@@ -12588,15 +12587,15 @@ function buildRoadMap() {
       ctx.fillStyle = '#f1ecd8'; ctx.beginPath(); ctx.arc(120, 150, 2.5, 0, Math.PI * 2); ctx.fill();
       ctx.font = 'bold 13px Georgia,serif'; ctx.fillStyle = '#782f25'; ctx.textAlign = 'left';
       ctx.fillText('FERN BEND DRIVE-IN', 132, 142);
-      ctx.font = 'bold 9px Arial,sans-serif'; ctx.fillStyle = '#5c4839';
+      ctx.font = 'bold 11px Arial,sans-serif'; ctx.fillStyle = '#5c4839';
       ctx.fillText('HOT COFFEE • CONES • MILE 16', 132, 153);
 
       // 6. Ridge Overlook Pullout (at 75, 130) - Label South/Below
       ctx.fillStyle = '#254e38'; ctx.beginPath(); ctx.arc(75, 130, 4, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#f1ecd8'; ctx.beginPath(); ctx.arc(75, 130, 1.8, 0, Math.PI * 2); ctx.fill();
-      ctx.font = 'bold 10px Georgia,serif'; ctx.fillStyle = '#1e382b'; ctx.textAlign = 'center';
+      ctx.font = 'bold 12px Georgia,serif'; ctx.fillStyle = '#1e382b'; ctx.textAlign = 'center';
       ctx.fillText('RIDGE PULLOUT', 75, 148);
-      ctx.font = '9px Arial,sans-serif'; ctx.fillStyle = '#475e51';
+      ctx.font = '11px Arial,sans-serif'; ctx.fillStyle = '#475e51';
       ctx.fillText('TRAILHEAD • MI 16.1', 75, 158);
 
       // SR 14 Shield badge
@@ -12613,9 +12612,9 @@ function buildRoadMap() {
       ctx.fillStyle = 'rgba(240, 234, 214, 0.95)'; ctx.strokeStyle = '#4e5f54'; ctx.lineWidth = 1.8;
       ctx.fillRect(inX, inY, inW, inH); ctx.strokeRect(inX, inY, inW, inH);
 
-      ctx.fillStyle = '#1e382b'; ctx.font = 'bold 11px Georgia,serif'; ctx.textAlign = 'left';
+      ctx.fillStyle = '#1e382b'; ctx.font = 'bold 12px Georgia,serif'; ctx.textAlign = 'left';
       ctx.fillText('FERN BEND DETAIL  •  WALKING LOOP & RIVER ACCESS', inX + 12, inY + 20);
-      ctx.font = '10px Arial,sans-serif'; ctx.fillStyle = '#5c6e62';
+      ctx.font = '12px Arial,sans-serif'; ctx.fillStyle = '#5c6e62';
       ctx.fillText('MILE 16.0  •  VALLEY FLOOR EL. 780 FT  •  WALKABLE CONNECTIONS', inX + 12, inY + 34);
 
       // Inset SR 14 road
@@ -12630,7 +12629,7 @@ function buildRoadMap() {
       const inRivY = inY + 142;
       ctx.strokeStyle = '#3e6c66'; ctx.lineWidth = 3.5;
       ctx.beginPath(); ctx.moveTo(inX + 12, inRivY); ctx.lineTo(inX + inW - 12, inRivY); ctx.stroke();
-      ctx.fillStyle = '#325852'; ctx.font = 'italic 10px Georgia,serif'; ctx.textAlign = 'right';
+      ctx.fillStyle = '#325852'; ctx.font = 'italic 12px Georgia,serif'; ctx.textAlign = 'right';
       ctx.fillText('Cedar River →', inX + inW - 16, inRivY - 4);
 
       // Inset Timber Footbridge across Cedar River
@@ -12638,7 +12637,7 @@ function buildRoadMap() {
       ctx.strokeStyle = '#5c4834'; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.moveTo(brX - 6, inRivY - 8); ctx.lineTo(brX - 6, inRivY + 8); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(brX + 6, inRivY - 8); ctx.lineTo(brX + 6, inRivY + 8); ctx.stroke();
-      ctx.font = 'bold 9px Arial,sans-serif'; ctx.fillStyle = '#4c3927'; ctx.textAlign = 'center';
+      ctx.font = 'bold 11px Arial,sans-serif'; ctx.fillStyle = '#4c3927'; ctx.textAlign = 'center';
       ctx.fillText('TIMBER FOOTBRIDGE', brX, inRivY + 18);
 
       // Inset Walking Trails (Dashed sienna line connecting everything)
@@ -12662,17 +12661,17 @@ function buildRoadMap() {
       // Inset Location Markers
       // Drive-In
       ctx.fillStyle = '#904e43'; ctx.beginPath(); ctx.arc(inX + 180, inRoadY - 8, 4.5, 0, Math.PI * 2); ctx.fill();
-      ctx.font = 'bold 10px Arial,sans-serif'; ctx.textAlign = 'center';
+      ctx.font = 'bold 12px Arial,sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('FERN BEND DRIVE-IN & CANOPY', inX + 180, inRoadY - 14);
 
       // River Access
       ctx.fillStyle = '#254e38'; ctx.beginPath(); ctx.arc(inX + 270, inRoadY + 9, 3.5, 0, Math.PI * 2); ctx.fill();
-      ctx.font = 'bold 9px Arial,sans-serif';
+      ctx.font = 'bold 11px Arial,sans-serif';
       ctx.fillText('RIVER ACCESS', inX + 270, inRoadY + 22);
 
       // Ridge Viewpoint & Trail
       ctx.fillStyle = '#254e38'; ctx.beginPath(); ctx.arc(inX + 75, inY + 54, 3.5, 0, Math.PI * 2); ctx.fill();
-      ctx.font = 'bold 9px Arial,sans-serif';
+      ctx.font = 'bold 11px Arial,sans-serif';
       ctx.fillText('▲ RIDGE VIEWPOINT (EL. 860 FT)', inX + 85, inY + 50);
       ctx.fillText('RIDGE PULLOUT', inX + 75, inRoadY + 16);
 
@@ -12681,11 +12680,11 @@ function buildRoadMap() {
         ctx.fillStyle = 'rgba(99, 88, 58, 0.18)'; ctx.fillRect(x - 2, 20, 2, 560);
         ctx.fillStyle = 'rgba(244, 229, 188, 0.35)'; ctx.fillRect(x, 20, 3, 560);
       }
-  agePaint(ctx,960,600,1963,.75);
+  agePaint(ctx,1440,600,1963,.75);
   const texture=new qt(canvas);texture.colorSpace='srgb';
   texture.needsUpdate=true;
   const material=new ji({map:texture,roughness:1});
-  const sheet=new ba(.42,.263,3,1);
+  const sheet=new ba(.42,.175,3,1);
   const positions=sheet.getAttribute('position');
   for(const i of [1,5])positions.setZ(i,.011);
   for(const i of [2,6])positions.setZ(i,-.006);
@@ -12699,23 +12698,62 @@ function buildRoadMap() {
   const panel=new ba(.14,.095);
   const uv=panel.getAttribute('uv');
   for(let i=0;i<uv.count;i++)uv.setX(i,uv.getX(i)/3);
-  return {open,folded:new dt(panel,material)};
+  return {open,folded:new dt(panel,material),canvas};
 }
-const {open:roadMap,folded:foldedRoadMap}=buildRoadMap();
-// Scroll to zoom the unfolded map (narrower field of view; mouse look pans across it).
-let mapFov = 76;
-function setMapZoom(fov) {
-  mapFov = Math.max(12, Math.min(76, fov));
-  Nn.fov = mapFov; Nn.updateProjectionMatrix();
+const {open:roadMap,folded:foldedRoadMap,canvas:roadMapCanvas}=buildRoadMap();
+// Map reader: a full-screen view of the same map canvas. Scroll zooms, mouse movement (or a drag when the
+// cursor is free) pans, double-click or R resets/folds.
+const mapView = { el: null, cv: null, zoom: 1, x: 0, y: 0, dragging: false };
+const MAP_ASPECT = 1440 / 600;
+function mapViewBase() { return Math.min(innerWidth * .98, innerHeight * .96 * MAP_ASPECT); }
+function mapViewApply() {
+  const w = mapViewBase(), z = mapView.zoom, h = w / MAP_ASPECT;
+  const maxX = Math.max(0, (w * z - innerWidth) / 2 + 40), maxY = Math.max(0, (h * z - innerHeight) / 2 + 40);
+  mapView.x = Math.max(-maxX, Math.min(maxX, mapView.x));
+  mapView.y = Math.max(-maxY, Math.min(maxY, mapView.y));
+  mapView.cv.style.width = w + 'px'; mapView.cv.style.height = h + 'px';
+  mapView.cv.style.transform = `translate(${mapView.x}px,${mapView.y}px) scale(${z})`;
 }
-addEventListener('wheel', e => {
-  if (!roadMap.visible || !seated) return;
-  e.preventDefault();
-  setMapZoom(mapFov * (e.deltaY > 0 ? 1.15 : 1 / 1.15));
-}, { passive: false });
+function mapViewEnsure() {
+  if (mapView.el) return;
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,6,14,.88);z-index:8;overflow:hidden;cursor:grab';
+  const cv = document.createElement('canvas');
+  cv.width = roadMapCanvas.width; cv.height = roadMapCanvas.height;
+  cv.getContext('2d').drawImage(roadMapCanvas, 0, 0);
+  cv.style.cssText = 'transform-origin:center center;box-shadow:0 12px 50px rgba(0,0,0,.8);will-change:transform;image-rendering:auto';
+  const tip = document.createElement('div');
+  tip.textContent = 'SCROLL zoom  ·  MOVE / DRAG pan  ·  DOUBLE-CLICK reset  ·  R fold map';
+  tip.style.cssText = 'position:absolute;left:0;right:0;bottom:10px;text-align:center;font:12px "Courier New",monospace;color:#d7c9a3;text-shadow:0 1px 3px #000;pointer-events:none';
+  el.append(cv, tip); document.body.appendChild(el);
+  mapView.el = el; mapView.cv = cv;
+  el.addEventListener('wheel', e => {
+    e.preventDefault();
+    const old = mapView.zoom, nz = Math.max(1, Math.min(6, old * (e.deltaY > 0 ? 1 / 1.18 : 1.18)));
+    // zoom about the cursor when it is free, else about the centre
+    const px = document.pointerLockElement ? 0 : e.clientX - innerWidth / 2, py = document.pointerLockElement ? 0 : e.clientY - innerHeight / 2;
+    mapView.x = px - (px - mapView.x) * nz / old; mapView.y = py - (py - mapView.y) * nz / old;
+    mapView.zoom = nz; if (nz === 1) { mapView.x = 0; mapView.y = 0; }
+    mapViewApply();
+  }, { passive: false });
+  el.addEventListener('mousedown', () => { mapView.dragging = true; el.style.cursor = 'grabbing'; });
+  addEventListener('mouseup', () => { mapView.dragging = false; el.style.cursor = 'grab'; });
+  addEventListener('mousemove', e => {
+    if (el.style.display === 'none' || !(mapView.dragging || document.pointerLockElement)) return;
+    mapView.x += e.movementX * (document.pointerLockElement ? -1 : 1); mapView.y += e.movementY * (document.pointerLockElement ? -1 : 1);
+    mapViewApply();
+  });
+  el.addEventListener('dblclick', () => { mapView.zoom = 1; mapView.x = mapView.y = 0; mapViewApply(); });
+  addEventListener('resize', () => { if (el.style.display !== 'none') mapViewApply(); });
+}
+function setMapViewOpen(open) {
+  mapViewEnsure();
+  mapView.el.style.display = open ? 'flex' : 'none';
+  if (open) { mapView.zoom = 1; mapView.x = mapView.y = 0; mapViewApply(); }
+}
 function setRoadMapOpen(open) {
   if(roadMap.visible===open)return;
-  if(!open && mapFov!==76 && Nn.fov===mapFov)setMapZoom(76);
+  setMapViewOpen(open);
   roadMap.visible=open;
   foldedRoadMap.visible=!open;
   setDomeLight(open || controls.find(control=>control.kind==='dome').on);
@@ -13795,7 +13833,7 @@ function updateCarHud() {
   } else if (inspection === 'motelBed') {
     text = hint + mode + '  ·  E / CLICK / T rest until wake time  ·  Move to stand';
   } else if (seated) {
-    text = hint + (roadMap.visible ? 'Parked  ·  SCROLL zoom map  ·  R fold map to drive' : Math.round(Math.abs(carSpeed) * 2.237) + ' MPH [' + gearBadge + ']  ·  WASD/ARROWS drive  ·  SPACE brake  ·  V gear  ·  O settings') + (carSpeed === 0 && glovebox.engaged && !roadMap.visible ? '  ·  R unfold map' : '') + carExtras + '  ·  C door  ·  F get out';
+    text = hint + (roadMap.visible ? 'Parked  ·  R fold map to drive' : Math.round(Math.abs(carSpeed) * 2.237) + ' MPH [' + gearBadge + ']  ·  WASD/ARROWS drive  ·  SPACE brake  ·  V gear  ·  O settings') + (carSpeed === 0 && glovebox.engaged && !roadMap.visible ? '  ·  R unfold map' : '') + carExtras + '  ·  C door  ·  F get out';
   } else {
     const locName = Math.abs(Nn.position.x - motelX) < 120 ? 'Cinder Court Motor Lodge' : (Math.abs(Nn.position.x - dinerX) < 120 ? 'Starlite Diner & Bar' : (Math.abs(Nn.position.x - fernBendX) < 140 ? 'Fern Bend Drive-In & Gorge Trail' : 'Coupe by the station'));
     text = hint + 'WASD/ARROWS walk  ·  ' + mode + '  ·  SHIFT run  ·  O settings  ·  ' + locName;
@@ -14187,6 +14225,9 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   get inspection() { return inspection; },
   set inspection(v) { inspection = v; },
   carryingBlanket, toggleCabinBlanket,
+  pumpHoses, takePumpNozzle, refuelCoupeAtPump, putDownNozzle,
+  get fuelLevel() { return fuelLevel; }, set fuelLevel(v) { fuelLevel = v; },
+  get heldPump() { return heldPump; },
   get cabinBlanketOpen() { return cabinBlanketOpen; },
   set cabinBlanketOpen(v) { cabinBlanketOpen = v; },
   cargoItems, takeCargo, stowCargo, trunkAccessible, toggleTrunk,
