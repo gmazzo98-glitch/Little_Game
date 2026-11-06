@@ -4201,8 +4201,11 @@ function plainsGust(x, z, t) {
   const w1 = Math.sin((p + slow) * Math.PI * 2);
   const w2 = Math.sin((p * 2.13 - t * 0.015) * Math.PI * 2) * 0.35;
   const raw = 0.5 + 0.5 * (w1 * 0.75 + w2);
-  return Math.max(0, Math.min(1, raw * raw));
+  // A mature storm lifts the whole gust field: stronger baseline and harder peaks.
+  const g = raw * raw, W = plainsStormWind;
+  return Math.max(0, Math.min(1, g * (1 + 0.9 * W) + 0.28 * W));
 }
+var plainsStormWind = 0;
 const plainsPads = [
   [64520, -48, 64680, -3.15],
   [64596, -38, 64604, -30],
@@ -4415,6 +4418,7 @@ function nwRelief(x, z, s, relZ, zr, dunes) {
   return { h, base };
 }
 function os(x, z, forTerrainMesh = false) {
+  if (ufoSpace && (x - ufoPlateau.x) ** 2 + (z - ufoPlateau.z) ** 2 < ufoPlateau.r2) return ufoPlateau.y;
   // The widest forecourt / plains pad distance blend saturates at 89 meters.
   let distance = Math.min(89, Math.max(Math.abs(z) - 3.5, 0));
   if (distance > 0) {
@@ -8501,7 +8505,7 @@ function handleCarCollision(speed, steer) {
     // 2. Safety hood latch pops open
     if (absSpd >= 3.6) {
       carDamage.hoodPopped = true;
-      hoodHinge.rotation.x = 0.09;
+      hoodHinge.rotation.x = -0.038;
     }
     // 3. Headlamp lens shatters & front grille header caves inward
     if (absSpd >= 5.5) {
@@ -8515,8 +8519,9 @@ function handleCarCollision(speed, steer) {
     // 4. Violent front crumple: hood buckles upward, bumper drags tire, wheel hub bends, radiator punctured
     if (absSpd >= 7.2) {
       carDamage.hoodBuckled = true;
-      hoodHinge.rotation.x = 0.38;
-      hoodHinge.position.z = 0.63;
+      hoodHinge.rotation.x = -0.14;
+      hoodHinge.position.y = 1.03;
+      hoodHinge.position.z = 0.69;
       carDamage.radiatorPunctured = true;
       carDamage.bumperGrinding = true;
       frontBumperHinge.position.z = 2.34;
@@ -8533,7 +8538,9 @@ function handleCarCollision(speed, steer) {
       carDamage.leftLightBroken = true;
       carDamage.rightLightBroken = true;
       syncHeadlampBeams();
-      hoodHinge.rotation.x = 0.62;
+      hoodHinge.rotation.x = -0.24;
+      hoodHinge.position.y = 1.05;
+      hoodHinge.position.z = 0.66;
     }
   } else {
     // 1. Rear bumper crumpled inward
@@ -8863,29 +8870,33 @@ function keepWalkerOutsideCar(previousX,previousZ) {
 function slamHoodShut() {
   carDamage.hoodPopped = false;
   hoodHinge.rotation.x = 0;
+  hoodHinge.position.set(0, 1.01, .72);
   playHoodSlam();
 }
 function hammerHoodLatch() {
   carDamage.hoodBuckled = false;
   carDamage.hoodPopped = false;
   hoodHinge.rotation.set(0, 0, 0);
-  hoodHinge.position.set(0, .82, .62);
+  hoodHinge.position.set(0, 1.01, .72);
   hoodHinge.scale.set(1, 1, 1);
   playMetalPry();
 }
 function pryBumperClear() {
   carDamage.bumperBent = false;
   carDamage.bumperGrinding = false;
+  carDamage.grilleCaved = false;
   carDamage.alignmentPull = 0;
   frontBumperHinge.rotation.set(0, 0, 0);
   frontBumperHinge.position.set(0, .53, 2.50);
+  frontGrilleHinge.rotation.set(0, 0, 0);
+  frontGrilleHinge.position.set(0, .70, 2.48);
   playMetalPry();
 }
 function pryRearBumperClear() {
   carDamage.rearBumperBent = false;
   carDamage.rearBumperSide = 0;
   rearBumperHinge.rotation.set(0, 0, 0);
-  rearBumperHinge.position.set(0, .50, -2.48);
+  rearBumperHinge.position.set(0, .53, -2.47);
   playMetalPry();
 }
 function repairBentWheel() {
@@ -13587,6 +13598,8 @@ function renderWithInspection() {
 
 let cursorMode=false, cursorX=innerWidth/2, cursorY=innerHeight/2;
 function findInteractionTarget() {
+  const ufoT=ufoInteraction();
+  if(ufoT||ufo.flying)return ufoT;
   if(inspection==='rest' || inspection==='dinerBooth' || inspection==='ridgeOverlook' || inspection==='porchBench')return {label:'Stand up',action:()=>{inspection=null;}};
   if(inspection==='payphone')return {label:'Dial rotary telephone (or move to hang up)',action:()=>playPhoneTone('rotary')};
   if(inspection==='binoculars')return {label:'Step down from binoculars',action:()=>{inspection=null;if(Nn.fov!==65){Nn.fov=65;Nn.updateProjectionMatrix();}}};
@@ -13966,18 +13979,18 @@ function officeWallInWay(delta) {
 function animateCar(dt) {
   if(carDamage.hoodBuckled) {
     const windFlutter = Math.sin(eg.elapsedTime * 42) * Math.min(0.025, Math.abs(carSpeed) * 0.002);
-    hoodHinge.rotation.x += (0.16 + windFlutter - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
-    hoodHinge.position.y += (0.86 - hoodHinge.position.y) * Math.min(1, 14 * dt);
-    hoodHinge.position.z += (0.54 - hoodHinge.position.z) * Math.min(1, 14 * dt);
+    hoodHinge.rotation.x += (-0.14 + windFlutter - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
+    hoodHinge.position.y += (1.03 - hoodHinge.position.y) * Math.min(1, 14 * dt);
+    hoodHinge.position.z += (0.69 - hoodHinge.position.z) * Math.min(1, 14 * dt);
   } else if(carDamage.hoodPopped) {
     const idleTremor = ignitionOn ? Math.sin(eg.elapsedTime * 34) * 0.0035 : 0;
-    hoodHinge.rotation.x += (0.045 + idleTremor - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
-    hoodHinge.position.y += (0.82 - hoodHinge.position.y) * Math.min(1, 14 * dt);
-    hoodHinge.position.z += (0.62 - hoodHinge.position.z) * Math.min(1, 14 * dt);
+    hoodHinge.rotation.x += (-0.038 + idleTremor - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
+    hoodHinge.position.y += (1.01 - hoodHinge.position.y) * Math.min(1, 14 * dt);
+    hoodHinge.position.z += (0.72 - hoodHinge.position.z) * Math.min(1, 14 * dt);
   } else {
     hoodHinge.rotation.x += (0 - hoodHinge.rotation.x) * Math.min(1, 14 * dt);
-    hoodHinge.position.y += (0.82 - hoodHinge.position.y) * Math.min(1, 14 * dt);
-    hoodHinge.position.z += (0.62 - hoodHinge.position.z) * Math.min(1, 14 * dt);
+    hoodHinge.position.y += (1.01 - hoodHinge.position.y) * Math.min(1, 14 * dt);
+    hoodHinge.position.z += (0.72 - hoodHinge.position.z) * Math.min(1, 14 * dt);
   }
   if(carDamage.wheelBent && carDamage.bentWheelSide !== 0) {
     const bentIdx = (carDamage.bentWheelSide || 1) > 0 ? 1 : 0;
@@ -14168,6 +14181,826 @@ const localLightGroups = [
   {position:fernBendGroup.position, range:64, lights:collectLocalLights(fernBendGroup,[fernSignLight,fernWindowLight,fernCanopyLight1,fernCanopyLight2,fernCounterLamp])},
   {position:coupe.position, range:185, lights:collectLocalLights(coupe)}
 ];
+
+// ============================================================================
+// EASTER EGG: the little saucer, free flight, and the asteroid outpost.
+// A small mismatched-teal pod with a glass bubble and a cozy cabin sits out in
+// the dunes. Board it (E), fly at six speeds, climb out of the atmosphere and
+// land on a neon-lit asteroid with a runway, fuel stop, food truck and motel.
+// Names used here: xi Group, dt Mesh, It BufferGeometry, Et BufferAttribute,
+// P Vector3, Me Color, Pn PointLight, ji Standard, Lm Lambert, wi Basic,
+// Cn Box, lr Sphere, ba Plane, or Points, Qi PointsMaterial, ar InstancedMesh,
+// rt ShaderMaterial, qt Texture.
+// ============================================================================
+const UFO_HOME = {x: -268, z: 150};
+const UFO_TIERS = [8, 35, 140, 600, 2500, 9000];
+const UFO_TIER_NAMES = ['DRIFT', 'CRUISE', 'FAST', 'HYPER', 'WARP', 'LUDICROUS'];
+const SP = {ex: UFO_HOME.x, ez: UFO_HOME.z, earthR: 9000, earthY: -9900,
+  ax: UFO_HOME.x + 4300, ay: 6400, az: UFO_HOME.z - 2800, aR: 520, cut: 465, plR: 236};
+SP.py = SP.ay + SP.cut;
+const spSun = new P(.52, .58, -.42).normalize();
+var ufoPlateau = {x: SP.ax, z: SP.az, y: SP.py, r2: 200 * 200};
+
+function ufoSmooth(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+
+// ---- geometry helpers -------------------------------------------------------
+function ufoGeo(pos, idx, uv) {
+  const g = new It();
+  g.setAttribute('position', new Et(new Float32Array(pos), 3));
+  if (uv) g.setAttribute('uv', new Et(new Float32Array(uv), 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+function ufoLatheGeo(profile, seg = 28) {
+  const pos = [], idx = [], n = profile.length;
+  for (let i = 0; i <= seg; i++) {
+    const phi = i / seg * Math.PI * 2, s = Math.sin(phi), c = Math.cos(phi);
+    for (let j = 0; j < n; j++) pos.push(profile[j][0] * s, profile[j][1], profile[j][0] * c);
+  }
+  for (let i = 0; i < seg; i++) for (let j = 0; j < n - 1; j++) {
+    const a = j + i * n, b = a + n, c = b + 1, d = a + 1;
+    idx.push(a, b, d, c, d, b);
+  }
+  return ufoGeo(pos, idx);
+}
+// A round tube along a polyline (closed loops for rings and outlines).
+function ufoTubeGeo(pts, r, rad = 6, closed = false) {
+  const pos = [], idx = [], m = pts.length, ref = new P(0, 1, 0);
+  const t = new P(), nrm = new P(), bn = new P();
+  for (let i = 0; i < m; i++) {
+    const a = pts[closed ? (i + m - 1) % m : Math.max(i - 1, 0)], b = pts[closed ? (i + 1) % m : Math.min(i + 1, m - 1)];
+    t.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize();
+    const rr2 = Math.abs(t.y) > .95 ? new P(1, 0, 0) : ref;
+    nrm.crossVectors(t, rr2).normalize(); bn.crossVectors(t, nrm).normalize();
+    for (let k = 0; k < rad; k++) {
+      const an = k / rad * Math.PI * 2, ca = Math.cos(an) * r, sa = Math.sin(an) * r;
+      pos.push(pts[i][0] + nrm.x * ca + bn.x * sa, pts[i][1] + nrm.y * ca + bn.y * sa, pts[i][2] + nrm.z * ca + bn.z * sa);
+    }
+  }
+  const segs = closed ? m : m - 1;
+  for (let i = 0; i < segs; i++) {
+    const i2 = (i + 1) % m;
+    for (let k = 0; k < rad; k++) {
+      const k2 = (k + 1) % rad, a = i * rad + k, b = i2 * rad + k, c = i2 * rad + k2, d = i * rad + k2;
+      idx.push(a, b, d, c, d, b);
+    }
+  }
+  return ufoGeo(pos, idx);
+}
+function ufoCircle(cx, cy, cz, r, axis = 'y', n = 40) {
+  const p = [];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, u = Math.cos(a) * r, v = Math.sin(a) * r;
+    p.push(axis === 'y' ? [cx + u, cy, cz + v] : axis === 'z' ? [cx + u, cy + v, cz] : [cx, cy + u, cz + v]);
+  }
+  return p;
+}
+function ufoAdd(parent, geo, mat, x = 0, y = 0, z = 0) {
+  const m = new dt(geo, mat); m.position.set(x, y, z); parent.add(m); return m;
+}
+function ufoBox(parent, w, h, d, mat, x, y, z) { return ufoAdd(parent, new Cn(w, h, d), mat, x, y, z); }
+function ufoBall(parent, r, mat, x, y, z, sx = 1, sy = 1, sz = 1) {
+  const m = ufoAdd(parent, new lr(r, 16, 10), mat, x, y, z); m.scale.set(sx, sy, sz); return m;
+}
+const ufoGlowMats = [];
+function ufoNeonMat(color) { return new wi({color}); }
+function ufoHaloMat(color, o = .2) { return new wi({color, transparent: true, opacity: o, blending: 2, depthWrite: false, fog: false}); }
+// Neon tube with a soft additive halo around it.
+function ufoNeon(parent, pts, color, r = .09, closed = false) {
+  const g = new xi(); parent.add(g);
+  ufoAdd(g, ufoTubeGeo(pts, r, 6, closed), ufoNeonMat(color));
+  ufoAdd(g, ufoTubeGeo(pts, r * 3.2, 6, closed), ufoHaloMat(color, .16));
+  return g;
+}
+function ufoCanvasTex(w, h, painter) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  painter(cv.getContext('2d'), w, h);
+  const tx = new qt(cv); tx.colorSpace = 'srgb'; tx.needsUpdate = true; return tx;
+}
+// Neon-lettered sign: dark board with glowing text.
+function ufoSign(parent, text, w, h, color, x, y, z, ry = 0, sub = '') {
+  const tex = ufoCanvasTex(512, Math.round(512 * h / w), (c, cw, ch) => {
+    c.fillStyle = '#0c0714'; c.fillRect(0, 0, cw, ch);
+    c.strokeStyle = color; c.lineWidth = 8; c.shadowColor = color; c.shadowBlur = 22;
+    c.strokeRect(14, 14, cw - 28, ch - 28);
+    c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.shadowBlur = 26; c.font = 'bold ' + Math.round(ch * (sub ? .46 : .56)) + 'px "Arial Black",Impact,sans-serif';
+    c.fillStyle = color; c.fillText(text, cw / 2, ch * (sub ? .4 : .52));
+    c.shadowBlur = 8; c.fillStyle = '#fff'; c.fillText(text, cw / 2, ch * (sub ? .4 : .52));
+    if (sub) { c.shadowBlur = 14; c.fillStyle = '#ffe7a8'; c.font = 'bold ' + Math.round(ch * .18) + 'px Arial,sans-serif'; c.fillText(sub, cw / 2, ch * .78); }
+  });
+  const m = new dt(new ba(w, h), new wi({map: tex, side: 2, fog: false}));
+  m.position.set(x, y, z); m.rotation.y = ry; parent.add(m); return m;
+}
+
+// ---- materials --------------------------------------------------------------
+const ufoM = {
+  hull: new ji({color: 0xa9c4bb, roughness: .55, metalness: .15, emissive: 0x26403a, emissiveIntensity: .9}),
+  hullDark: new ji({color: 0x56706a, roughness: .62, metalness: .2, emissive: 0x15221f, emissiveIntensity: .8}),
+  patch: new ji({color: 0xc9783b, roughness: .6, metalness: .3, emissive: 0x2a1408, emissiveIntensity: .5}),
+  trim: new ji({color: 0xd2dad2, roughness: .4, metalness: .25, emissive: 0x2a3030, emissiveIntensity: .6}),
+  glass: new wi({color: 0xd6fbff, transparent: true, opacity: .07, depthWrite: false, side: 1, fog: false}),
+  floor: new Lm({color: 0x4c3428}),
+  seat: new ji({color: 0xb4552f, roughness: .85, emissive: 0x2a0f06, emissiveIntensity: .5}),
+  seatDark: new ji({color: 0x5b2d1f, roughness: .9}),
+  dash: new ji({color: 0x2c343a, roughness: .5, metalness: .4, emissive: 0x0a0f12, emissiveIntensity: .8}),
+  rug: new Lm({color: 0xa0384f, emissive: 0x2a0912}),
+  blanket: new Lm({color: 0xd2864a, emissive: 0x3a1c08}),
+  plant: new Lm({color: 0x5aab55, emissive: 0x143a14}),
+  pot: new Lm({color: 0xc2a58a, emissive: 0x2a2018}),
+  dice: new Lm({color: 0xf4efe2, emissive: 0x6a6658}),
+  warm: new wi({color: 0xffc477}), hot: new wi({color: 0xfff1cf}),
+  cyan: new wi({color: 0x69f4ff}), pink: new wi({color: 0xff5fb8}), green: new wi({color: 0x58ffa6}),
+  red: new wi({color: 0xff4d4d}), amber: new wi({color: 0xffa23a}),
+  flame: new wi({color: 0x7ff2ff, transparent: true, opacity: .75, blending: 2, depthWrite: false, fog: false}),
+  flame2: new wi({color: 0xffffff, transparent: true, opacity: .8, blending: 2, depthWrite: false, fog: false}),
+};
+
+// ---- the saucer -------------------------------------------------------------
+const ufoShip = new xi(); ufoShip.name = 'Little saucer';
+ufoShip.rotation.order = 'YXZ';
+const ufoHull = new xi(); ufoShip.add(ufoHull);      // tilts a little in flight
+const ufoCabin = new xi(); ufoShip.add(ufoCabin);    // stays level so the eye never slides
+const ufoBlink = [], ufoRimBulbs = [], ufoFlames = [];
+(function buildSaucer() {
+  // Oval body, a touch dented and patched, like something fixed in a garage.
+  const body = ufoAdd(ufoHull, ufoLatheGeo([[0, -.66], [.7, -.64], [1.2, -.5], [1.55, -.24], [1.72, -.02], [1.7, .13], [1.45, .32], [.9, .45], [0, .5]], 36), ufoM.hull);
+  body.scale.set(1, 1, 1.3);
+  const belt = ufoAdd(ufoHull, ufoLatheGeo([[1.66, -.1], [1.76, -.06], [1.77, .06], [1.66, .1]], 36), ufoM.hullDark);
+  belt.scale.set(1, 1, 1.3);
+  const under = ufoAdd(ufoHull, ufoLatheGeo([[0, -.7], [.9, -.68], [1.0, -.62], [0, -.62]], 24), ufoM.hullDark);
+  under.scale.set(1, 1, 1.3);
+  // Rim lights: alternating warm and cyan bulbs.
+  for (let i = 0; i < 18; i++) {
+    const a = i / 18 * Math.PI * 2;
+    const b = ufoBall(ufoHull, .06, i % 2 ? ufoM.cyan : ufoM.warm, Math.cos(a) * 1.79, -.02, Math.sin(a) * 2.33);
+    ufoRimBulbs.push(b);
+  }
+  // Three round headlamps on the nose.
+  for (const [x, y, z] of [[-.46, .12, -2.18], [.46, .12, -2.18], [0, .18, -2.26]]) {
+    ufoBall(ufoHull, .13, ufoM.hot, x, y, z); ufoBall(ufoHull, .19, new wi({color: 0xffe2a8, transparent: true, opacity: .2, blending: 2, depthWrite: false}), x, y, z);
+  }
+  // Side nacelles with glowing nozzles and flame plumes.
+  for (const sx of [-1, 1]) {
+    const nac = ufoAdd(ufoHull, ufoLatheGeo([[0, -.9], [.2, -.85], [.28, -.5], [.28, .6], [.2, .88], [0, .95]], 14), ufoM.trim, sx * 1.62, .08, .95);
+    nac.rotation.x = Math.PI / 2;
+    ufoBall(ufoHull, .2, ufoM.cyan, sx * 1.62, .08, 1.9, 1, 1, .5);
+    const fl = ufoAdd(ufoHull, ufoLatheGeo([[.17, 0], [.12, .6], [.05, 1.4], [0, 1.9]], 10), ufoM.flame, sx * 1.62, .08, 1.9);
+    fl.rotation.x = Math.PI / 2; ufoFlames.push(fl);
+    ufoBox(ufoHull, .5, .06, .5, ufoM.hullDark, sx * 1.4, .2, .9);
+  }
+  // Main rear engine.
+  const eng = ufoAdd(ufoHull, ufoLatheGeo([[.5, -.1], [.47, .1], [.34, .34], [.0, .34]], 18), ufoM.trim, 0, .05, 2.08);
+  eng.rotation.x = Math.PI / 2;
+  ufoBall(ufoHull, .3, ufoM.cyan, 0, .05, 2.4, 1, 1, .4);
+  const fl = ufoAdd(ufoHull, ufoLatheGeo([[.36, 0], [.26, .9], [.1, 2.2], [0, 3.2]], 12), ufoM.flame, 0, .05, 2.4);
+  fl.rotation.x = Math.PI / 2; ufoFlames.push(fl);
+  const fl2 = ufoAdd(ufoHull, ufoLatheGeo([[.2, 0], [.12, .7], [0, 1.5]], 10), ufoM.flame2, 0, .05, 2.4);
+  fl2.rotation.x = Math.PI / 2; ufoFlames.push(fl2);
+  // Tail fins, an antenna with a blinking tip, a repair patch with rivets.
+  for (const sx of [-1, 1]) { const f = ufoBox(ufoHull, .07, .6, .8, ufoM.hullDark, sx * .85, .78, 1.55); f.rotation.z = -sx * .3; }
+  ufoBox(ufoHull, .035, .6, .035, ufoM.trim, -.55, .78, 1.2).rotation.z = .2;
+  const tip = ufoBall(ufoHull, .05, ufoM.red, -.62, 1.08, 1.2); ufoBlink.push(tip);
+  ufoBox(ufoHull, .62, .025, .42, ufoM.patch, .85, .43, .5).rotation.y = .3;
+  for (const [x, z] of [[.6, .35], [1.1, .35], [.6, .65], [1.1, .65]]) ufoBall(ufoHull, .025, ufoM.trim, x, .46, z);
+  // Side hatch with a glowing seam.
+  ufoBox(ufoHull, .05, .78, .86, ufoM.hullDark, 1.69, .05, .25);
+  ufoBox(ufoHull, .06, .72, .03, ufoM.cyan, 1.71, .05, -.2);
+  ufoBox(ufoHull, .06, .72, .03, ufoM.cyan, 1.71, .05, .7);
+  ufoBox(ufoHull, .08, .04, .1, ufoM.trim, 1.72, .05, .62);
+  // Landing legs.
+  for (const [x, z] of [[-1.0, -.9], [1.0, -.9], [-1.0, 1.1], [1.0, 1.1]]) {
+    const leg = ufoBox(ufoHull, .09, .5, .09, ufoM.trim, x * .94, -.74, z); leg.rotation.z = -x * .22;
+    ufoAdd(ufoHull, ufoLatheGeo([[0, -.03], [.24, -.03], [.26, 0], [.0, .0]], 12), ufoM.hullDark, x * 1.02, -.96, z);
+  }
+  // Bubble canopy and its ribs.
+  const dome = ufoAdd(ufoCabin, new lr(1.35, 36, 20, 0, Math.PI * 2, 0, Math.PI / 2), ufoM.glass, 0, .4, -.1);
+  dome.scale.set(1, 1.1, 1.1);
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2, pts = [];
+    for (let k = 0; k <= 12; k++) { const e = k / 12 * Math.PI / 2; pts.push([Math.cos(a) * Math.cos(e) * 1.36, .4 + Math.sin(e) * 1.49, -.1 + Math.sin(a) * Math.cos(e) * 1.5]); }
+    ufoAdd(ufoCabin, ufoTubeGeo(pts, .016, 5), ufoM.trim);
+  }
+  ufoAdd(ufoCabin, ufoTubeGeo(ufoCircle(0, .42, -.1, 1.36, 'y', 36), .05, 6, true), ufoM.trim);
+
+  // ---- cozy cabin ----
+  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [1.25, 0], [1.28, .03], [0, .03]], 32), ufoM.floor, 0, .48, -.1).scale.set(1, 1, 1.1);
+  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.95, 0], [.98, .02], [0, .02]], 24), ufoM.rug, .1, .52, .15);
+  // Pilot seat, passenger seat, blanket.
+  for (const sx of [-.05, .82]) {
+    ufoBox(ufoCabin, .62, .16, .6, ufoM.seat, sx, .72, .3);
+    ufoBox(ufoCabin, .62, .66, .14, ufoM.seat, sx, 1.02, .62).rotation.x = .12;
+    ufoBox(ufoCabin, .1, .2, .5, ufoM.seatDark, sx - .36, .86, .3); ufoBox(ufoCabin, .1, .2, .5, ufoM.seatDark, sx + .36, .86, .3);
+    ufoBox(ufoCabin, .4, .52, .3, ufoM.seatDark, sx, .56, .3);
+  }
+  ufoBox(ufoCabin, .56, .05, .38, ufoM.blanket, .82, 1.0, .5).rotation.x = .2;
+  // Dashboard with screens, dials and a little amber radio.
+  const dash = ufoBox(ufoCabin, 1.5, .4, .34, ufoM.dash, 0, .68, -1.02); dash.rotation.x = -.12;
+  const mk = (w, h, mat, x, y, z, rx = -.55) => { const s = ufoAdd(ufoCabin, new ba(w, h), mat, x, y, z); s.rotation.x = rx; return s; };
+  mk(.32, .18, ufoM.green, -.45, .93, -1.0); mk(.26, .16, ufoM.cyan, .02, .93, -1.0); mk(.18, .16, ufoM.amber, .4, .93, -.99);
+  for (let i = 0; i < 6; i++) ufoBall(ufoCabin, .022, [ufoM.pink, ufoM.green, ufoM.amber][i % 3], -.6 + i * .12, .9, -.88);
+  ufoBox(ufoCabin, .26, .11, .1, ufoM.seatDark, .55, 1.0, -.95);
+  ufoBall(ufoCabin, .025, ufoM.amber, .48, 1.0, -.89); ufoBall(ufoCabin, .025, ufoM.amber, .62, 1.0, -.89);
+  // Mug, plant, fuzzy dice, pendant lamp, string lights.
+  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.05, 0], [.055, .1], [.0, .1]], 10), ufoM.dice, -.72, .87, -.95);
+  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.12, 0], [.14, .18], [0, .18]], 10), ufoM.pot, -.95, .5, .85);
+  ufoBall(ufoCabin, .2, ufoM.plant, -.95, .86, .85, 1, 1.1, 1); ufoBall(ufoCabin, .12, ufoM.plant, -.86, 1.0, .9);
+  ufoAdd(ufoCabin, ufoTubeGeo([[.55, 1.82, -.7], [.55, 1.5, -.7]], .006, 4), ufoM.trim);
+  ufoBox(ufoCabin, .06, .06, .06, ufoM.dice, .55, 1.48, -.7).rotation.set(.4, .6, .2);
+  ufoBox(ufoCabin, .06, .06, .06, ufoM.dice, .62, 1.54, -.68).rotation.set(.2, .3, .5);
+  ufoAdd(ufoCabin, ufoTubeGeo([[-.4, 1.86, -.3], [-.4, 1.62, -.3]], .006, 4), ufoM.trim);
+  ufoBall(ufoCabin, .1, ufoM.warm, -.4, 1.56, -.3, 1, 1.15, 1);
+  ufoBall(ufoCabin, .2, new wi({color: 0xffb25a, transparent: true, opacity: .16, blending: 2, depthWrite: false}), -.4, 1.56, -.3);
+  for (let i = 0; i < 26; i++) {
+    const a = i / 26 * Math.PI * 2, sag = .1 * Math.abs(Math.sin(i / 26 * Math.PI * 6));
+    ufoBall(ufoCabin, .028, [ufoM.warm, ufoM.pink, ufoM.cyan, ufoM.hot][i % 4], Math.cos(a) * 1.15, 1.08 - sag, -.1 + Math.sin(a) * 1.22);
+  }
+  // Warm amber lamp, console glow, magenta underglow, engine light.
+  const lamp = new Pn(0xffb05a, 7.5, 9, 1.7); lamp.position.set(-.4, 1.56, -.3); ufoCabin.add(lamp);
+  const glow = new Pn(0x62ffd8, 1.0, 3.4, 2); glow.position.set(0, 1.0, -.7); ufoCabin.add(glow);
+  const under2 = new Pn(0xff4fd8, 4.5, 11, 2); under2.position.set(0, -1.0, 0); ufoHull.add(under2);
+  const eng2 = new Pn(0x68f0ff, 0, 16, 2); eng2.position.set(0, .05, 3.2); ufoHull.add(eng2);
+  ufoShip.userData.engineLight = eng2;
+})();
+Nt.add(ufoShip);
+
+// ---- game state --------------------------------------------------------------
+var ufoSpace = ufoSpace || false;
+const ufo = {flying: false, landed: true, vel: new P(), tier: 1, fuel: 100, speed: 0, braking: false,
+  yaw: -2.2, note: '', noteUntil: 0, throttle: 0, dockedNote: 0};
+const ufoCollider = {minX: 1e9, maxX: 1e9, minZ: 1e9, maxZ: 1e9, minY: 0, maxY: 0};
+Mc.push(ufoCollider);
+function ufoNote(text, secs = 4) { ufo.note = text; ufo.noteUntil = eg.elapsedTime + secs; }
+function ufoNoteText() { return ufo.note && eg.elapsedTime < ufo.noteUntil ? '  ·  ' + ufo.note : ''; }
+function ufoGroundAt(x, z) {
+  if (ufoSpace) return (x - SP.ax) ** 2 + (z - SP.az) ** 2 < 200 * 200 ? SP.py : -Infinity;
+  return os(x, z);
+}
+function ufoHome() {
+  const g = os(UFO_HOME.x, UFO_HOME.z);
+  ufoShip.position.set(UFO_HOME.x, g + .97, UFO_HOME.z);
+  ufo.yaw = -2.2; ufoShip.rotation.set(0, ufo.yaw, 0);
+  ufo.vel.set(0, 0, 0); ufo.speed = 0; ufo.landed = true;
+}
+ufoHome();
+
+// ---- the asteroid, Earth, stars, nebula, sun --------------------------------
+const spGroup = new xi(); spGroup.visible = false; spGroup.name = 'Asteroid outpost and space';
+Nt.add(spGroup);
+const spFollow = new xi(); spGroup.add(spFollow);           // follows the camera (sky things)
+const spLights = [], spNeonPulse = [], spSpin = [];
+var spPumps = [], spBell = new P();
+let spBuilt = false;
+function spBuild() {
+  if (spBuilt) return; spBuilt = true;
+  const rnd = Vm(5150);
+  // Nebula dome.
+  const neb = new dt(new lr(100000, 32, 20), new rt({side: 1, depthWrite: false, depthTest: false, fog: false,
+    vertexShader: 'varying vec3 vD; void main(){ vD=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader: `varying vec3 vD;
+      float h(vec3 p){ p=fract(p*.3183099+.1); p*=17.; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+      float n(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
+        return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),
+                   mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x),mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x),f.y),f.z); }
+      float fbm(vec3 p){ float s=0., a=.5; for(int k=0;k<5;k++){ s+=a*n(p); p=p*2.03+7.1; a*=.5; } return s; }
+      void main(){ vec3 d=normalize(vD);
+        float a=fbm(d*2.2+3.), b=fbm(d*3.1+19.), c=fbm(d*1.4-8.);
+        vec3 col=vec3(.008,.008,.022);
+        col+=vec3(.55,.08,.62)*smoothstep(.5,.85,a)*.46;
+        col+=vec3(.05,.42,.62)*smoothstep(.52,.9,b)*.38;
+        col+=vec3(.9,.25,.28)*smoothstep(.62,.95,c)*.2;
+        gl_FragColor=vec4(col,1.); }`}));
+  neb.renderOrder = -100; neb.frustumCulled = false; spFollow.add(neb);
+  // Dense coloured stars.
+  const sp = new Float32Array(6000 * 3), sc = new Float32Array(6000 * 3);
+  for (let i = 0; i < 6000; i++) {
+    const a = rnd() * Math.PI * 2, e = Math.acos(rnd() * 2 - 1), r = 80000;
+    sp[i * 3] = r * Math.sin(e) * Math.cos(a); sp[i * 3 + 1] = r * Math.cos(e); sp[i * 3 + 2] = r * Math.sin(e) * Math.sin(a);
+    const t = rnd(), b = .55 + rnd() * .45;
+    sc[i * 3] = b * (t < .3 ? .7 : 1); sc[i * 3 + 1] = b * (t < .3 ? .85 : .9); sc[i * 3 + 2] = b * (t > .6 ? .75 : 1);
+  }
+  const sg = new It(); sg.setAttribute('position', new Et(sp, 3)); sg.setAttribute('color', new Et(sc, 3));
+  const stars = new or(sg, new Qi({size: 2.4, sizeAttenuation: false, vertexColors: true, fog: false, depthWrite: false}));
+  stars.frustumCulled = false; stars.renderOrder = -90; spFollow.add(stars);
+  // The sun.
+  const sunP = spSun.clone().multiplyScalar(60000);
+  ufoAdd(spFollow, new lr(560, 20, 12), new wi({color: 0xfff1cf, fog: false}), sunP.x, sunP.y, sunP.z);
+  ufoAdd(spFollow, new lr(1300, 20, 12), new wi({color: 0xffc27a, transparent: true, opacity: .22, blending: 2, depthWrite: false, fog: false}), sunP.x, sunP.y, sunP.z);
+
+  // Earth, painted into the vertices: continents, ice caps, clouds and city lights on the night side.
+  const eg2 = new lr(1, 160, 80), ep = eg2.attributes.position, ec = new Float32Array(ep.count * 3);
+  const mixc = (a, b, t) => a + (b - a) * t;
+  for (let i = 0; i < ep.count; i++) {
+    const x = ep.getX(i), y = ep.getY(i), z = ep.getZ(i);
+    const h = .5 * Hm(x * 1.7 + 3.1, y * 1.7 + z * 1.1 + 7.7) + .3 * Hm(y * 3.4 + z * 2.1 + 1.3, x * 3.4 + 5.5) + .2 * Hm(z * 7 + x * 4, y * 7 + 2);
+    const land = ufoSmooth(.5, .54, h), ice = ufoSmooth(.8, .9, Math.abs(y) + (h - .5) * .25);
+    const cl = ufoSmooth(.57, .75, .6 * Hm(x * 5 + y * 3 + 11, z * 5 - y * 2 + 4) + .4 * Hm(x * 11 + z * 7, y * 11 + 5)) * .85;
+    let r = mixc(.04, .1, ufoSmooth(.3, .5, h)), g = mixc(.16, .42, ufoSmooth(.3, .5, h)), b = mixc(.4, .62, ufoSmooth(.3, .5, h));
+    const dry = ufoSmooth(.3, .1, Math.abs(y)) * ufoSmooth(.45, .7, Hm(x * 2 + 9, z * 2 + 4));
+    const lr2 = mixc(.2, .62, dry), lg = mixc(.44, .5, dry), lb = mixc(.2, .3, dry);
+    r = mixc(r, lr2, land); g = mixc(g, lg, land); b = mixc(b, lb, land);
+    r = mixc(r, .95, ice); g = mixc(g, .97, ice); b = mixc(b, 1, ice);
+    r = mixc(r, .96, cl); g = mixc(g, .97, cl); b = mixc(b, .98, cl);
+    const lit = x * spSun.x + y * spSun.y + z * spSun.z, day = ufoSmooth(-.12, .3, lit);
+    const city = (1 - day) * land * (1 - cl) * ufoSmooth(.66, .78, Hm(x * 40 + 5, z * 40 + y * 40)) * .9;
+    const warm = ufoSmooth(-.1, .12, lit) * (1 - ufoSmooth(.12, .35, lit)) * .18;
+    ec[i * 3] = r * (.05 + .95 * day) + city + warm; ec[i * 3 + 1] = g * (.06 + .94 * day) + city * .7 + warm * .5; ec[i * 3 + 2] = b * (.1 + .9 * day) + city * .25;
+  }
+  eg2.setAttribute('color', new Et(ec, 3));
+  const earthMat = new wi({vertexColors: true, fog: false, transparent: true, opacity: 0});
+  const earth = new dt(eg2, earthMat); earth.scale.setScalar(SP.earthR);
+  earth.position.set(SP.ex, SP.earthY, SP.ez); spGroup.add(earth);
+  const atmoMat = new rt({side: 1, transparent: true, blending: 2, depthWrite: false, fog: false, uniforms: {uA: {value: 0}},
+    vertexShader: 'varying vec3 vN; void main(){ vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader: 'varying vec3 vN; uniform float uA; void main(){ float i=pow(max(0.,.74-dot(vN,vec3(0.,0.,1.))),3.); gl_FragColor=vec4(.35,.62,1.,1.)*i*1.6*uA; }'});
+  const atmo = new dt(new lr(1.045, 96, 48), atmoMat); atmo.scale.setScalar(SP.earthR);
+  atmo.position.copy(earth.position); spGroup.add(atmo);
+  spGroup.userData.earthMat = earthMat; spGroup.userData.atmoMat = atmoMat;
+
+  // ---- the asteroid ----
+  const A = new xi(); A.position.set(SP.ax, SP.ay, SP.az); spGroup.add(A);
+  const ag = new lr(1, 96, 56), ap = ag.attributes.position, ac = new Float32Array(ap.count * 3);
+  for (let i = 0; i < ap.count; i++) {
+    const x = ap.getX(i), y = ap.getY(i), z = ap.getZ(i);
+    const bump = Hm(x * 2.3 + z * 1.1 + 5, y * 2.7 + x * .9 + 9) * .6 + Hm(x * 6 + 1, z * 6 + y * 3) * .25 + Hm(x * 14 + y * 5, z * 14) * .15;
+    const rad = SP.aR * (.86 + .3 * bump - .09 * ufoSmooth(.55, .8, Hm(x * 3.5 + 2, y * 3.5 + z * 2)));  // crater dimples
+    let px = x * rad, py = y * rad, pz = z * rad;
+    if (py > SP.cut - 4) py = SP.cut - 4;
+    ap.setXYZ(i, px, py, pz);
+    const t = Hm(px * .02 + 3, pz * .02 + py * .015), v = .78 + .3 * t;
+    const low = ufoSmooth(0, -300, py);
+    ac[i * 3] = (.34 + .12 * t + .08 * low) * v; ac[i * 3 + 1] = (.27 + .08 * t) * v; ac[i * 3 + 2] = (.4 + .1 * t + .12 * low) * v;
+  }
+  ag.setAttribute('color', new Et(ac, 3)); ag.computeVertexNormals();
+  ufoAdd(A, ag, new Lm({vertexColors: true, emissive: 0x1a1226}));
+  // Deck skirt so the plateau reads as a cut slab, and the tarmac disc itself.
+  const skirt = ufoAdd(A, ufoLatheGeo([[SP.plR - 2, SP.cut - 70], [SP.plR, SP.cut - 60], [SP.plR, SP.cut - 2], [SP.plR + .5, SP.cut]], 72), new Lm({color: 0x4a3f55, emissive: 0x1a1426}), 0, 0, 0);
+  skirt.material.side = 2;
+  const pTex = ufoCanvasTex(2048, 2048, spPaintDeck);
+  const dpos = [], duv = [], didx = [], RR = 24, SS = 72;
+  dpos.push(0, 0, 0); duv.push(.5, .5);
+  for (let r = 1; r <= RR; r++) for (let s = 0; s < SS; s++) {
+    const a = s / SS * Math.PI * 2, rad = SP.plR * r / RR, x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+    dpos.push(x, 0, z); duv.push(x / (2 * SP.plR) + .5, 1 - (z / (2 * SP.plR) + .5));
+  }
+  for (let s = 0; s < SS; s++) didx.push(0, 1 + (s + 1) % SS, 1 + s);
+  for (let r = 1; r < RR; r++) for (let s = 0; s < SS; s++) {
+    const a = 1 + (r - 1) * SS + s, b = 1 + (r - 1) * SS + (s + 1) % SS, c = 1 + r * SS + s, d = 1 + r * SS + (s + 1) % SS;
+    didx.push(a, b, c, b, d, c);
+  }
+  const deck = ufoAdd(A, ufoGeo(dpos, didx, duv), new Lm({map: pTex, emissive: 0xffffff, emissiveMap: pTex, emissiveIntensity: .6}), 0, SP.cut, 0);
+  deck.geometry.computeVertexNormals();
+  spGroup.userData.deck = deck;
+  spBuildOutpost(spGroup, rnd);
+  localLightGroups.push(...spLights);
+  // Debris drifting around the asteroid.
+  const dg = new lr(1, 6, 4), dm = new Lm({color: 0x6a5a72, emissive: 0x1a1426});
+  const deb = new ar(dg, dm, 44); deb.frustumCulled = false; spGroup.add(deb);
+  const dd = [];
+  for (let i = 0; i < 44; i++) dd.push({a: rnd() * 6.28, r: 700 + rnd() * 500, y: (rnd() - .5) * 220, s: 6 + rnd() * 26, w: (rnd() < .5 ? 1 : -1) * (.01 + rnd() * .02), sx: .6 + rnd() * .8, sz: .6 + rnd() * .8});
+  spGroup.userData.debris = {mesh: deb, data: dd};
+}
+
+function spPaintDeck(c, W, H) {
+  const R = SP.plR, S = W / (2 * R), X = x => (x + R) * S, Z = z => (z + R) * S;
+  const g = c.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, W / 2);
+  g.addColorStop(0, '#2d2540'); g.addColorStop(.8, '#221c33'); g.addColorStop(1, '#15111f');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const rr = Vm(77);
+  for (let i = 0; i < 9000; i++) { c.fillStyle = 'rgba(' + (rr() < .5 ? '255,255,255' : '10,6,20') + ',' + (rr() * .05).toFixed(3) + ')'; c.fillRect(rr() * W, rr() * H, 2 + rr() * 6, 2 + rr() * 6); }
+  const glow = (col, blur) => { c.shadowColor = col; c.shadowBlur = blur; c.strokeStyle = col; c.fillStyle = col; };
+  // faint hex pavers on the aprons
+  const hexPatch = (x0, z0, x1, z1, col) => {
+    c.save(); c.beginPath(); c.rect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S); c.clip();
+    c.fillStyle = 'rgba(70,56,100,.55)'; c.fillRect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S);
+    c.strokeStyle = col; c.lineWidth = 1.5; c.globalAlpha = .45;
+    const q = 2.6 * S;
+    for (let yy = Z(z0); yy < Z(z1); yy += q * .87) for (let xx = X(x0) + ((Math.round(yy / (q * .87)) % 2) ? q / 2 : 0); xx < X(x1); xx += q) {
+      c.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; c.lineTo(xx + Math.cos(a) * q * .55, yy + Math.sin(a) * q * .55); } c.closePath(); c.stroke();
+    }
+    c.restore();
+  };
+  hexPatch(-64, 26, -16, 72, '#52f4ff'); hexPatch(4, 26, 44, 60, '#ff6fd0');
+  // plaza spiral at the motel
+  c.save(); c.translate(X(80), Z(-14)); c.fillStyle = 'rgba(40,24,70,.9)'; c.beginPath(); c.arc(0, 0, 30 * S, 0, 7); c.fill();
+  glow('#c06bff', 12); c.lineWidth = 3; c.beginPath();
+  for (let a = 0; a < 6 * Math.PI; a += .05) { const r = a / (6 * Math.PI) * 28 * S; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.stroke();
+  c.restore();
+  // taxiway
+  c.shadowBlur = 0; c.fillStyle = '#1a1626'; c.fillRect(X(-46), Z(52), 12 * S, 36 * S);
+  glow('#ffb347', 8); c.lineWidth = 3; c.setLineDash([14, 14]); c.beginPath(); c.moveTo(X(-40), Z(52)); c.lineTo(X(-40), Z(86)); c.stroke(); c.setLineDash([]);
+  // runway
+  c.shadowBlur = 0; c.fillStyle = '#0f0c18'; c.fillRect(X(-200), Z(85), 320 * S, 28 * S);
+  glow('#4df3ff', 14); c.lineWidth = 4; c.strokeRect(X(-200), Z(85), 320 * S, 28 * S);
+  glow('#e9d9ff', 6); c.lineWidth = 5; c.setLineDash([36, 30]); c.beginPath(); c.moveTo(X(-186), Z(99)); c.lineTo(X(106), Z(99)); c.stroke(); c.setLineDash([]);
+  c.shadowBlur = 0; c.fillStyle = '#d8ccf0';
+  for (let k = 0; k < 6; k++) { c.fillRect(X(-196), Z(87 + k * 4.2), 12 * S, 2 * S); c.fillRect(X(104), Z(87 + k * 4.2), 12 * S, 2 * S); }
+  glow('#ff5fb8', 10); c.font = 'bold ' + (9 * S) + 'px Arial Black,Impact,sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.save(); c.translate(X(-168), Z(99)); c.rotate(-Math.PI / 2); c.fillText('07', 0, 0); c.restore();
+  c.save(); c.translate(X(80), Z(99)); c.rotate(Math.PI / 2); c.fillText('25', 0, 0); c.restore();
+  // ship parking ring
+  c.shadowBlur = 0; c.fillStyle = '#1b1630'; c.beginPath(); c.arc(X(-40), Z(77), 6.6 * S, 0, 7); c.fill();
+  glow('#58ffa6', 14); c.lineWidth = 5; c.beginPath(); c.arc(X(-40), Z(77), 6.2 * S, 0, 7); c.stroke();
+  c.font = 'bold ' + (4 * S) + 'px Arial Black,sans-serif'; c.fillText('P', X(-40), Z(77));
+  // glowing deck edge
+  glow('#ff4fd8', 18); c.lineWidth = 6; c.beginPath(); c.arc(W / 2, H / 2, (R - 3) * S, 0, 7); c.stroke();
+}
+
+function spBuildOutpost(parent, rnd) {
+  const O = new xi(); O.position.set(SP.ax, SP.py, SP.az); parent.add(O);
+  const lights = [];
+  const sm = {
+    mint: new ji({color: 0x7fe8d0, roughness: .45, metalness: .3, emissive: 0x143a34, emissiveIntensity: .6}),
+    plum: new ji({color: 0x5a3a86, roughness: .5, metalness: .3, emissive: 0x1a0f2e, emissiveIntensity: .7}),
+    teal: new ji({color: 0x2fb5b5, roughness: .45, metalness: .35, emissive: 0x0b3a3a, emissiveIntensity: .7}),
+    cream: new ji({color: 0xf0e2c4, roughness: .55, emissive: 0x3a3220, emissiveIntensity: .5}),
+    dark: new ji({color: 0x241d33, roughness: .6, metalness: .3, emissive: 0x0c0916, emissiveIntensity: .8}),
+    orange: new ji({color: 0xff8a3c, roughness: .5, metalness: .2, emissive: 0x3a1a08, emissiveIntensity: .7}),
+    wl: new wi({color: 0xffd9a0}),
+  };
+  const col = (c, i, d, x, y, z) => { const l = new Pn(c, i, d, 2); l.position.set(x, y, z); O.add(l); lights.push(l); return l; };
+
+  // ---------- ORBIT GAS: canopy, pumps, kiosk, pylon sign ----------
+  const G = new xi(); G.position.set(-40, 0, 48); O.add(G);
+  ufoBox(G, 24, .7, 12, sm.plum, 0, 7.2, 0);
+  ufoBox(G, 23, .12, 11, new wi({color: 0xdffbff}), 0, 6.8, 0);
+  for (const [x, z] of [[-10.5, -4.6], [10.5, -4.6], [-10.5, 4.6], [10.5, 4.6]]) ufoBox(G, .7, 7, .7, sm.mint, x, 3.5, z);
+  ufoNeon(G, [[-12.2, 7.7, -6.2], [12.2, 7.7, -6.2], [12.2, 7.7, 6.2], [-12.2, 7.7, 6.2]], 0xff4fd8, .14, true);
+  ufoNeon(G, [[-12.2, 6.6, -6.2], [12.2, 6.6, -6.2], [12.2, 6.6, 6.2], [-12.2, 6.6, 6.2]], 0x4df3ff, .1, true);
+  spPumps = [];
+  for (const px of [-5, 5]) {
+    const pg = new xi(); pg.position.set(px, 0, 0); G.add(pg);
+    ufoBox(pg, 3.2, .35, 1.4, sm.dark, 0, .18, 0);
+    for (const sz of [-1, 1]) {
+      const p = new xi(); p.position.set(0, 0, sz * .35); pg.add(p);
+      ufoBox(p, .9, 2.3, .62, sm.mint, 0, 1.5, 0);
+      ufoBox(p, .7, .5, .04, new wi({color: 0x6ffcff}), 0, 2.0, sz * .33);
+      ufoBox(p, .5, .26, .04, new wi({color: 0xff7bd0}), 0, 1.45, sz * .33);
+      ufoBall(p, .42, new wi({color: 0x9af7ff}), 0, 2.95, 0, 1, 1.1, 1);
+      ufoBall(p, .62, ufoHaloMat(0x4df3ff, .18), 0, 2.95, 0);
+      ufoAdd(p, ufoTubeGeo([[.45, 1.4, 0], [.9, 1.0, sz * .2], [.8, .5, sz * .25], [.6, .5, sz * .3]], .05, 5), sm.dark);
+    }
+    spPumps.push(new P(SP.ax - 40 + px, SP.py, SP.az + 48));
+    Dt(SP.ax - 40 + px - 1.6, SP.az + 48 - .7, SP.ax - 40 + px + 1.6, SP.az + 48 + .7, SP.py, SP.py + 4);
+  }
+  // kiosk behind the pumps
+  ufoBox(G, 8, 3.8, 5, sm.teal, -2, 1.9, -9.2); ufoBox(G, 8.6, .4, 5.6, sm.plum, -2, 3.95, -9.2).rotation.z = .04;
+  ufoBox(G, 5, 1.6, .06, sm.wl, -2, 2.2, -6.66);
+  ufoNeon(G, [[-4.6, 3.1, -6.62], [.6, 3.1, -6.62], [.6, 1.3, -6.62], [-4.6, 1.3, -6.62]], 0xffd24d, .07, true);
+  Dt(SP.ax - 40 - 6, SP.az + 48 - 11.8, SP.ax - 40 + 2, SP.az + 48 - 6.6, SP.py, SP.py + 6);
+  // pylon with neon ring and star
+  ufoBox(G, .6, 20, .6, sm.mint, 15, 10, -2);
+  ufoNeon(G, ufoCircle(15, 17.5, -2, 4.2, 'x'), 0x4df3ff, .16, true);
+  ufoNeon(G, ufoCircle(15, 17.5, -2, 3.7, 'x'), 0xff4fd8, .1, true);
+  const star = []; for (let k = 0; k <= 5; k++) { const a = k * 4 * Math.PI / 5 - Math.PI / 2; star.push([15, 21.8 + Math.sin(a) * 1.5, -2 + Math.cos(a) * 1.5]); }
+  ufoNeon(G, star, 0xffd24d, .09);
+  ufoSign(G, 'ORBIT GAS', 6.4, 2.6, '#4df3ff', 15.8, 17.5, -2, Math.PI / 2, 'ALL GRADES · ALL GALAXIES');
+  ufoSign(G, 'ORBIT GAS', 6.4, 2.6, '#4df3ff', 14.2, 17.5, -2, -Math.PI / 2, 'ALL GRADES · ALL GALAXIES');
+  Dt(SP.ax - 40 + 14.6, SP.az + 48 - 2.4, SP.ax - 40 + 15.4, SP.az + 48 - 1.6, SP.py, SP.py + 22);
+  col(0x4df3ff, 38, 70, -40, 8.5, 46); col(0xff4fd8, 20, 55, -34, 14, 50);
+
+  // ---------- NOVA NOSH food truck ----------
+  const T = new xi(); T.position.set(23, 0, 44); T.rotation.y = .12; O.add(T);
+  ufoBox(T, 6.6, 2.7, 3.1, sm.teal, 0, 2.2, 0); ufoBox(T, 2.3, 2.0, 3.0, sm.mint, 4.4, 1.9, 0);
+  ufoBox(T, 2.0, 1.0, .05, new wi({color: 0x9af7ff}), 4.6, 2.5, 1.53).rotation.y = 0;
+  ufoBox(T, 6.9, .25, 3.4, sm.orange, 0, 3.7, 0);
+  for (const wx of [-2.1, 2.2, 4.6]) for (const wz of [-1.45, 1.45]) {
+    const w = ufoAdd(T, ufoLatheGeo([[0, -.2], [.62, -.2], [.62, .2], [0, .2]], 14), sm.dark, wx, .62, wz); w.rotation.x = Math.PI / 2;
+    const hub = ufoAdd(T, ufoLatheGeo([[0, -.22], [.32, -.22], [.32, .22], [0, .22]], 10), new wi({color: 0xff5fb8}), wx, .62, wz); hub.rotation.x = Math.PI / 2;
+  }
+  ufoBox(T, 4.4, 1.3, .06, sm.wl, -.4, 2.5, 1.57);
+  ufoNeon(T, [[-2.7, 3.2, 1.62], [1.9, 3.2, 1.62], [1.9, 1.8, 1.62], [-2.7, 1.8, 1.62]], 0xff4fd8, .08, true);
+  for (let k = 0; k < 10; k++) { const s = ufoBox(T, .48, .08, 1.5, k % 2 ? sm.cream : new ji({color: 0xff4f8a, emissive: 0x3a0a1a, emissiveIntensity: .8}), -2.2 + k * .5, 3.35 - .0, 2.25); s.rotation.x = .38; }
+  for (let k = 0; k < 14; k++) ufoBall(T, .06, [ufoM.warm, ufoM.pink, ufoM.cyan, ufoM.green][k % 4], -3 + k * .45, 3.0 - .1 * Math.abs(Math.sin(k * 1.1)), 2.9);
+  ufoSign(T, 'NOVA NOSH', 4.6, 1.7, '#ff7bd0', -.4, 5.0, 0, 0, 'TACOS · TOASTED STARDUST');
+  ufoBox(T, .15, 1.0, .15, sm.dark, -2.4, 4.1, 0); ufoBox(T, .15, 1.0, .15, sm.dark, 1.6, 4.1, 0);
+  for (const [tx, tz] of [[-3, 6.6], [3.2, 7.4]]) {
+    ufoAdd(T, ufoLatheGeo([[0, 0], [.1, 0], [.1, .9], [.0, .9]], 8), sm.dark, tx, 0, tz);
+    ufoAdd(T, ufoLatheGeo([[0, 0], [1.1, 0], [1.1, .1], [0, .1]], 20), sm.cream, tx, .95, tz);
+    ufoNeon(T, ufoCircle(tx, 1.08, tz, 1.1, 'y', 28), 0x58ffa6, .05, true);
+  }
+  col(0xff4fd8, 30, 40, 23, 4.2, 48); col(0xffc477, 12, 22, 25, 1.4, 50);
+  Dt(SP.ax + 23 - 3.8, SP.az + 44 - 1.7, SP.ax + 23 + 6.6, SP.az + 44 + 1.7, SP.py, SP.py + 5);
+
+  // ---------- DRIFT INN: the strange motel ----------
+  const M = new xi(); M.position.set(80, 0, -14); O.add(M);
+  ufoAdd(M, ufoLatheGeo([[3.6, 0], [2.6, 3], [3.2, 8], [2.2, 14], [2.8, 19], [.8, 25], [0, 27]], 20), sm.plum);
+  [3, 8, 14, 19, 23].forEach((y, i) => ufoNeon(M, ufoCircle(0, y, 0, [2.75, 3.3, 2.35, 2.9, 1.6][i] + .18, 'y', 36), [0xff4fd8, 0x4df3ff, 0xc06bff, 0x58ffa6, 0xffd24d][i], .12, true));
+  const beacon = ufoBall(M, .8, new wi({color: 0xff4fd8}), 0, 28, 0); spNeonPulse.push(beacon);
+  ufoBall(M, 1.6, ufoHaloMat(0xff4fd8, .2), 0, 28, 0);
+  const beam = ufoAdd(M, ufoLatheGeo([[.5, 0], [.3, 40], [0, 90]], 10), ufoHaloMat(0xff7bd0, .12), 0, 28, 0);
+  const podColors = [sm.teal, sm.orange, sm.mint, sm.plum];
+  for (let i = 0; i < 9; i++) {
+    const a = i * 2.4 + .3, rad = 6.6 + (i % 3) * 1.3, y = 3.6 + i * 2.5;
+    const px = Math.cos(a) * rad, pz = Math.sin(a) * rad;
+    const pod = ufoBall(M, 2.3, podColors[i % 4], px, y, pz, 1, .78, 1);
+    ufoAdd(M, ufoTubeGeo([[px * .3, y - .2, pz * .3], [px * .75, y - .1, pz * .75]], .55, 6), sm.dark);
+    const wx = Math.cos(a), wz = Math.sin(a);
+    const win = ufoAdd(M, new ba(1.5, 1.0), sm.wl, px + wx * 2.22, y, pz + wz * 2.22); win.rotation.y = Math.PI / 2 - a; win.material = new wi({color: [0xffd9a0, 0xffa8e0, 0xa8f3ff][i % 3], side: 2});
+    ufoNeon(M, ufoCircle(px + wx * 2.25, y, pz + wz * 2.25, .95, wx * wx > wz * wz ? 'x' : 'z', 24).map(p => p), [0xff4fd8, 0x4df3ff, 0x58ffa6][i % 3], .05, true);
+    ufoAdd(M, ufoTubeGeo(ufoCircle(px, y - .55, pz, 2.5, 'y', 30), .06, 5, true), sm.trim, 0, 0, 0);
+  }
+  // lobby pod with a door
+  const lobby = ufoBall(M, 3.8, sm.cream, -7.5, 1.4, 6.5, 1.1, .6, 1.1);
+  ufoBox(M, 1.4, 2.1, .08, sm.wl, -7.5, 1.1, 10.2);
+  ufoNeon(M, [[-8.3, 0, 10.3], [-8.3, 2.2, 10.3], [-6.7, 2.2, 10.3], [-6.7, 0, 10.3]], 0xffd24d, .06);
+  ufoSign(M, 'DRIFT INN', 5.2, 2.0, '#c06bff', -7.5, 5.6, 9.8, 0, 'VACANCY · BRING A TOWEL');
+  ufoNeon(M, [[-10, 3.7, 10], [-5, 3.7, 10]], 0xff4fd8, .08);
+  Dt(SP.ax + 80 - 4.4, SP.az - 14 - 4.4, SP.ax + 80 + 4.4, SP.az - 14 + 4.4, SP.py, SP.py + 28);
+  Dt(SP.ax + 80 - 11.4, SP.az - 14 + 2.8, SP.ax + 80 - 3.6, SP.az - 14 + 10.2, SP.py, SP.py + 4);
+  col(0xc06bff, 42, 85, 80, 12, -14); col(0xff4fd8, 26, 50, 80, 29, -14); col(0xffa23a, 16, 30, 72, 3, -2);
+  spBell = new P(SP.ax + 72.5, SP.py, SP.az - 4);
+
+  // ---------- runway lights and the radio mast ----------
+  const bulbGeo = new lr(.28, 8, 6), n = 34;
+  const mq = new xi();
+  const rl = new ar(bulbGeo, new wi({color: 0xff5fb8}), n); rl.frustumCulled = false; O.add(rl);
+  const rl2 = new ar(bulbGeo, new wi({color: 0x4df3ff}), n); rl2.frustumCulled = false; O.add(rl2);
+  for (let k = 0; k < n; k++) {
+    mq.position.set(-200 + k * 320 / (n - 1), .3, 85); mq.updateMatrix(); rl.setMatrixAt(k, mq.matrix);
+    mq.position.set(-200 + k * 320 / (n - 1), .3, 113); mq.updateMatrix(); rl2.setMatrixAt(k, mq.matrix);
+  }
+  rl.instanceMatrix.needsUpdate = true; rl2.instanceMatrix.needsUpdate = true;
+  // mast
+  ufoBox(O, .5, 38, .5, sm.dark, 130, 19, 60);
+  const mastBulb = ufoBall(O, .6, new wi({color: 0xff4d4d}), 130, 38.5, 60); spNeonPulse.push(mastBulb);
+  ufoNeon(O, ufoCircle(130, 30, 60, 2.4, 'y', 24), 0x58ffa6, .08, true);
+  col(0x58ffa6, 14, 40, 130, 31, 60);
+  // crystal clusters around the rim
+  const cryCols = [0xff4fd8, 0x4df3ff, 0xc06bff, 0x58ffa6, 0xffd24d];
+  for (let k = 0; k < 22; k++) {
+    const a = rnd() * Math.PI * 2, rad = 188 + rnd() * 30, x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+    if (z > 70 && z < 130 && x < 130) continue;
+    const cg = new xi(); cg.position.set(x, 0, z); O.add(cg);
+    const colr = cryCols[k % 5];
+    const mat = new wi({color: colr});
+    for (let j = 0; j < 5; j++) {
+      const h = 5 + rnd() * 11, w = .8 + rnd() * 1.5;
+      const m = ufoAdd(cg, ufoLatheGeo([[0, 0], [w, 0], [w * .7, h * .7], [0, h]], 5), mat, (rnd() - .5) * 4, 0, (rnd() - .5) * 4);
+      m.rotation.set((rnd() - .5) * .5, rnd() * 3, (rnd() - .5) * .5);
+    }
+    ufoBall(cg, 5, ufoHaloMat(colr, .12), 0, 5, 0);
+    if (k % 4 === 0) col(colr, 9, 36, x, 5, z);
+  }
+  spLights.push({position: new P(SP.ax, SP.py, SP.az), range: 520, cull: 1100, lights, space: 'only'});
+}
+localLightGroups.push({position: ufoShip.position, range: 60, cull: 140, lights: collectLocalLights(ufoShip), space: 'both'});
+
+// ---- interaction -------------------------------------------------------------
+function ufoBoard() {
+  if (ufo.flying || seated) return;
+  if (carriedCargo) { ufoNote('Set down what you are carrying first (G)'); return; }
+  if (heldPump) putDownNozzle();
+  ufo.flying = true; inspection = null; ufo.vel.set(0, 0, 0);
+  ufoPlaceCamera();
+  Nn.fov = 78; Nn.updateProjectionMatrix();
+  const yaw = ufoShip.rotation.y;
+  Nn.lookAt(Nn.position.x - Math.sin(yaw) * 10, Nn.position.y - .4, Nn.position.z - Math.cos(yaw) * 10);
+  ufoAudioStart(); playInteractionSound('metal');
+  ufoNote('Welcome aboard. 1-6 sets speed. Space climbs. There is something up there.', 9);
+}
+function ufoExit() {
+  if (!ufo.flying) return;
+  const g = ufoGroundAt(ufoShip.position.x, ufoShip.position.z);
+  if (!ufo.landed) { ufoNote('Land first, then step out'); return; }
+  const yaw = ufoShip.rotation.y, ox = Math.cos(yaw) * 3.1, oz = -Math.sin(yaw) * 3.1;
+  const x = ufoShip.position.x + ox, z = ufoShip.position.z + oz;
+  ufo.flying = false; br = 0; oo = true;
+  Nn.position.set(x, ufoGroundAt(x, z) + jm, z);
+  Nn.fov = 65; Nn.updateProjectionMatrix();
+  Nn.lookAt(ufoShip.position.x, Nn.position.y - .3, ufoShip.position.z);
+  ufoAudioStop(); playInteractionSound('metal');
+}
+const ufoSpDummy = new P();
+function ufoInteraction() {
+  if (seated || inspection) return null;
+  if (ufo.flying) return ufo.landed ? {label: 'Step out of the saucer', action: ufoExit} : null;
+  const p = Nn.position;
+  if (Math.abs(p.y - ufoShip.position.y) < 4 && Math.hypot(p.x - ufoShip.position.x, p.z - ufoShip.position.z) < 4.6)
+    return {label: 'Board the little saucer', action: ufoBoard};
+  if (ufoSpace) {
+    for (const pm of spPumps) if (Math.hypot(p.x - pm.x, p.z - pm.z) < 6)
+      return {label: ufo.fuel < 99 ? 'Fill the saucer\'s tank' : 'Tank is already full', action: () => {
+        if (ufoShip.position.distanceTo(p) > 60) { ufoNote('Park the saucer closer to the pumps'); return; }
+        ufo.fuel = 100; ufoNote('Tank full. "On the house, traveler." — ORBIT GAS'); playInteractionSound('bell'); }};
+    if (Math.hypot(p.x - spBell.x, p.z - spBell.z) < 6)
+      return {label: 'Ring the front-desk bell', action: () => { playInteractionSound('bell'); ufoNote('"No vacancy in this dimension. Try the next." — DRIFT INN', 6); }};
+    const tx = SP.ax + 23, tz = SP.az + 44;
+    if (Math.hypot(p.x - tx, p.z - (tz + 3.2)) < 6)
+      return {label: 'Order a cosmic taco', action: () => { playInteractionSound('bell'); ufoNote('One toasted-stardust taco. It hums a little. Tastes like a warm evening.', 7); }};
+  }
+  return null;
+}
+
+// ---- flight -------------------------------------------------------------------
+const ufoD = new P(), ufoR = new P(), ufoUpV = new P(0, 1, 0), ufoW = new P(), ufoEye = new P();
+function ufoPlaceCamera() {
+  const yaw = ufoShip.rotation.y;
+  Nn.position.set(ufoShip.position.x - .05 * Math.sin(yaw), ufoShip.position.y + 1.45, ufoShip.position.z - .05 * Math.cos(yaw));
+}
+function ufoUpdate(dt) {
+  const s = ufo, ship = ufoShip, p = ship.position;
+  Nn.getWorldDirection(ufoD);
+  ufoR.crossVectors(ufoD, ufoUpV).normalize();
+  let iz = 0, ix = 0, iy = 0;
+  if (fn.KeyW || fn.ArrowUp) iz++; if (fn.KeyS || fn.ArrowDown) iz--;
+  if (fn.KeyD || fn.ArrowRight) ix++; if (fn.KeyA || fn.ArrowLeft) ix--;
+  if (fn.Space) iy++; if (fn.KeyC || fn.ControlLeft) iy--;
+  const gnd = ufoGroundAt(p.x, p.z), agl = p.y - gnd;
+  let cap = UFO_TIERS[s.tier];
+  s.braking = false;
+  if (s.fuel <= 0) cap = Math.min(cap, UFO_TIERS[1]);
+  if (!ufoSpace) { const a2 = Math.max(0, agl), lim = a2 < 100 ? 40 + a2 * 1.2 : 160 + (a2 - 100) * 3; if (cap > lim) { cap = lim; s.braking = true; } }
+  else {
+    const d = Math.hypot(p.x - SP.ax, p.y - SP.ay, p.z - SP.az) - SP.aR;
+    const lim = 25 + Math.max(0, d) * .4; if (cap > lim) { cap = lim; s.braking = true; }
+  }
+  ufoW.set(0, 0, 0).addScaledVector(ufoD, iz).addScaledVector(ufoR, ix).addScaledVector(ufoUpV, iy);
+  const wishing = ufoW.lengthSq() > 0;
+  if (wishing) ufoW.normalize().multiplyScalar(cap);
+  const k = wishing ? 1.5 : 2.4;
+  s.vel.lerp(ufoW, 1 - Math.exp(-dt * k));
+  if (!wishing && s.vel.lengthSq() < .01) s.vel.set(0, 0, 0);
+  p.addScaledVector(s.vel, dt);
+  const floorY = gnd + .97;
+  if (p.y < floorY) { p.y = floorY; if (s.vel.y < 0) s.vel.y = 0; }
+  s.speed = s.vel.length();
+  s.landed = p.y - floorY < .06 && s.speed < 2.5 && iy <= 0;
+  if (s.landed && !wishing) s.vel.multiplyScalar(.8);
+  s.fuel = Math.max(0, s.fuel - dt * (s.speed / 9000 * .9 + (wishing ? .015 : 0)));
+  s.throttle += ((wishing ? Math.min(1, s.speed / 9000 + .15) : 0) - s.throttle) * Math.min(1, dt * 4);
+  // Keep the hull turned the way you look.
+  if (!s.landed || wishing) {
+    const camYaw = Math.atan2(-ufoD.x, -ufoD.z);
+    let dy = camYaw - ship.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    ship.rotation.y += dy * Math.min(1, dt * 3.2);
+  }
+  ufoPlaceCamera();
+  const fovGoal = 78 + 14 * Math.min(1, s.speed / 1500);
+  if (Math.abs(Nn.fov - fovGoal) > .05) { Nn.fov += (fovGoal - Nn.fov) * Math.min(1, dt * 3); Nn.updateProjectionMatrix(); }
+}
+function ufoHudText(hint, mode) {
+  const s = ufo, p = ufoShip.position;
+  const sp = Math.round(s.speed).toLocaleString();
+  const alt = ufoSpace ? (Math.abs(p.y - SP.py) < 600 && Math.hypot(p.x - SP.ax, p.z - SP.az) < 240 ? Math.round(p.y - SP.py) + ' m above deck' : (p.y / 1000).toFixed(1) + ' km') : (p.y > 2000 ? (p.y / 1000).toFixed(2) + ' km' : Math.round(p.y - os(p.x, p.z)) + ' m');
+  return hint + sp + ' m/s  ·  ALT ' + alt + '  ·  [' + (s.tier + 1) + '] ' + UFO_TIER_NAMES[s.tier] + (s.braking ? ' (auto-brake)' : '') + '  ·  FUEL ' + Math.round(s.fuel) + '%  ·  ' + mode + '  ·  WASD fly  ·  SPACE up  ·  C down  ·  1-6 / WHEEL speed';
+}
+addEventListener('wheel', e => {
+  if (!ufo.flying || !active) return;
+  ufo.tier = Math.max(0, Math.min(5, ufo.tier + (e.deltaY < 0 ? 1 : -1))); e.preventDefault();
+}, {passive: false});
+
+// ---- audio: a low warm hum that climbs with speed ---------------------------------
+let ufoAud = null;
+function ufoAudioStart() {
+  const c = audio.ctx; if (!c || ufoAud) return;
+  if (c.state === 'suspended') c.resume();
+  const o1 = c.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 46;
+  const o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = 92;
+  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220; f.Q.value = .8;
+  const g = c.createGain(); g.gain.value = 0;
+  o1.connect(f); o2.connect(f); f.connect(g); g.connect(audio.master);
+  const ns = c.createBufferSource(); ns.buffer = audio.noiseBuf; ns.loop = true;
+  const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 400; nf.Q.value = .5;
+  const ng = c.createGain(); ng.gain.value = 0;
+  ns.connect(nf); nf.connect(ng); ng.connect(audio.master);
+  o1.start(); o2.start(); ns.start();
+  ufoAud = {o1, o2, f, g, ng, nf, ns};
+  g.gain.setTargetAtTime(.07, c.currentTime, .6);
+}
+function ufoAudioStop() {
+  if (!ufoAud) return;
+  const c = audio.ctx, a = ufoAud; ufoAud = null;
+  a.g.gain.setTargetAtTime(0, c.currentTime, .3); a.ng.gain.setTargetAtTime(0, c.currentTime, .3);
+  setTimeout(() => { try { a.o1.stop(); a.o2.stop(); a.ns.stop(); } catch (e) {} }, 1500);
+}
+function ufoAudioUpdate() {
+  if (!ufoAud) return;
+  const c = audio.ctx, t = c.currentTime, f = Math.min(1, ufo.speed / 2500);
+  ufoAud.o1.frequency.setTargetAtTime(46 + 90 * f, t, .2); ufoAud.o2.frequency.setTargetAtTime(92 + 150 * f, t, .2);
+  ufoAud.f.frequency.setTargetAtTime(220 + 900 * f, t, .3);
+  ufoAud.g.gain.setTargetAtTime(.06 + .07 * f, t, .3);
+  ufoAud.ng.gain.setTargetAtTime(Math.min(.09, .004 + .1 * f), t, .3); ufoAud.nf.frequency.setTargetAtTime(300 + 1800 * f, t, .3);
+}
+
+// ---- stars-and-dust field that sells speed -----------------------------------------
+const ufoDustN = 420, ufoDustBase = new Float32Array(ufoDustN * 3), ufoDustPos = new Float32Array(ufoDustN * 3);
+(function () { const r = Vm(808); for (let i = 0; i < ufoDustN * 3; i++) ufoDustBase[i] = r(); })();
+const ufoDustGeo = new It(); ufoDustGeo.setAttribute('position', new Et(ufoDustPos, 3));
+const ufoDust = new or(ufoDustGeo, new Qi({color: 0xcfe9ff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: .55, fog: false, depthWrite: false}));
+ufoDust.frustumCulled = false; ufoDust.visible = false; Nt.add(ufoDust);
+function ufoUpdateDust() {
+  const show = ufo.flying && (ufoSpace || Nn.position.y > 1800) && ufo.speed > 6;
+  ufoDust.visible = show; if (!show) return;
+  const L = 60 + Math.min(400, ufo.speed * .06), c = Nn.position;
+  for (let i = 0; i < ufoDustN; i++) for (let a = 0; a < 3; a++) {
+    const o = [c.x, c.y, c.z][a], b = ufoDustBase[i * 3 + a] * L;
+    ufoDustPos[i * 3 + a] = o + (((b - o) % L) + L) % L - L / 2;
+  }
+  ufoDustGeo.attributes.position.needsUpdate = true;
+}
+
+// ---- per-frame: space mode switch, atmosphere fade, animation ----------------------
+let ufoHidden = [], ufoEnterT = 0;
+const ufoKeep = new Set();
+function ufoSetSpace(on) {
+  if (on === ufoSpace) return;
+  ufoSpace = on;
+  if (on) {
+    ufoHidden = Nt.children.filter(o => o !== ufoShip && o !== spGroup && o !== ufoDust && o !== Nt.userData.stars && !o.isLight && o.visible);
+    for (const o of ufoHidden) o.visible = false;
+    spGroup.visible = true; Nn.near = .4; Nn.far = 130000;
+  } else {
+    for (const o of ufoHidden) o.visible = true;
+    ufoHidden = []; spGroup.visible = false; Nn.near = .1; Nn.far = 3500;
+    Qt.target.position.set(Nn.position.x, 0, Nn.position.z);
+  }
+  Nn.updateProjectionMatrix();
+}
+function ufoFrame(dt, t) {
+  const p = ufoShip.position, camY = Nn.position.y;
+  // Parked ships left up in space go home when the player leaves.
+  if (!ufo.flying && !ufoSpace && p.y > 3000) ufoHome();
+  // Space mode with hysteresis, keyed to where the player's eyes are.
+  if (camY > 1800 && fl) spBuild();
+  ufoSetSpace(ufoSpace ? camY > 3100 : camY > 3200);
+  const fl = ufo.flying;
+  if (fl && !ufoSpace) {
+    // Climbing out: fog opens up with height, then the whole sky drains to black.
+    const f = ufoSmooth(900, 3200, camY);
+    const farBoost = Math.min(9000, 1400 * (1 + camY / 260));
+    Nt.fog.far = Nt.fog.far + (farBoost - Nt.fog.far) * ufoSmooth(0, 260, camY);
+    if (f > 0) {
+      Xm.material.uniforms.uNight.value = Math.max(Xm.material.uniforms.uNight.value, f);
+      Xm.material.uniforms.uDay.value *= (1 - f);
+      Nt.fog.color.multiplyScalar(1 - f); Nt.fog.far = Nt.fog.far * (1 - f) + 900 * f;
+      Nt.userData.stars.visible = true; Nt.userData.stars.material.opacity = Math.max(Nt.userData.stars.material.opacity, .95 * f);
+    }
+    const wantFar = Math.max(3500, Nt.fog.far * 1.35);
+    if (Math.abs(Nn.far - wantFar) > wantFar * .08) { Nn.far = wantFar; Nn.updateProjectionMatrix(); }
+  } else if (!ufoSpace && Nn.far !== 3500) { Nn.far = 3500; Nn.updateProjectionMatrix(); }
+  if (ufoSpace) {
+    Nt.fog.near = 1e7; Nt.fog.far = 2e7; Nt.fog.color.setRGB(0, 0, 0);
+    Xm.visible = false;
+    for (const o of ufoHidden) o.visible = false;
+    spFollow.position.copy(Nn.position);
+    Nt.userData.stars.visible = true; Nt.userData.stars.material.opacity = 1;
+    // Deep-space lighting: one hard white sun and a faint cool fill.
+    Qt.color.setRGB(1, .96, .9); Qt.intensity = 2.5;
+    Qt.target.position.set(Nn.position.x, Nn.position.y, Nn.position.z);
+    Qt.position.copy(Qt.target.position).addScaledVector(spSun, 60);
+    hhem.color.setRGB(.25, .22, .45); hhem.groundColor.setRGB(.12, .08, .2); hhem.intensity = .5;
+    const fadeIn = ufoSmooth(3300, 5200, camY);
+    spGroup.userData.earthMat.opacity = fadeIn; spGroup.userData.atmoMat.uniforms.uA.value = fadeIn;
+    spGroup.userData.earthMat.visible = fadeIn > .01;
+    const pulse = .75 + .25 * Math.sin(t * 2.4);
+    for (const b of spNeonPulse) b.scale.setScalar(.85 + .3 * pulse);
+    const db = spGroup.userData.debris, m = new xi();
+    for (let i = 0; i < db.data.length; i++) {
+      const d = db.data[i], a = d.a + t * d.w;
+      m.position.set(SP.ax + Math.cos(a) * d.r, SP.ay + d.y + Math.sin(a * 2 + i) * 14, SP.az + Math.sin(a) * d.r);
+      m.rotation.set(t * .05 + i, t * .04 + i * 2, 0); m.scale.set(d.s * d.sx, d.s, d.s * d.sz); m.updateMatrix();
+      db.mesh.setMatrixAt(i, m.matrix);
+    }
+    db.mesh.instanceMatrix.needsUpdate = true;
+    const wg = audio.windGain, ig = audio.insectGain;
+    if (audio.ctx && wg) { wg.gain.setTargetAtTime(.0001, audio.ctx.currentTime, .15); }
+    if (audio.ctx && ig) { ig.gain.setTargetAtTime(.0001, audio.ctx.currentTime, .15); }
+  }
+  // Ship: flame, blink, parked collider, hull tilt.
+  const eng = ufoShip.userData.engineLight;
+  const th = fl ? ufo.throttle : 0;
+  eng.intensity = 18 * th;
+  for (let i = 0; i < ufoFlames.length; i++) {
+    const f = ufoFlames[i]; f.visible = th > .03;
+    const flick = 1 + .12 * Math.sin(t * 40 + i * 2) ;
+    f.scale.set(1, (.25 + 1.4 * th) * flick, 1);
+  }
+  ufoBlink[0].visible = Math.sin(t * 3) > -.3;
+  for (let i = 0; i < ufoRimBulbs.length; i++) ufoRimBulbs[i].visible = (Math.floor(t * 5) + i) % 6 !== 0 || th > .02 || true;
+  if (fl) {
+    const tiltTarget = Math.max(-1, Math.min(1, ufo.vel.dot(ufoD) / 600)) * -.12;
+    ufoHull.rotation.x += (tiltTarget - ufoHull.rotation.x) * Math.min(1, dt * 3);
+    ufoHull.rotation.z += ((-ufoR.dot(ufo.vel) / 600) * .1 - ufoHull.rotation.z) * Math.min(1, dt * 3);
+    ufoCollider.minX = ufoCollider.maxX = ufoCollider.minZ = ufoCollider.maxZ = 1e9;
+  } else {
+    ufoHull.rotation.x *= .9; ufoHull.rotation.z *= .9;
+    const yw = ufoShip.rotation.y, c = Math.abs(Math.cos(yw)), s = Math.abs(Math.sin(yw));
+    const hx = 1.8 * c + 2.3 * s, hz = 1.8 * s + 2.3 * c;
+    ufoCollider.minX = p.x - hx; ufoCollider.maxX = p.x + hx; ufoCollider.minZ = p.z - hz; ufoCollider.maxZ = p.z + hz;
+    ufoCollider.minY = p.y - 1; ufoCollider.maxY = p.y + 2;
+  }
+  // Keep a walker on the asteroid deck.
+  if (ufoSpace && !fl) {
+    const dx = Nn.position.x - SP.ax, dz = Nn.position.z - SP.az, d = Math.hypot(dx, dz);
+    if (d > 196 && Nn.position.y < SP.py + 6) { Nn.position.x = SP.ax + dx / d * 196; Nn.position.z = SP.az + dz / d * 196; }
+  }
+  ufoUpdateDust();
+  ufoAudioUpdate();
+  // Cozy glow reads best from outside at night: the cabin lamp never dims.
+}
+
 function fogCornerDistance(camera) {
   const halfHeight = Math.tan(camera.fov * Math.PI / 360);
   return Nt.fog.far * Math.hypot(1, halfHeight, halfHeight * camera.aspect);
@@ -14176,8 +15009,12 @@ function updateLocalLightVisibility() {
   // Three compiles every visible light into each lit material. Keep the full light
   // rig of each site until its influence cannot reach either view inside the fog.
   const viewRange = Math.max(fogCornerDistance(Nn), seated ? fogCornerDistance(mirrorCamera) : 0) + 12;
-  for (const {position, range, lights} of localLightGroups) {
-    const nearby = Nn.position.distanceToSquared(position) < (viewRange + range) ** 2;
+  for (const g of localLightGroups) {
+    const {position, range, lights} = g;
+    let nearby = Nn.position.distanceToSquared(position) < (viewRange + range) ** 2;
+    if (g.cull) nearby = Nn.position.distanceToSquared(position) < g.cull ** 2;
+    if (g.space === 'only') nearby = nearby && ufoSpace;
+    else if (ufoSpace && g.space !== 'both') nearby = false;
     for (const light of lights) light.visible = nearby && (!light.isSpotLight || light.intensity > 0);
   }
 }
@@ -14315,7 +15152,7 @@ addEventListener('keydown',event=>{
     return;
   }
   if(travelBusy) return;
-  if(key==='Backquote') { openTravelModal(true); event.preventDefault(); return; }
+  if(key==='Backquote' && !ufo.flying) { openTravelModal(true); event.preventDefault(); return; }
   if(key==='KeyO') { openSettingsModal(); event.preventDefault(); return; }
   if(restModalActive) {
     if(key==='Escape') { closeRestModal(); event.preventDefault(); return; }
@@ -14347,6 +15184,10 @@ addEventListener('keydown',event=>{
   fn[key]=true;
   if(key==='Space')event.preventDefault();
   if(event.repeat)return;
+  if(ufo.flying){
+    if(key>='Digit1'&&key<='Digit6'){ufo.tier=+key.slice(5)-1;return;}
+    if(key==='KeyF'){ufoExit();return;}
+  }
   if(key==='KeyE')findInteractionTarget()?.action();
   if(key==='KeyT') {
     if(inspection==='motelBed') { openRestModal('bed'); return; }
@@ -14408,7 +15249,9 @@ function updateCarHud() {
   const binocularsDisplay = inspection === 'binoculars' ? 'block' : 'none';
   if(binocularsOverlay.style.display !== binocularsDisplay) binocularsOverlay.style.display = binocularsDisplay;
   let text = '';
-  if (inspection === 'rest' || inspection === 'dinerBooth' || inspection === 'ridgeOverlook' || inspection === 'porchBench') {
+  if (ufo.flying) {
+    text = ufoHudText(hint, mode);
+  } else if (inspection === 'rest' || inspection === 'dinerBooth' || inspection === 'ridgeOverlook' || inspection === 'porchBench') {
     text = hint + mode + '  ·  Move to stand';
   } else if (inspection === 'payphone') {
     text = hint + mode + '  ·  Move or E to dial / hang up';
@@ -14428,13 +15271,14 @@ function updateCarHud() {
     inspection==='rest'?(lapBlanket.visible?'  ·  Blanket across your lap':''):
     carriedCargo?'  ·  Carrying '+carriedCargo.label+'  ·  G set down':
     seated && trunkOpen?'  ·  TRUNK OPEN':'';
-  const status=cargoStatus+(audio.muted?'  ·  SOUND OFF (M)':'');
+  const status=cargoStatus+ufoNoteText()+(audio.muted?'  ·  SOUND OFF (M)':'');
   if(text+status!==hudText){hud.textContent=text+status;hudText=text+status;}
 }
 
 var jm=1.7,br=0,oo=!0,eg=new Pi,Ni=new P,lo=new P,dn=new P;let gasDipEnd=-1,gasNextDip=9+Dn(0,22),stepAcc=0;function tg(i){Nn.getWorldDirection(Ni),Ni.y=0,Ni.normalize(),lo.crossVectors(Ni,new P(0,1,0)).normalize(),dn.set(0,0,0);const wFwd=!!(fn.KeyW||fn.ArrowUp),wBwd=!!(fn.KeyS||fn.ArrowDown),wRgt=!!(fn.KeyD||fn.ArrowRight),wLft=!!(fn.KeyA||fn.ArrowLeft);wFwd&&dn.add(Ni),wBwd&&dn.sub(Ni),wRgt&&dn.add(lo),wLft&&dn.sub(lo),dn.lengthSq()>0&&dn.normalize();let e=fn.ShiftLeft||fn.ShiftRight?10:5.5,t=Nn.position,n=t.x+dn.x*e*i,s=vc(n,t.y,t.z);t.x=s[0];let r=t.z+dn.z*e*i;s=vc(t.x,t.y,r),t.z=s[1];let o=os(t.x,t.z)+jm;fn.Space&&oo&&(br=5.2,oo=!1),br-=13*i,t.y+=br*i,t.y<=o&&(t.y=o,br=0,oo=!0)}function Cc(){requestAnimationFrame(Cc);const delta=eg.getDelta();adaptRenderResolution(delta);let i=settingsModalActive?0:Math.min(delta,.05);animateCar(i);animateGestures(i);
 if(active){
-  if(seated){driveCar(i);stepAcc=0;}
+  if(ufo.flying){ufoUpdate(i);stepAcc=0;}
+  else if(seated){driveCar(i);stepAcc=0;}
   else{
     const x=Nn.position.x,z=Nn.position.z;
     tg(i);
@@ -14482,9 +15326,13 @@ const wetRegion = nwH(routeS, 9600, 15800);
 const weatherHour = ((worldClockHours % 24) + 24) % 24 / 24 * Math.PI * 2;
 const weatherSwing = Math.max(0, Math.min(1, 0.5 + 0.30 * Math.sin(weatherHour * 5 + 1.1) + 0.22 * Math.sin(weatherHour * 3 + 2.4)));
 const nwCloud = wetRegion * (0.72 + 0.28 * weatherSwing);
-const rainFactor = wetRegion * nwH(weatherSwing, 0.40, 0.78);
-const gloom = Math.min(1, nwCloud * 0.72 + rainFactor * 0.28);
-terrainWetnessUniform.value = Math.max(0, Math.min(1, wetRegion * (0.45 + 0.35 * weatherSwing + 0.35 * rainFactor)));
+// Plains thunderstorm weather: the cell on the rim matures, then its gloom, rain and wind reach the player.
+const stormNow = plainsStormPower(eg.elapsedTime) * Math.max(0, Math.min(1, (Nn.position.x - 42000) / 6000));
+const stormRain = nwH(stormNow, 0.55, 0.95);
+plainsStormWind = stormNow;
+const rainFactor = Math.max(wetRegion * nwH(weatherSwing, 0.40, 0.78), 0.9 * stormRain);
+const gloom = Math.min(1, nwCloud * 0.72 + rainFactor * 0.28 + 0.40 * stormNow);
+terrainWetnessUniform.value = Math.max(0, Math.min(1, Math.max(wetRegion * (0.45 + 0.35 * weatherSwing + 0.35 * rainFactor), 0.9 * stormRain)));
 
 Xm.material.uniforms.uNight.value = uNight;
 Xm.material.uniforms.uDay.value = uDay;
@@ -14495,7 +15343,7 @@ Xm.material.uniforms.uForestSkyline.value = nwBiome;
 
 Xm.position.copy(Nn.position);
 Nt.userData.stars.position.copy(Nn.position);
-recenterDesert(Nn.position.x, Nn.position.z, 1.25);
+if(!(Nn.position.y>160&&(ufo.flying||ufoSpace)))recenterDesert(Nn.position.x, Nn.position.z, 1.25);
 updateTelephoneLine(Nn.position.x);
 updateRiverSurface(Nn.position.x);
 updateForestPool(Nn.position.x);
@@ -14553,6 +15401,7 @@ let sk=Math.max(0,(uNight-.3)/.7);
 sk=sk*sk*(3-2*sk) * (1.0 - uDay) * (1.0 - 0.95 * gloom);
 Nt.userData.stars.visible = sk > 0;
 Nt.userData.stars.material.opacity = .85 * sk;
+ufoFrame(i, t);
 updateLocalLightVisibility();
 
 const targetDoorRot = fernDoorOpen ? -1.65 : 0;
@@ -14650,6 +15499,12 @@ if(Xm && Xm.material && Xm.material.uniforms) {
   const calm = (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 0.4 : 1;
   boltFlash *= stormPower * calm;
   const flashAll = Math.max(heatFlash, boltFlash * 0.8);
+  if (boltFlash > 0.002) {
+    // Each flash washes the landscape in cold light: fill, fog and distant ground lift together, then fall back next frame.
+    hhem.intensity += 1.3 * boltFlash * (0.55 + 0.45 * S.kind);
+    Nt.fog.color.r += 0.045 * boltFlash; Nt.fog.color.g += 0.055 * boltFlash; Nt.fog.color.b += 0.10 * boltFlash;
+    terrainSkyTone.value.setRGB(Nt.fog.color.r, Nt.fog.color.g, Nt.fog.color.b).multiplyScalar(0.55);
+  }
   if(Xm.material.uniforms.uStormPower) Xm.material.uniforms.uStormPower.value = stormPower;
   if(Xm.material.uniforms.uBoltFlash) Xm.material.uniforms.uBoltFlash.value = boltFlash;
   if(Xm.material.uniforms.uBoltKind) Xm.material.uniforms.uBoltKind.value = S.kind;
@@ -14734,7 +15589,7 @@ if(audio.plainsWindGain && plainsBiome > 0.01) {
   const depthDriveIn = Math.min(5.8 - Math.abs(x - 64600), z + 131.5, -138.5 - z);
   const inConcession = depthDriveIn > 0 ? 1 : 0;
   const plainsMuffled = Math.max(shelter * 0.72, cabin, inConcession * 0.8);
-  const pWindVol = audio.muted ? 0 : (0.015 + 0.042 * gustAud) * plainsBiome * (1 - plainsMuffled * 0.75);
+  const pWindVol = audio.muted ? 0 : (0.015 + 0.042 * gustAud) * (1 + 0.8 * plainsStormWind) * plainsBiome * (1 - plainsMuffled * 0.75);
   audio.plainsWindGain.gain.setTargetAtTime(pWindVol, now, 0.15);
   if(audio.plainsWindFilter) audio.plainsWindFilter.frequency.setTargetAtTime(650 + 850 * gustAud, now, 0.15);
 
@@ -14813,6 +15668,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
     .52+Math.sin(angle)*radius*.5+.10*Math.sin(angle*11.7));
   gasSign.localToWorld(gasMothPoint).toArray(mothPos,mi*3);
 }mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);renderWithInspection()}document.getElementById("app")._game = {
+  ufo, ufoShip, spGroup, SP, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt,
   Nt, Nn, coupe, os, nwRoadZ, nwRoadSlopeZ, nwRoadY, nwSFromX, nwXFromS, carSurfaceAt,
   ROUTE_CATALOG, throughTurnout, sitInCar, leaveCar, setRoadMapOpen, driveCar, groundCoupe, recenterDesert,
   updateTelephoneLine, fn, driverDoor, glovebox, roadMap,

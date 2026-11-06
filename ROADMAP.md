@@ -592,6 +592,22 @@ For each `index.html` change:
   - Offline check: `scripts/verify_offline.js` confirmed 0 runtime network requests.
   - Headless Chrome CDP test (`scripts/test_mirror_visor.js`): verified mirror clearance ($5.0\text{ cm}$ behind windshield), visor hinge clearance ($3.6\text{ cm}$ behind windshield), flipped visor clearance ($17.8\text{ cm}$ behind windshield), side window clearance ($10.0\text{ cm}$), and presence of the driver exterior door mirror.
 
+### 2026-11-06g — Fix sunken hood rest position and collision lift geometry
+
+- **User Inquiry:** "what happened to the car model, now the hood is sacked in. CHeck it and build it correctly with all the damaging features and all the old features"
+- **Root Cause Analysis:**
+  - *Sunken Rest Geometry:* When vehicle deformation was added, `hoodHinge` was constructed at $(0, 1.01, 0.72)$ matching the original coupe deck geometry (`deck(0, 1.75, 0, -.20, .91, -.53)`). However, `animateCar(dt)` erroneously lerped the undamaged hood's rest position to $y = 0.82$ and $z = 0.62$ instead of $y = 1.01$ and $z = 0.72$. This pulled the entire hood $19\text{ cm}$ below the cowl/fenders and $10\text{ cm}$ rearward every frame, creating a collapsed/sunk-in appearance.
+  - *Inverted Pop/Buckle Direction:* In Three.js with $+Z$ forward and $+Y$ up, positive rotation around $+X$ pushes the front of the hood *downward* into the radiator. The collision pop angle ($+0.09\text{ rad}$) and buckle angle ($+0.38\text{ rad}$) drove the front of the hood down rather than lifting it up.
+  - *Repair Reset:* `hammerHoodLatch()` and `slamHoodShut()` reset positions were corrected to restore `hoodHinge.position.set(0, 1.01, 0.72)` and `rotation.set(0, 0, 0)`.
+- **Corrections Implemented:**
+  - *Undamaged Rest Position:* `animateCar` now smoothly targets $y = 1.01$ and $z = 0.72$ with `rotation.x = 0`, keeping the hood completely flush with the cowl ($y = 1.01$), windshield bottom, and front nose ($y = 0.81$).
+  - *Popped Latch:* Pops the front edge up $\approx 6.6\text{ cm}$ ($\theta = -0.038\text{ rad}$ around $+X$) with subtle engine idle vibration (`idleTremor`), safely caught on the safety hook.
+  - *Buckled Crumple:* Tents upward by $\approx 24\text{ cm}$ ($\theta = -0.14\text{ rad}$ with upward cowl lift $y = 1.03, z = 0.69$) with slipstream flutter (`windFlutter`). Severe crashes pitch upward to $\theta = -0.24\text{ rad}$ ($y = 1.05, z = 0.66$).
+  - *Roadside Repairs:* `slamHoodShut()` and `hammerHoodLatch()` fully restore the hood to $(0, 1.01, 0.72)$ at $\theta = 0$.
+- **Verification:**
+  - `scripts/test_hood_geometry.js`: extracted inline script syntax check passed with 0 errors (1,107,334 bytes); verified rest position $(0, 1.01, 0.72)$, pop lift rotation, buckle tenting, and repair resets.
+  - Offline check: 0 runtime network requests, single self-contained file.
+
 ### 2026-11-06e — Drifting mechanics, tire squeal, vehicle destruction/deformation, and linear steering tuning
 
 - **User Requests Addressed:**
