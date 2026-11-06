@@ -369,7 +369,7 @@ About 5–7 set pieces, one destination, 8–12 interactables, 6–10 ground tra
 | Hay stack | A round or square stack greying | A winter's food, forgotten. |
 | Concrete silo | A tall cylinder, a lean-to at its foot | A tower of the plain. |
 
-**Destination: the drive-in** *(working name: the Starlight Drive-In; flagged against the Starlite diner for a rename)*. A great white screen on a timber frame, a ticket booth, a cinder-block concession building with a projection booth, a field of mounded rows with speaker posts, a marquee with a letter board, a playground under the screen, and one lit sign.
+**Destination: the drive-in** *(working name: Harvest Moon Drive-In, renamed to avoid Starlite Diner)*. A great white screen on a timber frame, a ticket booth, a cinder-block concession building with a projection booth, a field of mounded rows with speaker posts, a marquee with a letter board, a playground under the screen, and one lit sign.
 
 | Fixture | Action and feedback | Feeling |
 | --- | --- | --- |
@@ -577,5 +577,5 @@ Fixtures carry the feeling only if a few are excellent. Build each region's **si
 - **Fireflies (Farm belt).** Optional, few, silent. Confirm whether they count as sparse insects.
 - **Speaker field sound (Plains).** Confirm that a hung speaker carrying filtered wind, with no music, fits the no-music rule.
 - **Penny scale text (Lakes).** The card text is placeholder; decide whether any fortune-style text belongs.
-- **Naming.** All names here are working names. Starlight Drive-In should be renamed if it is too close to Starlite Diner.
+- **Naming.** All names here are working names. The Plains drive-in is now Harvest Moon Drive-In, so it does not echo Starlite Diner.
 - **Set pieces and WORLD_LORE.** Confirm that non-enterable set pieces do not count against the "one new visitable place per region" rule.
