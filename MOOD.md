@@ -72,6 +72,54 @@ The land lies down and the sky stands up. For miles there is nothing to lean on,
 
 *Build notes:* flat heightfield with long, soft swells; no lit trains or traffic; the elevator and water tower stay unlit; heat lightning is silent and rare; crickets are sparse and stop near the sign hum; the one warm light is the motel or drive-in, seen first as colour.
 
+### Great Plains — ambience in depth
+
+The desert is about being exposed to dryness and distance. The Plains are about being exposed to *time*. Everything is green and gold and alive, and still it feels left behind. Summer is at its fullest and nobody is there to see it. That is the ache: abundance with no one to share it.
+
+**The sky is the main character.** Give it more of the frame than any other region. Let the horizon sit low, so the player feels small under it. At dusk the colour is slower than in the desert: gold, then rose, then lavender, then a deep blue that holds a green edge near the ground. Cloud towers far away catch the last light after the ground has gone dark, so the top of a storm glows while the land is already night. That detail alone says *the day is over for you, not yet for the sky*.
+
+**Sound is wind in grass, not wind on rock.**
+- A soft, constant hush that rises and falls in long waves as gusts cross the field and arrive at the player a second late. The sound should visibly *travel*.
+- Crickets and a single distant insect line, sparse, stopping the moment the sign hum comes into earshot, as if the field itself were listening.
+- A fence wire ticking. A loose sheet of tin on an old shed, rare, once in a long while.
+- Almost-thunder: no sound at all with the heat lightning. The silence is the point.
+- Near the motel, the hum of a transformer is the only mechanical voice for miles.
+
+**Light is generous, then withdrawn.** For the first minutes, long gold shadows stretch across the grass and the road. They go cold and blue slowly. The motel's red and the diner or drive-in's warmer tones should appear against a sky that still has colour in it, so neon feels like a small coal held in an open hand.
+
+**Distance is the loneliest thing here.** The road runs dead straight to a point. Telephone poles shrink in perfect ranks. Let the player see a light for a very long time before reaching it, longer than in the desert. The waiting is the feeling. Then, leaving, the same light stays visible in the mirror for an almost unreasonable time, a red grain that refuses to go out.
+
+**The five distances**
+
+| Where you are | What you can see | What you can hear |
+| --- | --- | --- |
+| Open highway | A flat horizon, a vast sky, a dark elevator on the rim, one red point far ahead | Grass hush, tyres, the sign nowhere yet |
+| Approaching, a few hundred metres | The sign resolves to letters. A low roofline. A water tower with its name half gone. | The field's insects stop. A faint transformer hum. |
+| The gravel lot | Warm pools on pale gravel. Painted doors. A cooler by the office with no label. | Gravel under boots, wind in the wire, the sign more clearly |
+| At the door | A key rack with one key gone. A lamp. The field visible through the window. | The wind drops, the hum becomes close and physical |
+| Leaving | The sign in the mirror, a tiny red coal, still there | Engine, tyres, then wind taking the engine's place |
+
+**Traces of care, Plains edition**
+- A hand-lettered rate card with three prices, each crossed out and rewritten.
+- A faded handpainted sign for a church supper, a county fair, or a harvest dance that is long over. Old, not recent.
+- A mailbox with a flag that has rusted in the up position.
+- A worn path through the grass from the motel to the road, the way people used to wait for a ride.
+- Mud-dauber nests under the eave. A wasp-paper corner. Nature moving in, gently.
+- A child's measuring marks on a doorframe, if the motel was also someone's home. Heights only, no names, no dates.
+
+**What to feel, moment by moment**
+
+| Moment | Feeling | What carries it |
+| --- | --- | --- |
+| Leaving the last place behind | Smallness | The horizon drops low, the sky grows |
+| Seeing the first light | Hope that is almost embarrassing | A red point, too far to be sure of |
+| Driving toward it for a long time | Patience turning into tenderness | Telephone poles, grass hush, no destination in reach |
+| Arriving | Being let in | Gravel, a warm lamp, the wind dropping |
+| Standing in the doorway at blue hour | Wanting to stay | Sky still holding colour, the room still holding warmth |
+| Driving away | Loss, quiet and unspeakable | The red coal in the mirror lasting too long |
+
+**Guardrails.** No people, no distant vehicles, no lit trains, no music. The elevator and tower stay dark. Lightning stays silent. Insects stay sparse. The point is not to fill the Plains with things but to let their emptiness feel like a held breath.
+
 ## Keeping mood independent of region
 
 - **Parameters, not branches.** Fog, wind bed, hum level, spill radius, tyre surface, star visibility, and grade tint are all functions of world position and blend smoothly. A region is a set of values for these, plus its own models.
@@ -97,6 +145,7 @@ Until the decision is recorded, treat the original one-way rule as authoritative
 - **Radio.** The project rule is no music. A radio that only produces static between stations would be a strong lonely device, but it needs an explicit exception.
 - **Clock model.** One-way descent versus a repeating day (above).
 - **Next region.** Great Plains is recommended, but the choice is the project owner's.
+- **Pinned: driveable train and station.** Proposed 2026-11-06 and set aside by the project owner. If revived: one slow, period-correct railcar, parked at one station, moving only on player input; no other trains, no moving lights seen from the road, no horn set pieces. Revisit after the Plains region is accepted.
 
 ## Acceptance
 
