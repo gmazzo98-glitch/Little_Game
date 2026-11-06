@@ -543,6 +543,7 @@ For each `index.html` change:
 
 - **Report:** Trees could stand in the river, bushes on the road, telephone poles on the road or in the river, and trees or bushes on top of poles.
 - **Fix:** Forest trees now keep 16 m from the river centreline (was 13) and understory shrubs 11.5 m (was 9), covering the cobble bank. Road clearance is measured perpendicular to the road (trees 8.5 m, shrubs 7.2 m) so steep road bends no longer let shrubs reach the asphalt. New `poleDistance()` keeps trees 4.5 m and shrubs 2.6 m off every pole base, and desert-kit cacti, rocks and scrub keep 2.6 m off poles. `poleWorldZ()` now moves a pole to the opposite verge or a wider offset when its default spot is within 11 m of the river (the bridge crossing).
+- **Follow-up pass:** Added `wireDistance()` so forest trees stay 3.6 m out from under the strung wire. Audited the hand-placed Fern Bend grove numerically (road, river and creek offsets from `nwRoadZ`/`nwRiverZ`): moved two Douglas firs that stood on the road shoulder (5-6 m from centre) to about 10-12 m, and three trees that stood in the river or creek bank (a redcedar and two alders) onto dry ground.
 - **Checks:** Inline script passed `node --check`. No new resources or network code. **Not verified:** in-game visual review near the river crossing and the SR 14 forest; the in-app browser could not open the local `file://` page. Acceptance stays open.
 
 ### 2026-11-05b — Duplicate coupe rearview mirror cleanup

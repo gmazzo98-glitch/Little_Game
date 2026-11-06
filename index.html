@@ -5989,6 +5989,12 @@ function poleWorldZ(x, baseZ, useSR14) {
   }
   return pz;
 }
+// Sideways distance from (x,z) to the strung wire at that x, so tall trees stay out from under the line.
+function wireDistance(x, z, useSR14) {
+  const L = telephoneLine, i = Math.floor((x - L.offset) / L.spacing), x0 = L.offset + i * L.spacing, t = (x - x0) / L.spacing;
+  const z0 = poleWorldZ(x0, L.z, useSR14), z1 = poleWorldZ(x0 + L.spacing, L.z, useSR14);
+  return Math.abs(z - (z0 + (z1 - z0) * t));
+}
 // Distance from (x,z) to the nearest telephone pole base, so scenery can keep clear of it.
 function poleDistance(x, z, useSR14) {
   const L = telephoneLine, px = L.offset + Math.round((x - L.offset) / L.spacing) * L.spacing;
@@ -10002,16 +10008,16 @@ function makeConiferParts(species, height, seed) {
 // Hand-composed hero foreground grove at Fern Bend
 (function buildForegroundGrove() {
   const grove = [
-    ['dougFir', -28328, -6405, 18.5, 101],
-    ['dougFir', -28372, -6406, 21.0, 102],
+    ['dougFir', -28328, -6410, 18.5, 101],
+    ['dougFir', -28372, -6412, 21.0, 102],
     ['hemlock', -28342, -6422, 16.0, 103],
     ['redcedar', -28358, -6424, 19.0, 104],
     ['ponderosa', -28380, -6418, 17.5, 105],
-    ['redcedar', -28312, -6378, 22.0, 106],
+    ['redcedar', -28308, -6380, 22.0, 106],
     ['redcedar', -28324, -6373, 20.5, 107],
     ['hemlock', -28306, -6374, 15.0, 108],
-    ['alder', -28318, -6368, 12.5, 109],
-    ['alder', -28308, -6365, 11.0, 110],
+    ['alder', -28323, -6369, 12.5, 109],
+    ['alder', -28300, -6370, 11.0, 110],
     ['dougFir', -28298, -6384, 23.0, 111],
     ['hemlock', -28282, -6388, 17.0, 112],
     ['dougFir', -28276, -6382, 24.0, 113],
@@ -10240,7 +10246,7 @@ function forestCellTrees(c) {
       if (hd > density * grove * (lat < 13 ? 0.7 : 1)) continue;
       if (sr14TurnoutDist(x, z, zr, 6) < 5.5) continue;
       if (lat / Math.sqrt(1 + nwRoadSlopeZ(x) ** 2) < 8.5) continue;   // measure clearance perpendicular to the road
-      if (poleDistance(x, z, true) < 4.5) continue;
+      if (poleDistance(x, z, true) < 4.5 || wireDistance(x, z, true) < 3.6) continue;   // no crowns through the wires
       const nearWater = s > 13200 && Math.abs(z - nwRiverZ(x)) < 44;
       if (s > 13200 && Math.abs(z - nwRiverZ(x)) < 16) continue;
       if (Math.abs(x + 22546.4) < 48 && lat < 40) continue;
