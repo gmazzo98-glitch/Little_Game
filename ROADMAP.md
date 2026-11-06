@@ -539,6 +539,12 @@ For each `index.html` change:
 - Use the [1963 Chevrolet Impala Sport Coupe factory reference](https://news.chevrolet.com/content/dam/company/no_search/heritage-archive-docs/vehicle-information-kits/chevrolet/1963-Chevrolet.pdf) for the roof, rear seat, and deck relationship. The game coupe now has a rearward roof and backlight, fixed rear quarter glass, and a separate parcel shelf behind a reclined saddle-vinyl bench.
 - Inline JavaScript parses. The transformed rear backrest vertices above the glass sill clear the rear glass plane by at least 0.128 m. In-game visual review remains open.
 
+### 2026-11-06 — Scenery placement cleanup (river, road, telephone poles)
+
+- **Report:** Trees could stand in the river, bushes on the road, telephone poles on the road or in the river, and trees or bushes on top of poles.
+- **Fix:** Forest trees now keep 16 m from the river centreline (was 13) and understory shrubs 11.5 m (was 9), covering the cobble bank. Road clearance is measured perpendicular to the road (trees 8.5 m, shrubs 7.2 m) so steep road bends no longer let shrubs reach the asphalt. New `poleDistance()` keeps trees 4.5 m and shrubs 2.6 m off every pole base, and desert-kit cacti, rocks and scrub keep 2.6 m off poles. `poleWorldZ()` now moves a pole to the opposite verge or a wider offset when its default spot is within 11 m of the river (the bridge crossing).
+- **Checks:** Inline script passed `node --check`. No new resources or network code. **Not verified:** in-game visual review near the river crossing and the SR 14 forest; the in-app browser could not open the local `file://` page. Acceptance stays open.
+
 ### 2026-11-05b — Duplicate coupe rearview mirror cleanup
 
 - **Report:** The coupe displayed two overlapping rearview mirrors near the windshield header, where only one projected the road behind the vehicle and the other had a dead black face.

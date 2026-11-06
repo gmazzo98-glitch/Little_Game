@@ -5979,7 +5979,20 @@ function poleWorldZ(x, baseZ, useSR14) {
   const zr = nwRoadZ(x);
   let pz = zr + baseZ;
   if (sr14TurnoutDist(x, pz, zr) < 2.2) pz = zr + 16.8;
+  // Never stand a pole in the river: try the other verge, then the far offsets.
+  if (nwSFromX(x) > 13000 && Math.abs(pz - nwRiverZ(x)) < 11) {
+    const rz = nwRiverZ(x);
+    for (const off of [baseZ, -baseZ, 16.8, -16.8]) {
+      const cz = zr + off;
+      if (Math.abs(cz - rz) >= 11 && sr14TurnoutDist(x, cz, zr) >= 2.2) { pz = cz; break; }
+    }
+  }
   return pz;
+}
+// Distance from (x,z) to the nearest telephone pole base, so scenery can keep clear of it.
+function poleDistance(x, z, useSR14) {
+  const L = telephoneLine, px = L.offset + Math.round((x - L.offset) / L.spacing) * L.spacing;
+  return Math.hypot(x - px, z - poleWorldZ(px, L.z, useSR14));
 }
 function updateTelephoneLine(cameraX) {
   const line=telephoneLine,center=Math.round((cameraX-line.offset)/line.spacing);
@@ -6066,7 +6079,7 @@ Nt.userData.telephoneLine=telephoneLine;
   // that recedes into the distance, none on the road, plot, or driveway.
   const CELL = 7, RADIUS = 150;
   const spotBlocked = (x, z) =>
-    Math.abs(z) < 6.5 || forecourt.some(([x0,z0,x1,z1])=>
+    Math.abs(z) < 6.5 || poleDistance(x, z, false) < 2.6 || forecourt.some(([x0,z0,x1,z1])=>
       x>=x0-1.4 && x<=x1+1.4 && z>=z0-1.4 && z<=z1+1.4) || Math.hypot(x, z - 10) < 6 || Math.hypot(x - motelX, z - 10) < 6 || Math.hypot(x - dinerX, z - 10) < 6;
   const cactusByRole = {}, rocksByRole = {}, scrubs = [];
   for (const centerSiteX of [0, motelX, dinerX]) {
@@ -10226,8 +10239,10 @@ function forestCellTrees(c) {
       const grove = 0.38 + 0.62 * xc(Math.min(Math.max((Hm(x * 0.0065 + 2, z * 0.0065) - 0.28) / 0.3, 0), 1));
       if (hd > density * grove * (lat < 13 ? 0.7 : 1)) continue;
       if (sr14TurnoutDist(x, z, zr, 6) < 5.5) continue;
+      if (lat / Math.sqrt(1 + nwRoadSlopeZ(x) ** 2) < 8.5) continue;   // measure clearance perpendicular to the road
+      if (poleDistance(x, z, true) < 4.5) continue;
       const nearWater = s > 13200 && Math.abs(z - nwRiverZ(x)) < 44;
-      if (s > 13200 && Math.abs(z - nwRiverZ(x)) < 13) continue;
+      if (s > 13200 && Math.abs(z - nwRiverZ(x)) < 16) continue;
       if (Math.abs(x + 22546.4) < 48 && lat < 40) continue;
       if (Math.hypot(x - fernBendX, z - fernBendZ) < 26) continue;
       const wp = fernWalkPathInfo(x, z);
@@ -10265,7 +10280,9 @@ function forestCellUnder(c) {
       const zr = nwRoadZ(x), z = zr + side * lat;
       if (hd > dens * (0.45 + 0.55 * xc(Math.min(Math.max((Hm(x * 0.02 + 5, z * 0.02) - 0.25) / 0.3, 0), 1)))) continue;
       if (sr14TurnoutDist(x, z, zr, 6) < 4.5) continue;
-      if (s > 13200 && Math.abs(z - nwRiverZ(x)) < 9) continue;
+      if (lat / Math.sqrt(1 + nwRoadSlopeZ(x) ** 2) < 7.2) continue;   // keep bushes off the asphalt and shoulder
+      if (poleDistance(x, z, true) < 2.6) continue;
+      if (s > 13200 && Math.abs(z - nwRiverZ(x)) < 11.5) continue;
       if (Math.abs(x + 22546.4) < 40 && lat < 30) continue;
       if (Math.hypot(x - fernBendX, z - fernBendZ) < 22) continue;
       const wp = fernWalkPathInfo(x, z);
