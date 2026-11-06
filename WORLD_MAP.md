@@ -46,9 +46,9 @@ All distances are driven distance along the named road. Drive time uses the coup
 | Salt playa | U.S. 66 | `T` −44 to −26 | 18 | 13.4 |
 | Cinder field | U.S. 66 | `T` −26 to −9.6 | 16.4 | 12.2 |
 | **Sunset basin (exists)** | U.S. 66 | `T` −9.6 to +4.6 | 14.2 | 10.6 |
-| Painted mesa country | U.S. 66 | `T` +4.6 to +24 | 19.4 | 14.4 |
-| The Divide (high pass) | U.S. 66 | `T` +24 to +46 | 22 | 16.4 |
-| Great Plains | U.S. 66 | `T` +46 to +84 | 38 | 28.3 |
+| Painted mesa country (placeholder steppe) | U.S. 66 | `T` +4.6 to +24 | 19.4 | 14.4 |
+| The Divide (high pass, placeholder steppe) | U.S. 66 | `T` +24 to +46 | 22 | 16.4 |
+| **Great Plains (exists, built)** | U.S. 66 | `T` +46 to +84 | 38 | 28.3 |
 | Farm belt | U.S. 66 | `T` +84 to +102 | 18 | 13.4 |
 | Great Lakes strip | U.S. 66 | `T` +102 to +118 | 16 | 11.9 |
 | **Dry foothills (exists)** | SR 14 | `s` 5 to 12.5 | 7.5 | 5.6 |
@@ -88,7 +88,7 @@ Each entry gives the place, what holds it together, and the one destination it w
 
 **Snow country** (SR 89 north, 36 km, dead end). Snow on the ground, snow-laden pines, and a road that narrows to a plowed track. The hush overlaps the northwest's muffling, so keep it for after the Plains and the Lakes. It ends at a snow gate. *Destination:* a closed lodge with a single lit window, at the gate.
 
-**Great Plains** (`T` +46 to +84). Flat or gently rolling grass under a huge sky, cheapest terrain in the game. Warm summer dusk, crickets, a distant storm cloud with no lightning set piece. Grain elevators and a water tower stay dark. This is where waiting is the point, so it is also the longest region. The SR 61 spur leaves to the south at `T` +72. *Destination:* a drive-in movie screen with one lit sign.
+**Great Plains (exists, built)** (`T` +46 to +84, $x = 46000..84000$). Flat or gently rolling straw and green grass under an immense sky. Warm summer dusk, crickets, a distant cumulonimbus storm silhouette with silent heat lightning. Concrete silo, unlit grain elevator, dead siding ballast bed, water tower, windmill with stock tank, shelterbelts, and mailbox row. Western hinge rise at $x = 42000..48500$ ($12$ m crest over 6.5 km). Steppe placeholder (`PLACEHOLDER_STEPPE`) fills $x = 4600..46000$ (`T` +4.6 to +46) and plain continues as placeholder to $x = 102000$. *Destination:* **Harvest Moon Drive-In** ($x = 64600, z = -14$, `T` +64.6) with 9.2m roadside pylon sign, "The Red Coal" distance sprite visible from 300m to 5km, 22x14m Great Screen with timber truss, 9 arced mound rows with 70 speaker posts, concession building with warm switchable lamp, and creaking playground swing.
 
 **Gulf flatwoods and bayou** (SR 61 south, 48 km, dead end at water). Grass gives way to longleaf pine flatwoods, then live oak draped in moss, then cypress and black water. Humidity is the biome: thick air, halos on every light. The road ends on a causeway over the water. Dense insect sound conflicts with the sparse-insects rule, so use it only if the destination is a pocket of silence inside thick sound (see [MOOD.md](MOOD.md)). *Destination:* a fish camp on stilts with one beer sign reflected in the water.
 

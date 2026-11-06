@@ -351,40 +351,44 @@ About 5–7 set pieces, one destination, 8–12 interactables, 6–10 ground tra
 
 **Considered and rejected:** plow lights, animal tracks for story, falling snow as a particle show. If snow falls, it is sparse and slow.
 
-### Great Plains — waiting
+### Great Plains — waiting (Implemented on `vibe/neon-gas-voxel-f660eb`)
 
 *The sky is the main character. A summer no one is here to see.*
 
-**Set pieces**
+**Set pieces (All built in `index.html`)**
 
-| Structure | What it is | What it evokes |
-| --- | --- | --- |
-| Unlit grain elevator | A tall concrete or timber bin against the sky | A cathedral for harvests that stopped. |
-| Water tower | A tank with a name half washed away | A town's name that nobody needs. |
-| Dead siding | A bed of ballast with the rails taken up | A line removed. |
-| Windmill and stock tank | A tower turning slowly over a green-rimmed tank | Water still drawn by wind alone. |
-| Shelterbelt | A row of trees lining a field | The only shade for miles. |
-| Fence line | Wire ticking in the wind | A line holding the plain together. |
-| Mailbox row | Three boxes on a post, flags rusted | Mail for farms that stopped. |
-| Hay stack | A round or square stack greying | A winter's food, forgotten. |
-| Concrete silo | A tall cylinder, a lean-to at its foot | A tower of the plain. |
+| Structure | What it is | Status | What it evokes |
+| --- | --- | --- | --- |
+| Concrete silo | A tall cylinder, a lean-to at its foot ($x = 47600, z = 70$) | **Built** | A tower of the plain. |
+| Unlit grain elevator | A tall concrete/timber bin against the sky ($x = 52400, z = -70$) | **Built** | A cathedral for harvests that stopped. |
+| Dead siding | A bed of ballast with ties half-buried, rails taken up ($x \in [52100, 52700], z = -40$) | **Built** | A line removed. No trains, cars, or active track. |
+| Water tower | A 20 m tank with "PRAIRIE VIEW" half washed away ($x = 53100, z = 210$) | **Built** | A town's name that nobody needs. |
+| Hay stacks | Round bales under dark canvas tarps ($x = 55200, z = -35, +60$) | **Built** | A winter's food, forgotten. |
+| Windmill and stock tank | 11 m lattice tower turning over green-rimmed tank ($x = 57000, z = 95$) | **Built** | Water still drawn by wind alone. Animated spinning wheel, brake lever. |
+| Shelterbelts | Broadleaf cottonwoods ($x \in [58000, 59600], z = -300$; $x \in [66500, 68500], z = 260$) | **Built** | The only shade for miles. |
+| Fence line | Continuous 4-wire barbed fence ($z = \pm 14.5$ m, $x = 42000..86000$) | **Built** | Wire ticking in the wind; 10 m gate gaps every 2 km. |
+| Mailbox row | Three boxes on a post, flags rusted up ($x = 61000, z = 6.2$) | **Built** | Mail for farms that stopped. Openable middle door. |
+| Stone culverts | Concrete headwalls with stenciled "MP 31" and "MP 37" ($x = 50200, 59000$) | **Built** | Low wash crossings under US 66. |
 
-**Destination: the drive-in** *(working name: Harvest Moon Drive-In, renamed to avoid Starlite Diner)*. A great white screen on a timber frame, a ticket booth, a cinder-block concession building with a projection booth, a field of mounded rows with speaker posts, a marquee with a letter board, a playground under the screen, and one lit sign.
+**Destination: Harvest Moon Drive-In** ($x = 64600, z = -14$, `T` +64.6). A great white screen on a timber frame, a ticket booth, a cinder-block concession building with a projection booth, a field of mounded rows with speaker posts, a marquee with a letter board, a playground under the screen, and one lit sign with "The Red Coal" distance sprite.
 
-| Fixture | Action and feedback | Feeling |
-| --- | --- | --- |
-| Speaker on a post | Lift it and hang it on the coupe window. The speaker carries only the thin sound of the field. | The place was built to bring a story to your car; now it brings the wind. |
-| Marquee | Look. The letters read THANKS FOR A GREAT SEASON, with some letters fallen and others sun-bleached. | The last message of a place that ended. |
-| Projector | Throw the switch. A plain white beam crosses the dust to the screen and lights it. Switch off to end. | A blank rectangle of light, and it is enough. |
-| Film cans | Open one. Empty. | A story, gone. |
-| Ticket roll | Pull a ticket. A tear and a click. | The first step into a night out. |
-| Cash drawer | Press the key. A ring and a slide. | Pennies for an evening. |
-| Popcorn kettle | Lift the lid. A dry kernel and a dull echo. | A smell that cannot be here. |
-| Soda taps | Pull one. Air and a dry cough. | Thirst that went unmet. |
-| Swing set | Push a swing. Chains creak. | A child's small hour. |
-| Concession shutter | Roll it up and down. A rattle in the dark. | A window for talk, empty. |
-| Screen glow | Stand in the field at night. A silent flash from the far storm lights the screen white. | The whole screen holds the sky's light. |
-| Mound row | Walk along. The grass is flattened in long rows. | Where cars once tilted toward the picture. |
+| Fixture | Action and feedback | Status | Feeling |
+| --- | --- | --- | --- |
+| Speaker on a post | Lift it and hang it on the coupe window. The speaker carries only the thin sound of the field. | **Built** | The place was built to bring a story to your car; now it brings the wind. |
+| Marquee | Look. The letters read THANKS FOR A GREAT SEASON, with some letters fallen and others sun-bleached. | **Built** | The last message of a place that ended. |
+| Concession lamp | Switch behind counter. Toggles warm incandescent pool, on by default at dusk. | **Built** | Being let in; the warm pool on pale gravel. |
+| Swing set | Push a swing. Chains creak; oscillates with wind gusts. | **Built** | A child's small hour. |
+| Screen glow | Stand in the field at night. A silent flash from the far storm lights the screen white. | **Built** | The whole screen holds the sky's light. Zero thunder. |
+| Ticket roll | Pull a ticket. A tear and a click. | **Built** | The first step into a night out. |
+| Cash drawer | Press the key. A ring and a slide. | **Built** | Pennies for an evening. |
+| Popcorn kettle | Lift the lid. A dry kernel and a dull echo. | **Built** | A smell that cannot be here. |
+| Soda taps | Pull one. Air and a dry cough. | **Built** | Thirst that went unmet. |
+| Film cans | Open one in projection booth. Empty reel container. | **Built** | A story, gone. |
+| Windmill brake lever | Hold lever to stop blade rotation; release to resume spin. | **Built** | Wind holding against a hand. |
+| Mailbox door | Open door. Metal squeak, reveals 1961 farm journal. | **Built** | A message that arrived too late. |
+| Stock tank rim | Lean in. Green algae ring and sky reflection. | **Built** | Cold water under a summer sky. |
+| Mound row walk | Walk along flattened rows; distinct mound footstep sound. | **Built** | Where cars once tilted toward the picture. |
+| Projector | Reserved hook: `PLAINS_PROJECTOR = false` (owner decision). | **Reserved** | A blank rectangle of light, and it is enough. |
 
 **Ground and small traces:** grass through the gravel; speaker-post stumps with no speakers; tyre-flattened rows gone to green; faded painted parking numbers; a rusted bike rack; a dented trash barrel; a leaf of newspaper caught in a fence; wind-flattened grass in waves.
 

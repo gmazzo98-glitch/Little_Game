@@ -1,0 +1,186 @@
+{
+  "results": [
+    {
+      "pose": "sunset_baseline",
+      "time": "dusk",
+      "median": 16.299999952316284,
+      "p95": 21.200000047683716
+    },
+    {
+      "pose": "sunset_baseline",
+      "time": "blue_hour",
+      "median": 16.700000047683716,
+      "p95": 21.40000009536743
+    },
+    {
+      "pose": "sunset_baseline",
+      "time": "night",
+      "median": 16.899999976158142,
+      "p95": 19.90000009536743
+    },
+    {
+      "pose": "starlite_baseline",
+      "time": "dusk",
+      "median": 16.699999928474426,
+      "p95": 19.799999952316284
+    },
+    {
+      "pose": "starlite_baseline",
+      "time": "blue_hour",
+      "median": 16.600000023841858,
+      "p95": 19.200000047683716
+    },
+    {
+      "pose": "starlite_baseline",
+      "time": "night",
+      "median": 16.700000047683716,
+      "p95": 18.5
+    },
+    {
+      "pose": "plains_hinge_crest",
+      "time": "dusk",
+      "median": 16.59999990463257,
+      "p95": 19.200000047683716
+    },
+    {
+      "pose": "plains_hinge_crest",
+      "time": "blue_hour",
+      "median": 16.600000023841858,
+      "p95": 18.699999928474426
+    },
+    {
+      "pose": "plains_hinge_crest",
+      "time": "night",
+      "median": 16.600000023841858,
+      "p95": 21.600000023841858
+    },
+    {
+      "pose": "plains_grain_elevator",
+      "time": "dusk",
+      "median": 16.799999952316284,
+      "p95": 20.5
+    },
+    {
+      "pose": "plains_grain_elevator",
+      "time": "blue_hour",
+      "median": 16.600000023841858,
+      "p95": 21.399999976158142
+    },
+    {
+      "pose": "plains_grain_elevator",
+      "time": "night",
+      "median": 16.600000023841858,
+      "p95": 19.399999976158142
+    },
+    {
+      "pose": "plains_windmill_tank",
+      "time": "dusk",
+      "median": 16.300000071525574,
+      "p95": 20
+    },
+    {
+      "pose": "plains_windmill_tank",
+      "time": "blue_hour",
+      "median": 16.799999952316284,
+      "p95": 20.100000023841858
+    },
+    {
+      "pose": "plains_windmill_tank",
+      "time": "night",
+      "median": 16.600000023841858,
+      "p95": 18.200000047683716
+    },
+    {
+      "pose": "harvest_moon_road_approach",
+      "time": "dusk",
+      "median": 16.699999928474426,
+      "p95": 20.800000071525574
+    },
+    {
+      "pose": "harvest_moon_road_approach",
+      "time": "blue_hour",
+      "median": 16.59999990463257,
+      "p95": 20.299999952316284
+    },
+    {
+      "pose": "harvest_moon_road_approach",
+      "time": "night",
+      "median": 16.700000047683716,
+      "p95": 19.5
+    },
+    {
+      "pose": "harvest_moon_field_screen",
+      "time": "dusk",
+      "median": 16.700000047683716,
+      "p95": 19.600000023841858
+    },
+    {
+      "pose": "harvest_moon_field_screen",
+      "time": "blue_hour",
+      "median": 16.600000023841858,
+      "p95": 19
+    },
+    {
+      "pose": "harvest_moon_field_screen",
+      "time": "night",
+      "median": 16.700000047683716,
+      "p95": 20.300000071525574
+    },
+    {
+      "pose": "harvest_moon_concession_lamp",
+      "time": "dusk",
+      "median": 16.699999928474426,
+      "p95": 19.600000023841858
+    },
+    {
+      "pose": "harvest_moon_concession_lamp",
+      "time": "blue_hour",
+      "median": 16.600000023841858,
+      "p95": 18.700000047683716
+    },
+    {
+      "pose": "harvest_moon_concession_lamp",
+      "time": "night",
+      "median": 16.699999928474426,
+      "p95": 18.299999952316284
+    },
+    {
+      "pose": "plains_east_terminus",
+      "time": "dusk",
+      "median": 16.799999952316284,
+      "p95": 18.59999990463257
+    },
+    {
+      "pose": "plains_east_terminus",
+      "time": "blue_hour",
+      "median": 16.600000023841858,
+      "p95": 18.40000009536743
+    },
+    {
+      "pose": "plains_east_terminus",
+      "time": "night",
+      "median": 16.699999928474426,
+      "p95": 18.799999952316284
+    }
+  ],
+  "precisionTest": {
+    "46000": {
+      "y": 11.220194912224978,
+      "roadY": 11.220194912224978,
+      "gust": 0.2595281821457495,
+      "surf": "asphalt"
+    },
+    "64600": {
+      "y": 0,
+      "roadY": 0,
+      "gust": 0.5180761394909295,
+      "surf": "asphalt"
+    },
+    "84000": {
+      "y": 0,
+      "roadY": 0,
+      "gust": 0.06489916376756556,
+      "surf": "asphalt"
+    }
+  }
+}

@@ -61,7 +61,7 @@ Ranked by fit and build cost. Each needs a mood card and a roadmap entry before 
 
 | Biome | Emotional key | Neon payoff | Notes |
 | --- | --- | --- | --- |
-| **Great Plains** (Kansas, Nebraska) | Waiting, expectancy | Lone motel or drive-in screen under a huge sky; unlit grain elevator and water tower silhouettes | Cheapest terrain (flat). Warm summer dusk, crickets, distant storm cloud. Elevators and towers stay dark. No train lights. |
+| **Great Plains (built)** (Kansas, Nebraska) | Waiting, expectancy | Harvest Moon Drive-In red neon sign under a huge sky; unlit grain elevator, water tower, windmill | Built and verified on `vibe/neon-gas-voxel-f660eb`. Warm summer dusk, crickets, distant storm cloud with silent heat lightning. Red coal in mirror for 3–5 km. |
 | **Great Lakes off-season resort strip** | A season that ended | "Vacancy" neon in grey cold light; boarded kiosks; empty beach lot | Strong 1960s nostalgia. Lake gives a flat horizon without waves. No gulls or crowds. |
 | **Gulf Coast bayou** | Memory, decay | Neon on black water, haloed in humid air | Heaviest to build. Dense insect sound conflicts with "sparse insects"; use it only if the station becomes a pocket of silence inside thick sound. |
 | **Northern snow** (Montana, Dakotas) | Hush | Neon glow on snow at blue hour | Overlaps the NW's muffling. Keep for later. |

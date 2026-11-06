@@ -553,6 +553,60 @@ For each `index.html` change:
 - **Authentic Counter Room Props:** Furnished the interior with a vintage Hamilton Beach triple-spindle malt/milkshake mixer with fluted stainless cups and jade-green cowl, a 4-well stainless steel crushed fruit & syrup pump rail with porcelain flavor knobs, a countertop glass/chrome straw dispenser, stamped metal napkin dispensers, a vintage mechanical cash register, two heavy timber storage shelves with bulk "CASCADE JOY CONES" cartons and gallon glass syrup jugs, two chrome pedestal red vinyl counter stools, and an electric Westclox wall clock.
 - **Checks:** Inline script extracted and passed `node --check` with 0 errors (965,435 bytes). Zero external runtime dependencies or network requests.
 
+### 2026-11-06 — Great Plains region and Harvest Moon Drive-In implementation
+
+- **Scope & Context:** Implemented the Great Plains region (`T` +46 to +84 km, world $x = 46000..84000$) and its sole authorized destination, the **Harvest Moon Drive-In** ($x = 64600, z = -14$, `T` +64.6), as real, playable game code in `index.html` on branch `vibe/neon-gas-voxel-f660eb`.
+- **Reserved Ground & Steppe Placeholder:** Following `WORLD_MAP.md` section 4, $x = 4600..46000$ (`T` +4.6 to +46) is preserved as explicitly marked steppe placeholder (`PLACEHOLDER_STEPPE`), transitioning low desert dunes into rolling straw grass swells without shortening the map or distorting mileposts. The plain continues as placeholder through $x = 102000$.
+- **Western Hinge ($x = 42000..48500$):** Implemented `us66RoadY(x)` delivering a gentle 12 m sinusoidal crest over 6.5 km (max grade 0.58%, strictly $< 2\%$), opening an expansive 180° horizon with mountain silhouettes receding behind the player.
+- **Travelling Wind Field & Terrain Shading:** Implemented deterministic wave field `plainsGust(x, z, t)` ($\lambda = 420$ m, $v = 14$ m/s with low-frequency phase drift) driving ground wind streaks, grass sway, windmill spin, swing oscillation, and audio wind. Terrain shader in `desertMaterial.onBeforeCompile` blends straw (`#b8a56a`), green-gold (`#8c9a52`), olive shadow (`#4d5530`), and verge (`#9b8f6c`), with gravel pads for pads, apron, siding, and mailboxes.
+- **Instanced Vegetation & Roadside Fencing:**
+  - Instanced near grass tufts (`PLAINS_GRASS_NEAR_N = 3600`) and mid grass tufts (`PLAINS_GRASS_MID_N = 2400`) using double crossed quads with dark-olive base to straw-gold tip vertex coloring and deterministic cell streaming (`updatePlainsStreaming`).
+  - Roadside 4-strand barbed wire fence with weathered cedar posts at $z = \pm 14.5$ m from $x = 42000$ to $86000$, with 10 m gate openings every 2 km for foot access.
+- **Great Plains Set Pieces:**
+  - Concrete Silo at $x = 47600, z = +70$ (diam 6 m, h 18 m, dome cap, exterior ladder cage, lean-to equipment shed, colliders).
+  - Grain Elevator & Dead Siding at $x = 52400, z = -70$ (26 m crib tower, cupola headhouse, enclosed conveyor gallery, loading boom, ground office). Dead siding ballast bed ($x \in [52100, 52700], z = -40$) with half-buried weathered ties and no rails.
+  - Municipal Water Tower at $x = 53100, z = +210$ (4 lattice steel legs, 20 m height, diam 9 m tank with faded "PRAIRIE VIEW" lettering).
+  - Hay Stacks at $x = 55200, z = -35$ and $z = +60$ (5 round bales in pyramid under weathered canvas tarp).
+  - Windmill & Stock Tank at $x = 57000, z = +95$ (11 m lattice tower, animated 18-blade wheel with "AERMOTOR" tail vane, brake lever, 4.2 m galvanized stock tank with dark water and green algae rim).
+  - Shelterbelts at $x = 58000..59600, z = -300$ and $x = 66500..68500, z = +260$ (broadleaf cottonwoods).
+  - Mailbox Row at $x = 61000, z = +6.2$ (3 metal mailboxes on post, openable center box, pullout pad).
+  - Stone Culvert Headwalls at $x = 50200$ and $x = 59000$ ("MP 31" / "MP 37").
+- **Harvest Moon Drive-In Destination:**
+  - 9.2 m roadside steel pylon sign at $x = 64570, z = -14$ with cabinet (`harvestCabinet`), red neon crescent moon, red cursive tube text ("HARVEST MOON"), cyan accent ("DRIVE-IN"), point lights (`harvestSignLight`, `harvestCyanLight`), and "The Red Coal" distance sprite visible from 300 m to 5 km, lingering in the rearview mirror.
+  - Ticket Booth at $x = 64600, z = -34$ (window, ticket roll dispenser, brass cash drawer, colliders).
+  - The Great Screen at $x = 64620, z = -62$ (22 m $\times$ 14 m, rear timber truss bents, catwalk, ladder, white panel face toward field, foundation piers).
+  - Field of 9 arced mounds with 70 instanced speaker posts and hung die-cast speaker boxes.
+  - Concession & Projection building at $x = 64600, z = -135$ (cinder block, service counter, popcorn kettle, soda fountain, projection booth with 35mm projector and film cans, switchable warm concession lamp `harvestLampLight`, 80% wind shelter inside).
+  - Playground at $x = 64650, z = -75$ (timber 3-swing set with creaking physics swing, galvanized steel slide).
+  - Marquee board at entrance reading "THANKS FOR A GREAT SEASON" with fallen letters.
+  - Decorative locked restrooms.
+- **Procedural WebAudio Sound & Interactables:**
+  - Procedural grass wind bus (`audio.plainsWindGain`) crossfading with desert wind, modulated with 2-second visual lead from `plainsGust`.
+  - Summer crickets bed (`audio.plainsCricketGain`) active at dusk/night, suppressed within 120 m of pylon sign.
+  - Pylon sign 60Hz + 120Hz transformer hum (`audio.plainsSignHumGain`).
+  - Interactive speaker: player can lift speaker and hang it on the coupe driver window (`plainsSpeakerHung`), routing live filtered field wind into the cabin via `audio.plainsSpeakerGain`.
+  - Silent heat lightning: rare pulse every ~85s in cumulonimbus cloud top illuminating sky and reflecting softly off the great screen face with zero thunder.
+  - Interactables: concession lamp switch, playground swing push, marquee read, ticket pull, cash drawer inspect, kettle lid lift, soda tap pull, film can inspect, windmill brake hold, mailbox open, stock tank look.
+- **Navigation & Integration:**
+  - Glovebox Road Map (`buildRoadMap`): expanded to 3-panel tri-fold map (`[320, 640]` creases) adding Panel 3: Great Plains / US 66 East showing Starlite hinge, landmarks, and Harvest Moon.
+  - Roadside signs: Starlite advance sign ("HARVEST MOON 38 MI"), advance sign 1.5 km before entrance ("HARVEST MOON DRIVE-IN 1 MI • ENTRANCE ON LEFT"), diner counter slip mileage trace.
+  - Trip card & dev warp: `travelStopList` includes Harvest Moon and plains landmarks; fuel consumption verified (0.336 tank from Starlite, well within 1.0 tank).
+- **Verification & Acceptance Evidence:**
+  - Syntax: extracted inline script passed `node --check` with 0 errors.
+  - Offline: verified 0 external runtime network requests (`scripts/verify_offline.js`).
+  - Performance measured via Chrome DevTools Protocol (`scripts/cdp_verify_plains.js`) on Windows (ANGLE Direct3D11, 960x540, DPR 1):
+    - Sunset baseline: dusk 16.30 ms (p95 21.20 ms), blue hour 16.70 ms (p95 21.40 ms), night 16.90 ms (p95 19.90 ms).
+    - Starlite baseline: dusk 16.70 ms (p95 19.80 ms), blue hour 16.60 ms (p95 19.20 ms), night 16.70 ms (p95 18.50 ms).
+    - Plains Hinge ($x = 45000$): dusk 16.60 ms (p95 19.20 ms), blue hour 16.60 ms (p95 18.70 ms), night 16.60 ms (p95 21.60 ms).
+    - Plains Grain Elevator ($x = 52400$): dusk 16.80 ms (p95 20.50 ms), blue hour 16.60 ms (p95 21.40 ms), night 16.60 ms (p95 19.40 ms).
+    - Plains Windmill ($x = 57000$): dusk 16.30 ms (p95 20.00 ms), blue hour 16.80 ms (p95 20.10 ms), night 16.60 ms (p95 18.20 ms).
+    - Harvest Moon Road Approach ($x = 64520$): dusk 16.70 ms (p95 20.80 ms), blue hour 16.60 ms (p95 20.30 ms), night 16.70 ms (p95 19.50 ms).
+    - Harvest Moon Field Screen ($x = 64610$): dusk 16.70 ms (p95 19.60 ms), blue hour 16.60 ms (p95 19.00 ms), night 16.70 ms (p95 20.30 ms).
+    - Harvest Moon Concession ($x = 64600$): dusk 16.70 ms (p95 19.60 ms), blue hour 16.60 ms (p95 18.70 ms), night 16.70 ms (p95 18.30 ms).
+    - Plains East Terminus ($x = 84000$): dusk 16.80 ms (p95 18.60 ms), blue hour 16.60 ms (p95 18.40 ms), night 16.70 ms (p95 18.80 ms).
+  - Screenshots captured: `captures/plains_*_{dusk,blue_hour,night}.jpg`.
+  - Gameplay & interactions verified via CDP (`scripts/cdp_test_gameplay.js`): travel, lamp, swing, speaker, marquee, map, fuel cost.
+
 ### 2026-11-06 — Scenery placement cleanup (river, road, telephone poles)
 
 - **Report:** Trees could stand in the river, bushes on the road, telephone poles on the road or in the river, and trees or bushes on top of poles.
