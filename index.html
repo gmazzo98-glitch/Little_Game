@@ -4186,13 +4186,46 @@ const PLAINS_LAYOUT = {
   endRegion: 84000, placeholderEnd: 102000
 };
 const PLAINS_PROJECTOR = false;
+// Integer lattice hash shared bit-for-bit with the ground shader (ihash in desertMaterial), so the farm mosaic, lanes and
+// farmsteads the shader paints are the same ones the scene builds geometry for.
+function plainsHash(x, y) {
+  let h = Math.imul((x + 100000) | 0, 0x27d4eb2d) ^ Math.imul((y + 100000) | 0, 0x165667b1);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+  h ^= h >>> 15;
+  return (h >>> 8) / 16777216;
+}
+const PLAINS_PARCEL = 402;           // quarter-mile survey grid, metres
+const PLAINS_LANE_X0 = 46000, PLAINS_LANE_STEP = 1000, PLAINS_LANE_COUNT = 44;
+// Farm lanes: thin two-track roads leaving the highway to a farmstead [x, side(+1/-1 of the road), length, seed].
+const PLAINS_LANES = (function () {
+  const keepOut = [[47600, 1, 90], [52400, -1, 130], [53100, 1, 90], [55200, -1, 80], [55200, 1, 80], [57000, 1, 110], [59000, -1, 900],
+    [61000, 1, 60], [64600, -1, 330], [67500, 1, 1100], [50200, 0, 60], [59000, 0, 60], [73000, 0, 60]];
+  const lanes = [];
+  for (let k = 0; k < PLAINS_LANE_COUNT; k++) {
+    let x = PLAINS_LANE_X0 + k * PLAINS_LANE_STEP + 140 + 700 * plainsHash(k, 11);
+    let side = plainsHash(k, 12) < 0.5 ? -1 : 1;
+    const len = 280 + 520 * plainsHash(k, 13), seed = plainsHash(k, 14);
+    const clash = s => keepOut.some(([kx, ks, w]) => (ks === 0 || ks === s) && Math.abs(x - kx) < w);
+    if (clash(side)) side = -side;
+    if (clash(side)) { x += 420; if (clash(side)) side = -side; }
+    lanes.push([x, side, len, seed]);
+  }
+  return lanes;
+})();
+const PLAINS_LANES_GLSL = 'const vec4 PLAINS_LANES[' + PLAINS_LANE_COUNT + '] = vec4[' + PLAINS_LANE_COUNT + '](' +
+  PLAINS_LANES.map(l => 'vec4(' + l[0].toFixed(1) + ',' + l[1].toFixed(1) + ',' + l[2].toFixed(1) + ',' + l[3].toFixed(3) + ')').join(',') + ');';
+const plainsStormWindUniform = { value: 0 };
 function us66RoadY(x) {
   if (x < 42000) return 0;
   if (x < 48500) {
     const u = (x - 42000) / 6500;
     return 12.0 * Math.sin(Math.min(1, Math.max(0, u)) * Math.PI);
   }
-  return 0;
+  // Rolling prairie: long vertical curves the road rides over, so crests hide the next stretch of highway and reveal the view
+  // beyond. Slope stays under 2%: 4 m over a 340 m phase scale plus a 0.9 m ripple on 131 m.
+  const k = Math.min(1, (x - 48500) / 4000), kk = k * k * (3 - 2 * k), q = x - 48500;
+  return kk * (4.0 * Math.sin(q / 340 + 0.8) + 0.9 * Math.sin(q / 131 + 2.1));
 }
 function plainsGust(x, z, t) {
   const d = x * 0.72 + z * 0.69;
@@ -4206,6 +4239,25 @@ function plainsGust(x, z, t) {
   return Math.max(0, Math.min(1, g * (1 + 0.9 * W) + 0.28 * W));
 }
 var plainsStormWind = 0;
+// CPU mirror of plainsSkyCol at the horizon (h = 0), so objects that use the scene fog colour dissolve into the same haze the terrain
+// and sky use in whichever direction the camera is facing.
+function plainsHorizonColor(dx, dz, sunV, T, dayK, overcast) {
+  const mixc = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const k3 = (a, b, c, t) => t < 0.5 ? mixc(a, b, t * 2) : mixc(b, c, t * 2 - 1);
+  const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const sl = Math.hypot(sunV.x, sunV.z) || 1;
+  const az = dx * sunV.x / sl + dz * sunV.z / sl;
+  const tow = sm(-0.3, 1, az), away = sm(0.1, 1, -az), dusk = 1 - T;
+  let hor = k3([0.96, 0.44, 0.17], [0.50, 0.20, 0.26], [0.010, 0.028, 0.034], T);
+  hor = mixc(hor, [hor[0] * 1.08, hor[1] * 0.95, hor[2] * 0.75], tow * dusk * 0.7);
+  hor = mixc(hor, [0.24 * (0.3 + 0.7 * dusk), 0.18 * (0.3 + 0.7 * dusk), 0.36 * (0.3 + 0.7 * dusk)], away * 0.6);
+  const gl = Math.sin(Math.min(1, Math.max(0, T)) * Math.PI) * (1 - tow * 0.7) * 0.85;
+  const c = [hor[0] + 0.020 * gl + 0.004 * T, hor[1] + 0.115 * gl + 0.020 * T, hor[2] + 0.095 * gl + 0.018 * T];
+  let dc = mixc([0.76, 0.69, 0.56], [0.375, 0.405, 0.435], overcast);
+  dc = mixc(dc, [dc[0] * 1.06 + 0.07, dc[1] + 0.04, dc[2] * 0.9], tow * 0.6);
+  return mixc(c, dc, dayK);
+}
+const plainsFwd = new P();
 const plainsPads = [
   [64520, -48, 64680, -3.15],
   [64596, -38, 64604, -30],
@@ -4447,7 +4499,7 @@ function os(x, z, forTerrainMesh = false) {
     }
     // Great Plains and Steppe branch (x >= 4600)
     const plainsFactor = nwH(x, 4600, 28000);
-    const rolling = 1.9 * Hm(x * .0016 + 7.3, z * .0016 + 2.1) + 0.85 * ao(x * .0042 + 13, z * .0042 + 37) + 0.35 * ao(x * .012 + 5, z * .012 + 19);
+    const rolling = 7.0 * (Hm(x * .0011 + 7.3, z * .0011 + 2.1) - 0.5) + 2.4 * (ao(x * .0042 + 13, z * .0042 + 37) - 0.5) + 0.7 * (ao(x * .012 + 5, z * .012 + 19) - 0.5);
     // Dry washes / swales crossed by low road culverts
     const dSwale = Math.min(Math.abs(x - 50200), Math.abs(x - 59000), Math.abs(x - 73000));
     const swaleDip = (dSwale < 180 && distance > 5.0) ? (2.1 * (1 - xc(dSwale / 180)) * xc(Math.min((distance - 5.0) / 15, 1))) : 0;
@@ -4507,7 +4559,83 @@ function os(x, z, forTerrainMesh = false) {
   }
   return h;
 }
-var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(s.carOnly||e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.985,.062,-.15).normalize()},moonDir:{value:new P(52,26,20).normalize()},uNight:{value:0},uDay:{value:0},uOvercast:{value:0},uForestSkyline:{value:0},uPlains:{value:0},uStormGlow:{value:0},uHeatLightning:{value:0},uStormDrift:{value:0},uStormPower:{value:0},uBoltFlash:{value:0},uBoltKind:{value:0},uBoltOff:{value:0},uBoltSeed:{value:0}},vertexShader:`
+var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,this.type="MeshLambertMaterial",this.color=new Me(e.color!==void 0?e.color:16777215),this.emissive=new Me(e.emissive!==void 0?e.emissive:0),this.emissiveIntensity=e.emissiveIntensity!==void 0?e.emissiveIntensity:1,this.flatShading=!0,this.fog=!0}};var Mc=[];function Dt(i,e,t,n,s=0,r=100){Mc.push({minX:i,minZ:e,maxX:t,maxZ:n,minY:s,maxY:r})}function vc(i,e,t){for(let s of Mc){if(s.carOnly||e+.15<s.minY||e-1.7>s.maxY||i+.35<s.minX||i-.35>s.maxX||t+.35<s.minZ||t-.35>s.maxZ)continue;let r=Math.max(s.minX,Math.min(i,s.maxX)),o=Math.max(s.minZ,Math.min(t,s.maxZ)),a=i-r,l=t-o,c=a*a+l*l;if(c<.35*.35)if(c>1e-8){let h=Math.sqrt(c);i=r+a/h*.35,t=o+l/h*.35}else{let h=i-s.minX,d=s.maxX-i,f=t-s.minZ,m=s.maxZ-t,g=Math.min(h,d,f,m);g===h?i=s.minX-.35:g===d?i=s.maxX+.35:g===f?t=s.minZ-.35:t=s.maxZ+.35}}return[i,t]}var mn=new Ki({antialias:!0});mn.setSize(innerWidth,innerHeight);mn.setPixelRatio(Math.min(devicePixelRatio,2));mn.shadowMap.enabled=!0;mn.shadowMap.type=Ja;mn.toneMapping=ns;mn.toneMappingExposure=1;document.getElementById("app").appendChild(mn.domElement);var Nt=new sr;Nt.fog=new ir(0x6f535c,70,1400);var Nn=new gt(65,innerWidth/innerHeight,.1,3500);Nn.position.set(0,os(0,10)+1.7,10);Nn.lookAt(0,2.5,-12);// Shared Plains noise: integer-lattice hash (mirrored by plainsHash in JS), value noise, the gust field and the wild-prairie palette.
+var PLAINS_NOISE_GLSL=`
+      float ihash(ivec2 c) {
+        uint h = uint(c.x) * 0x27d4eb2du ^ uint(c.y) * 0x165667b1u;
+        h = (h ^ (h >> 15u)) * 0x2c1b3c6du;
+        h = (h ^ (h >> 12u)) * 0x297a2d39u;
+        h ^= h >> 15u;
+        return float(h >> 8u) * (1.0 / 16777216.0);
+      }
+      float gh(ivec2 c) { return ihash(c + ivec2(100000)); }
+      float gn(vec2 p) {
+        vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        ivec2 c = ivec2(i);
+        return mix(mix(gh(c), gh(c + ivec2(1, 0)), f.x), mix(gh(c + ivec2(0, 1)), gh(c + ivec2(1, 1)), f.x), f.y);
+      }
+      float plainsGustG(vec2 p, float t, float W) {
+        float d = p.x * 0.72 + p.y * 0.69;
+        float ph = d / 420.0 - t * 0.0333;
+        float slow = 0.32 * sin(t * 0.031 + p.x * 0.00015) + 0.18 * cos(t * 0.017 + p.y * 0.0002);
+        float w1 = sin((ph + slow) * 6.28318);
+        float w2 = sin((ph * 2.13 - t * 0.015) * 6.28318) * 0.35;
+        float raw = 0.5 + 0.5 * (w1 * 0.75 + w2);
+        return clamp(raw * raw * (1.0 + 0.9 * W) + 0.28 * W, 0.0, 1.0);
+      }
+      vec3 plainsWild(vec2 p, out float hiN) {
+        float lowN = gn(p * 0.0025 + vec2(3.7, 1.9));
+        float midN = gn(p * 0.011 + vec2(8.1, 2.2));
+        hiN = gn(p * 0.045 + vec2(1.3, 6.4));
+        vec3 wildGreen = vec3(0.26, 0.335, 0.125);
+        vec3 wildGold = vec3(0.64, 0.51, 0.255);
+        vec3 wildTawny = vec3(0.50, 0.325, 0.165);
+        vec3 wild = mix(wildGold, wildGreen, smoothstep(0.30, 0.70, lowN * 0.7 + midN * 0.5 - 0.15));
+        wild = mix(wild, wildTawny, smoothstep(0.55, 0.85, midN * 0.6 + hiN * 0.45) * 0.55);
+        return wild * (0.74 + 0.52 * hiN);
+      }
+`;
+// Plains horizon palette: one GLSL function shared by the sky dome and the terrain fog so the two meet without a seam.
+var PLAINS_SKY_GLSL=`
+      vec3 k3(vec3 a, vec3 b, vec3 c, float t) { return t < 0.5 ? mix(a, b, t * 2.0) : mix(b, c, t * 2.0 - 1.0); }
+      float sunAz(vec3 dir) {
+        vec2 hd = dir.xz, sd = sunDir.xz;
+        float hl = length(hd), sl = length(sd);
+        return (hl > 1e-4 && sl > 1e-4) ? dot(hd / hl, sd / sl) : 0.0;
+      }
+      // The whole plains sky as one function of direction, so terrain fog can use the very same colours.
+      vec3 plainsSkyCol(vec3 dir) {
+        float h = max(dir.y, -0.05);
+        float az = sunAz(dir);
+        float T = uNight;
+        float dusk = 1.0 - T;
+        vec3 zen = k3(vec3(.030, .040, .175), vec3(.010, .013, .072), vec3(.0008, .0016, .0090), T);
+        vec3 mid = k3(vec3(.33, .17, .33), vec3(.095, .065, .250), vec3(.004, .006, .020), T);
+        vec3 hor = k3(vec3(.96, .44, .17), vec3(.50, .20, .26), vec3(.010, .028, .034), T);
+        float tow = smoothstep(-0.30, 1.0, az);
+        float away = smoothstep(0.10, 1.0, -az);
+        hor = mix(hor, hor * vec3(1.08, 0.95, 0.75), tow * dusk * 0.7);
+        mid = mix(mid, mid * vec3(1.45, 1.0, 0.62), tow * dusk * (1.0 - smoothstep(.25, .6, h)) * 0.7);
+        // opposite the sun: the cool shadow of the Earth, with the pink Belt of Venus climbing above it
+        hor = mix(hor, vec3(.24, .18, .36) * (0.30 + 0.70 * dusk), away * 0.60);
+        float belt = smoothstep(0.012, 0.07, h) * (1.0 - smoothstep(0.07, 0.26, h)) * away * dusk;
+        vec3 c = mix(hor, mid, smoothstep(0.0, 0.24, h));
+        c = mix(c, zen, smoothstep(0.20, 0.82, h));
+        c += vec3(0.46, 0.24, 0.30) * belt * 0.32;
+        // the faint green edge near the ground at blue hour, then a cold airglow at night
+        float lowBand = 1.0 - smoothstep(0.0, 0.075, h);
+        c += vec3(0.020, 0.115, 0.095) * lowBand * sin(clamp(T, 0.0, 1.0) * 3.14159) * (1.0 - tow * 0.7) * 0.85;
+        c += vec3(0.004, 0.020, 0.018) * lowBand * T;
+        vec3 dZen = mix(vec3(.105, .255, .500), vec3(.205, .245, .285), uOvercast);
+        vec3 dMid = mix(vec3(.300, .450, .640), vec3(.285, .325, .365), uOvercast);
+        vec3 dHor = mix(vec3(.760, .690, .560), vec3(.375, .405, .435), uOvercast);
+        vec3 dc = mix(dHor, dMid, smoothstep(0.0, 0.20, h));
+        dc = mix(dc, dZen, smoothstep(0.15, 0.80, h));
+        dc = mix(dc, dc * vec3(1.06, 1.0, 0.90) + vec3(.07, .04, 0.0), tow * (1.0 - smoothstep(0.0, .35, h)) * 0.6);
+        return mix(c, dc, uDay);
+      }
+`;
+var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.985,.062,-.15).normalize()},moonDir:{value:new P(52,26,20).normalize()},uNight:{value:0},uDay:{value:0},uOvercast:{value:0},uForestSkyline:{value:0},uPlains:{value:0},uStormGlow:{value:0},uHeatLightning:{value:0},uStormDrift:{value:0},uStormPower:{value:0},uBoltFlash:{value:0},uBoltKind:{value:0},uBoltOff:{value:0},uBoltSeed:{value:0},uTime:{value:0},uCover:{value:.5}},vertexShader:`
       varying vec3 vDir;
       void main(){
         vDir = normalize(position);
@@ -4530,6 +4658,8 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
       uniform float uBoltKind;
       uniform float uBoltOff;
       uniform float uBoltSeed;
+      uniform float uTime;
+      uniform float uCover;
 
       // Periodic angular ridges close seamlessly around the entire sky.
       // Their shallow angles place them on the far horizon, never beside the station.
@@ -4541,9 +4671,146 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
         return scale * (.17 + .34 * broad + .32 * peaks + .17 * detail) * corridor;
       }
 
+      // ---- Great Plains sky: noise, palette, cloud decks, rays, stars, far land ----
+      float sh21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+      float vn(vec2 p) {
+        vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(sh21(i), sh21(i + vec2(1.0, 0.0)), f.x), mix(sh21(i + vec2(0.0, 1.0)), sh21(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+      // Five octaves; the fine ones fade out as the cloud plane compresses toward the horizon so nothing shimmers.
+      float fbmL(vec2 p, float fw) {
+        float a = 0.5, s = 0.0, f = 1.0;
+        for (int i = 0; i < 5; i++) {
+          float k = 1.0 - smoothstep(0.30, 0.85, fw * f);
+          s += a * mix(0.5, vn(p * f + float(i) * 11.7), k);
+          a *= 0.5; f *= 2.03;
+        }
+        return s * 1.0323;
+      }
+      ${PLAINS_SKY_GLSL}
+      // Colour of a cloud at a given height: the setting sun lights the highest decks last, and only on the sun's side of the sky.
+      vec3 cloudCol(float boost, float shade, float edge, float tow, vec3 dir) {
+        float sy = sunDir.y + boost;
+        float lit = 1.0 - smoothstep(-0.03, 0.40, -sy);
+        float depth = -sy;
+        vec3 sunny = mix(vec3(1.0, 0.64, 0.34), vec3(1.0, 0.97, 0.92), smoothstep(0.05, 0.50, sunDir.y));
+        sunny = mix(sunny, vec3(0.90, 0.52, 0.50), smoothstep(0.04, 0.22, depth));
+        sunny = mix(sunny, vec3(0.46, 0.30, 0.56), smoothstep(0.20, 0.50, depth));
+        vec3 shadow = mix(vec3(0.34, 0.24, 0.40), vec3(0.010, 0.014, 0.036), uNight);
+        shadow = mix(shadow, vec3(0.36, 0.41, 0.50), uDay);
+        float facing = mix(0.32, 1.0, tow);
+        float L = clamp(shade, 0.0, 1.0) * lit * facing;
+        vec3 c = mix(shadow, sunny, L);
+        c += sunny * edge * lit * facing * 0.55;
+        float mo = smoothstep(0.35, 0.95, dot(dir, moonDir)) * uNight * (1.0 - uDay);
+        c += vec3(0.20, 0.27, 0.42) * mo * (0.4 + 0.6 * shade) * 0.8;
+        return c;
+      }
+      void plainsClouds(inout vec3 col, vec3 dir, vec3 pHaze, float fwb, float stormProx) {
+        float y = dir.y;
+        float tow = smoothstep(-0.4, 1.0, sunAz(dir));
+        vec2 base = dir.xz / (y + 0.06);
+        vec2 wv = vec2(1.0, 0.30) * uTime * 0.012;
+        vec2 toSun = normalize(sunDir.xz + 1e-5) * 0.12;
+        float cover = uCover;
+        float rim = smoothstep(0.0, 0.05, y);
+        float hz = 1.0 - smoothstep(0.0, 0.16, y);
+        float flash = (uHeatLightning * 0.35 + uBoltFlash * 0.40) * stormProx;
+        // A. cirrus: long fibrous streaks, the highest deck and the last to lose the light
+        {
+          vec2 uv = (base * vec2(0.22, 0.95) + wv * 0.4) * 1.7;
+          float n = fbmL(uv, fwb * 1.6);
+          float m = smoothstep(0.56 - 0.10 * cover, 0.90, n) * (0.20 + 0.50 * cover);
+          vec3 cc = cloudCol(0.46, 0.9, 1.0 - m, tow, dir);
+          cc = mix(cc, pHaze, hz * 0.7);
+          col = mix(col, cc, m * rim * 0.62);
+        }
+        // B. altocumulus: rows of cloudlets, the mackerel sky
+        {
+          vec2 uv = base * 1.55 + wv * 0.8 + vec2(0.0, 3.7);
+          float fw = fwb * 1.55;
+          float band = 0.5 + 0.5 * sin(uv.y * 2.1 + 2.4 * vn(uv * 0.45));
+          float n = fbmL(uv, fw);
+          float n2 = fbmL(uv + toSun * 0.55, fw);
+          float dens = n * 0.62 + band * 0.42;
+          float m = smoothstep(0.55 - 0.14 * cover, 0.80 - 0.08 * cover, dens) * smoothstep(0.05, 0.40, cover + 0.15);
+          float shade = clamp(0.55 + (n - n2) * 4.0, 0.0, 1.0);
+          vec3 cc = cloudCol(0.24, shade, 1.0 - smoothstep(0.0, 0.5, m), tow, dir);
+          cc = mix(cc, pHaze, hz * 0.6);
+          cc += vec3(0.55, 0.62, 0.95) * flash * m;
+          col = mix(col, cc, m * rim * 0.74);
+        }
+        // C. low cumulus: puffs that shrink toward the horizon, which is what makes the sky look this big
+        {
+          vec2 uv = base * 0.62 + wv * 1.6 + vec2(9.1, 2.3);
+          float fw = fwb * 0.62;
+          vec2 warp = vec2(vn(uv * 0.9 + 5.0), vn(uv * 0.9 + 17.0)) - 0.5;
+          vec2 q = uv + warp * 0.9;
+          float n = fbmL(q, fw);
+          float n2 = fbmL(q + toSun * 0.9, fw);
+          float th = 0.70 - 0.30 * cover;
+          float m = smoothstep(th, th + 0.12, n);
+          float shade = clamp(0.50 + (n - n2) * 5.5, 0.0, 1.0) * (1.0 - 0.45 * smoothstep(th + 0.10, th + 0.35, n));
+          float edge = (1.0 - smoothstep(th + 0.02, th + 0.22, n)) * m;
+          float glow = 0.5 + 1.1 * pow(max(sunAz(dir), 0.0), 3.0);
+          vec3 cc = cloudCol(0.10, shade, edge * glow, tow, dir);
+          cc = mix(cc, pHaze, hz * 0.55);
+          cc += vec3(0.55, 0.62, 0.95) * flash * m * 1.4;
+          col = mix(col, cc, m * rim);
+        }
+      }
+      // Crepuscular rays fanning up from the sun while it is still just under the rim of the world.
+      vec3 plainsRays(vec3 dir) {
+        float sy = sunDir.y;
+        float act = smoothstep(-0.34, -0.04, sy) * (1.0 - uDay) * (1.0 - uNight);
+        if (act < 0.01) return vec3(0.0);
+        vec2 hd = dir.xz, sd = sunDir.xz;
+        float den = length(hd) * length(sd) + 1e-5;
+        float da = atan((hd.x * sd.y - hd.y * sd.x) / den, dot(hd, sd) / den);
+        vec2 rel = vec2(da, dir.y - sy);
+        float ang = atan(rel.y, rel.x);
+        float r = length(rel);
+        float rays = vn(vec2(ang * 9.0 + 0.002 * uTime, 3.1)) * 0.65 + vn(vec2(ang * 23.0, 7.7 + 0.004 * uTime)) * 0.35;
+        rays = smoothstep(0.50, 0.95, rays);
+        float fall = exp(-r * 3.2) * smoothstep(-0.02, 0.12, dir.y);
+        return vec3(1.0, 0.58, 0.26) * rays * fall * act * 0.085;
+      }
+      vec3 milkyWay(vec3 dir) {
+        float n0 = dot(dir, normalize(vec3(0.34, 0.78, -0.52)));
+        float band = exp(-n0 * n0 / 0.035);
+        float core = exp(-n0 * n0 / 0.008);
+        float grain = vn(dir.xy * 11.0 + dir.z * 5.0) * 0.6 + vn(dir.zy * 23.0 + 3.1) * 0.4;
+        float dust = smoothstep(0.35, 0.70, vn(vec2(n0 * 22.0, dot(dir, normalize(vec3(-0.5, 0.0, 0.85))) * 7.0)));
+        return vec3(0.19, 0.205, 0.27) * band * (0.35 + 0.80 * grain) * (1.0 - 0.55 * dust * core) * 0.50;
+      }
+      // Three bands of far country under the horizon haze: swells, shelterbelts and the odd grove.
+      void plainsLand(inout vec3 col, vec3 dir, vec3 pHaze) {
+        float a = atan(dir.z, dir.x);
+        float tow = smoothstep(-0.2, 1.0, sunAz(dir));
+        float T = uNight;
+        for (int i = 0; i < 3; i++) {
+          float fi = float(i);
+          float swell = 0.62 * vn(vec2(a * (4.0 + 2.5 * fi), fi * 7.3)) + 0.38 * vn(vec2(a * (17.0 + 6.0 * fi), fi * 3.1 + 2.0));
+          float belts = smoothstep(0.50, 0.72, vn(vec2(a * (2.6 + 1.1 * fi), fi * 5.7 + 11.0)));
+          float crown = vn(vec2(a * (210.0 + 70.0 * fi), fi * 2.9)) * 0.6 + vn(vec2(a * (610.0 + 150.0 * fi), fi * 1.3)) * 0.4;
+          float hL = (0.0012 + 0.0013 * fi) + (0.0028 + 0.0030 * fi) * swell + belts * (0.0013 + 0.0006 * fi) * (0.4 + 0.9 * crown);
+          vec3 lc = mix(vec3(0.115, 0.082, 0.150), vec3(0.006, 0.009, 0.013), T);
+          lc = mix(lc, vec3(0.27, 0.33, 0.29), uDay);
+          float hazeAmt = 0.76 - 0.24 * fi;
+          lc = mix(lc, pHaze, hazeAmt);
+          lc = mix(lc, pHaze, (1.0 - smoothstep(0.0, hL, dir.y)) * 0.65);
+          lc += vec3(1.0, 0.55, 0.22) * tow * (1.0 - T) * (1.0 - uDay) * smoothstep(hL - 0.0014, hL, dir.y) * 0.30 * (1.0 - hazeAmt);
+          float m = (1.0 - smoothstep(hL - 0.0005, hL + 0.0005, dir.y)) * smoothstep(-0.02, -0.004, dir.y);
+          col = mix(col, lc, m);
+        }
+      }
+
       void main() {
         vec3 direction = normalize(vDir);
         float h = clamp(direction.y, -.05, 1.0);
+        // derivatives must be taken outside any branch
+        vec2 fwUV = fwidth(direction.xz / (max(direction.y, 0.0) + 0.06));
+        float fwb = max(fwUV.x, fwUV.y);
         vec3 zenith = mix(vec3(.020, .028, .095), vec3(.002, .003, .012), uNight);
         vec3 mid = mix(vec3(.300, .120, .360), vec3(.008, .010, .030), uNight);
         vec3 horizon = mix(vec3(.980, .420, .160), vec3(.030, .025, .055), uNight);
@@ -4558,6 +4825,11 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
         haze = mix(haze, dayHaze, uDay);
         vec3 col = mix(horizon, mid, smoothstep(.00, .28, h));
         col = mix(col, zenith, smoothstep(.22, .75, h));
+        float pl = uPlains;
+        if (pl > 0.01) {
+          col = mix(col, plainsSkyCol(direction), pl);
+          haze = mix(haze, plainsSkyCol(vec3(direction.x, 0.0, direction.z)), pl);
+        }
         float s = max(dot(direction, sunDir), 0.0);
         float sunDisc = smoothstep(.99920, .99962, s);
         float sunVis = (1.0 - uNight) * (1.0 - 0.82 * uOvercast);
@@ -4566,17 +4838,21 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
         float moonVis = smoothstep(.08, .82, uNight) * (1.0 - uDay) * (1.0 - 0.75 * uOvercast);
         float moonDisc = smoothstep(.99938, .99964, m);
         col += (vec3(.84, .90, .98) * moonDisc * 1.55 + vec3(.22, .28, .42) * pow(m, 95.0) * .28 + vec3(.09, .13, .22) * pow(m, 12.0) * .08) * moonVis;
-        col = mix(haze, col, smoothstep(-.025, .16, h));
+        col = mix(haze, col, smoothstep(-.025, .16 - .13 * pl, h));
 
-        // Above the highest possible ridge, all three silhouette masks are zero.
-        if (uPlains > 0.01) {
-          vec3 plainsZenith = mix(vec3(.018, .026, .110), vec3(.001, .002, .010), uNight);
-          vec3 plainsMid = mix(vec3(.380, .140, .320), vec3(.006, .008, .026), uNight);
-          vec3 plainsHorizon = mix(vec3(1.0, .580, .200), vec3(.015, .035, .038), uNight);
-          zenith = mix(zenith, plainsZenith, uPlains);
-          mid = mix(mid, plainsMid, uPlains);
-          horizon = mix(horizon, plainsHorizon, uPlains);
+        float stormAzC = -0.65 + uStormDrift * 0.35;
+        float stormProx = 0.0;
+        if (pl > 0.02) {
+          float aC = atan(direction.z, direction.x);
+          float dA = mod(aC - stormAzC + 3.14159, 6.28318) - 3.14159;
+          stormProx = exp(-dA * dA / 0.8);
+          if (direction.y > 0.002) {
+            col += milkyWay(direction) * uNight * (1.0 - uDay) * smoothstep(0.03, 0.30, direction.y) * pl * (1.0 - 0.7 * uCover);
+            plainsClouds(col, direction, haze, fwb, stormProx);
+            col += plainsRays(direction) * pl;
+          }
         }
+        // Above the highest possible ridge, all three silhouette masks are zero.
         if (direction.y < .18) {
           float a = atan(direction.z, direction.x);
           float nwDir = smoothstep(-0.2, 0.85, -direction.x * 0.7 - direction.z * 0.5) * uForestSkyline;
@@ -4599,15 +4875,16 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
         // and lightning (sheet flashes inside the cloud, now and then a branched bolt to the ground).
         if (uPlains > 0.05 && direction.y > -0.01 && direction.y < 0.40) {
           float a = atan(direction.z, direction.x);
-          float stormAz = -0.65 + uStormDrift * 0.35;
+          float stormAz = stormAzC;
           float sA = mod(a - stormAz + 3.14159, 6.28318) - 3.14159;
           float P = uStormPower;
           float sc = 1.3 + 0.75 * P;
           float dAz = abs(sA) / sc;
           float vv = direction.y / sc;
           float baseH = 0.004, topH = 0.165;
-          // Low-frequency billow noise: soft lobes, not stripes.
-          float en = 0.5 * sin(a * 31.0 + vv * 37.0) + 0.3 * sin(a * 67.0 - vv * 71.0) + 0.2 * sin(a * 19.0 + vv * 113.0);
+          // Billow noise: soft lobes with real cauliflower breakup, not stripes.
+          float en = 0.34 * sin(a * 31.0 + vv * 37.0) + 0.20 * sin(a * 67.0 - vv * 71.0) + 0.12 * sin(a * 19.0 + vv * 113.0)
+                   + 1.05 * (vn(vec2(a * 44.0, vv * 120.0)) - 0.5) + 0.55 * (vn(vec2(a * 130.0, vv * 330.0)) - 0.5);
           float tower = 0.078 + 0.034 * smoothstep(0.0, 0.07, vv) - 0.040 * smoothstep(0.08, 0.15, vv);
           float anvilW = 0.19 * smoothstep(0.095, 0.135, vv) * (1.0 - smoothstep(0.128, 0.165, vv));
           float colWidth = max(tower, anvilW) + 0.012 * en;
@@ -4625,12 +4902,17 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
           col = mix(col, rainCol, shaftMask);
           float F = uBoltFlash;
           if (cloudMask > 0.003) {
-            float billow = 0.5 + 0.5 * en;
+            float billow = 0.5 + 0.5 * clamp(en, -1.0, 1.0);
             vec3 stormBaseCol = mix(vec3(.12, .08, .14), vec3(.012, .014, .022), uNight) * (0.75 + 0.5 * billow) * (1.0 - 0.35 * P);
             vec3 anvilGlow = mix(vec3(1.0, .68, .35), vec3(.75, .32, .55), clamp(uNight * 1.8, 0.0, 1.0));
             anvilGlow = mix(anvilGlow, vec3(.35, .20, .45), clamp((uNight - 0.5) * 2.0, 0.0, 1.0));
             float topCatch = smoothstep(0.07, 0.15, vv + 0.012 * en) * (1.0 - smoothstep(0.7, 0.95, uNight));
             vec3 stormCol = mix(stormBaseCol, anvilGlow * (0.8 + 0.3 * billow), topCatch * 0.85);
+            // lit edge on the flank that faces the setting sun, and rose mammatus under the anvil
+            float flank = smoothstep(-0.02, 0.05, (colWidth - dAz) - 0.02) * (1.0 - smoothstep(0.05, 0.10, colWidth - dAz));
+            stormCol += anvilGlow * flank * (0.20 + 0.50 * billow) * (1.0 - uNight) * smoothstep(0.02, 0.12, vv);
+            float mam = smoothstep(0.52, 0.80, vn(vec2(sA * 95.0, vv * 70.0))) * smoothstep(0.075, 0.095, vv) * (1.0 - smoothstep(0.100, 0.125, vv));
+            stormCol = mix(stormCol, anvilGlow * 0.75, mam * 0.45 * (1.0 - uNight * 0.6));
             if (uHeatLightning > 0.001) {
               float interior = smoothstep(colWidth - 0.02, 0.0, dAz) * smoothstep(baseH, baseH + 0.04, vv) * smoothstep(topH, topH - 0.04, vv);
               stormCol += vec3(0.9, 0.92, 1.0) * uHeatLightning * interior * 1.8;
@@ -4667,6 +4949,7 @@ var Lm=class extends Rn{constructor(e={}){super(),this.isMeshLambertMaterial=!0,
             }
           }
         }
+        if (pl > 0.02 && direction.y < 0.06) plainsLand(col, direction, haze);
         // A shallow haze band joins the distant silhouettes to the ground fog.
         col = mix(col, haze, 1.0 - smoothstep(-.018, .009 + .018 * uOvercast, direction.y));
         gl_FragColor = vec4(col, 1.0);
@@ -4782,6 +5065,11 @@ desertMaterial.onBeforeCompile = shader => {
   shader.uniforms.uWetness = terrainWetnessUniform;
   shader.uniforms.uSkyTone = terrainSkyTone;
   shader.uniforms.uTime = terrainTimeUniform;
+  shader.uniforms.sunDir = Xm.material.uniforms.sunDir;
+  shader.uniforms.uNight = Xm.material.uniforms.uNight;
+  shader.uniforms.uDay = Xm.material.uniforms.uDay;
+  shader.uniforms.uOvercast = Xm.material.uniforms.uOvercast;
+  shader.uniforms.uStormWind = plainsStormWindUniform;
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vDesertWorld;\nvarying vec3 vDesertWorldNormal;')
     .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDesertWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvDesertWorldNormal = normalize(mat3(modelMatrix) * objectNormal);');
@@ -4836,6 +5124,113 @@ desertMaterial.onBeforeCompile = shader => {
         float fernGate = 1.0 - nwH(s, 25650.0, 25850.0) * (1.0 - nwH(s, 26250.0, 26500.0));
         float meander = bridgeGate * fernGate * (8.0 * sin(s * 0.0023 + 0.7) + 4.5 * cos(s * 0.0051 - 1.2));
         return zr + sideShift + meander;
+      }
+      uniform vec3 sunDir;
+      uniform float uNight;
+      uniform float uDay;
+      uniform float uOvercast;
+      uniform float uStormWind;
+      ${PLAINS_SKY_GLSL}
+      // ---------- Great Plains ground ----------
+      ${PLAINS_NOISE_GLSL}
+      ${PLAINS_LANES_GLSL}
+      vec3 prairieColor(vec2 p, float dist, float fieldAmt, out float glow, out float grassy) {
+        float nearF = 1.0 - smoothstep(12.0, 150.0, dist);
+        float midF = 1.0 - smoothstep(60.0, 700.0, dist);
+        // the wild prairie underneath everything: green swales, bleached rises, rust-red patches of little bluestem
+        float hiN;
+        vec3 wild = plainsWild(p, hiN);
+        vec3 base = wild;
+        float grass = 1.0;
+        // the farm mosaic on a quarter-mile survey grid, Plains proper only; the highway corridor stays wild
+        vec2 cellF = p / ${PLAINS_PARCEL}.0;
+        ivec2 cid = ivec2(floor(cellF));
+        vec2 cuv = fract(cellF);
+        vec2 eDv = min(cuv, 1.0 - cuv) * ${PLAINS_PARCEL}.0;
+        float eD = min(eDv.x, eDv.y);
+        float r0 = gh(cid), r1 = gh(cid + ivec2(313, 777)), r2 = gh(cid + ivec2(997, 131));
+        float field = fieldAmt * smoothstep(26.0, 72.0, abs(p.y));
+        vec3 crop = wild; float cropRow = 0.0; float rowSp = 1.0; float cropGrass = 1.0;
+        if (r0 < 0.20) { crop = mix(vec3(0.74, 0.58, 0.25), vec3(0.82, 0.66, 0.30), r2); rowSp = 0.34; cropRow = 0.10; }
+        else if (r0 < 0.30) { crop = mix(vec3(0.60, 0.50, 0.31), vec3(0.68, 0.58, 0.36), r2); rowSp = 0.4; cropRow = 0.08; cropGrass = 0.4; }
+        else if (r0 < 0.40) { crop = mix(vec3(0.66, 0.59, 0.36), vec3(0.72, 0.64, 0.40), r2); rowSp = 3.4; cropRow = 0.16; }
+        else if (r0 < 0.52) { crop = mix(vec3(0.14, 0.29, 0.095), vec3(0.20, 0.34, 0.12), r2); rowSp = 0.76; cropRow = 0.22; }
+        else if (r0 < 0.62) { crop = mix(vec3(0.29, 0.37, 0.115), vec3(0.37, 0.42, 0.14), r2); rowSp = 0.76; cropRow = 0.34; }
+        else if (r0 < 0.69) { crop = mix(vec3(0.44, 0.23, 0.15), vec3(0.52, 0.28, 0.17), r2); rowSp = 0.76; cropRow = 0.22; }
+        else if (r0 < 0.76) { crop = mix(vec3(0.27, 0.19, 0.14), vec3(0.34, 0.24, 0.17), r2); rowSp = 1.1; cropRow = 0.42; cropGrass = 0.0; }
+        else if (r0 < 0.80) { crop = vec3(0.50, 0.41, 0.115); rowSp = 0.76; cropRow = 0.20; }
+        float across = (r1 < 0.5) ? p.y : p.x;
+        float rowPh = across / rowSp;
+        float rowVis = 1.0 - smoothstep(0.20, 0.55, fwidth(rowPh));
+        float rows = 0.5 + 0.5 * cos(6.28318 * rowPh);
+        crop *= 1.0 - cropRow * rowVis * rows;
+        crop *= 0.86 + 0.28 * gn(p * 0.02 + r2 * 40.0);
+        float hedge = (1.0 - smoothstep(0.0, 6.0, eD)) * field;
+        crop = mix(crop, vec3(0.13, 0.16, 0.075) * (0.8 + 0.4 * hiN), hedge * 0.6);
+        base = mix(base, crop, field);
+        grass = mix(1.0, cropGrass, field);
+        // two-track farm lanes and the trampled farmyards at their ends
+        int lk = int(floor((p.x - ${PLAINS_LANE_X0}.0) / ${PLAINS_LANE_STEP}.0));
+        if (lk >= 0 && lk < ${PLAINS_LANE_COUNT} && fieldAmt > 0.0) {
+          vec4 L = PLAINS_LANES[lk];
+          float zt = p.y * L.y - 16.0;
+          float cx = p.x - L.x - 2.5 * sin(zt * 0.012 + L.w * 9.0);
+          if (zt > -1.0 && zt < L.z) {
+            float ruts = 1.0 - smoothstep(0.10, 0.34, abs(abs(cx) - 0.95));
+            float lane = 1.0 - smoothstep(1.4, 2.4, abs(cx));
+            vec3 laneC = mix(vec3(0.27, 0.32, 0.14), vec3(0.58, 0.50, 0.36), ruts);
+            base = mix(base, laneC, lane * fieldAmt);
+          }
+          if (L.w > 0.38) {
+            float dy = length(p - vec2(L.x, L.y * (16.0 + L.z)));
+            float yard = 1.0 - smoothstep(16.0, 46.0, dy);
+            base = mix(base, vec3(0.40, 0.33, 0.22) * (0.8 + 0.4 * gn(p * 0.8)), yard * 0.75 * fieldAmt);
+            grass *= 1.0 - yard * 0.7;
+          }
+        }
+        // dry washes: meandering lines of greener ground where a creek would run, and the culvert swales
+        float rv = abs(gn(p * 0.00115 + vec2(5.2, 2.7)) - 0.5);
+        float wash = 1.0 - smoothstep(0.004, 0.026, rv);
+        vec3 washC = mix(vec3(0.17, 0.29, 0.10), vec3(0.34, 0.31, 0.20), 1.0 - smoothstep(0.0, 0.012, rv));
+        base = mix(base, washC, wash * 0.65 * smoothstep(8.0, 30.0, abs(p.y)) * fieldAmt);
+        float swD = min(min(abs(p.x - 50200.0), abs(p.x - 59000.0)), abs(p.x - 73000.0));
+        base = mix(base, vec3(0.17, 0.29, 0.10), (1.0 - smoothstep(30.0, 190.0, swD)) * 0.45 * smoothstep(5.0, 20.0, abs(p.y)) * fieldAmt);
+        // fine grass: fibres streaming with the wind, tuft crowns, the odd bald patch
+        // fibre coordinates are wrapped on a 5 km tile first: v * 41 at x = 60000 would be past float32's useful range
+        vec2 pw = p - 5000.0 * floor(p / 5000.0);
+        vec2 wdir = vec2(0.6, 0.8), wper = vec2(-0.8, 0.6);
+        float u = dot(pw, wdir), v = dot(pw, wper);
+        float fibre = gn(vec2(u * 4.0, v * 19.0)) * 0.50 + gn(vec2(u * 9.0, v * 41.0)) * 0.30 + gn(vec2(u * 2.0, v * 8.0)) * 0.20;
+        float clump = gn(p * 1.35) * 0.6 + gn(p * 0.5 + 9.0) * 0.4;
+        float tex = mix(0.5, fibre, nearF);
+        base *= (0.58 + 0.84 * tex) * mix(1.0, 0.66 + 0.68 * clump, nearF);
+        float bald = smoothstep(0.80, 0.92, gn(p * 0.9 + 4.0)) * nearF;
+        base = mix(base, vec3(0.50, 0.42, 0.29), bald * 0.5 * grass);
+        // wildflowers in drifts
+        if (nearF > 0.02) {
+          vec2 fc = p * 1.8;
+          vec2 fi = floor(fc);
+          ivec2 fci = ivec2(fi);
+          float patchF = smoothstep(0.52, 0.80, gn(p * 0.035 + 3.0));
+          if (gh(fci + ivec2(41, 7)) > 1.0 - 0.14 * patchF - 0.012) {
+            vec2 off = vec2(gh(fci + ivec2(5, 91)), gh(fci + ivec2(77, 3))) * 0.5 + 0.25;
+            float fd = length(fract(fc) - off) / 1.8;
+            float dotM = 1.0 - smoothstep(0.035, 0.07, fd);
+            float cp = gh(fci + ivec2(13, 29));
+            vec3 fcol = cp < 0.34 ? vec3(0.56, 0.36, 0.66) : (cp < 0.62 ? vec3(0.93, 0.74, 0.16) : (cp < 0.82 ? vec3(0.90, 0.86, 0.74) : vec3(0.84, 0.30, 0.20)));
+            base = mix(base, fcol, dotM * nearF * grass);
+          }
+        }
+        // the gust field: grass bent over shows its pale underside, so the wind is visible crossing the land
+        float G = plainsGustG(p, uTime, uStormWind);
+        float sheen = G * grass * (0.35 + 0.65 * midF);
+        base = mix(base * 0.88, base * vec3(1.28, 1.20, 0.98) + vec3(0.025, 0.02, 0.0), sheen);
+        grassy = grass;
+        // low sun behind the field sets the stems alight
+        vec3 vd = vDesertWorld - cameraPosition;
+        float toward = pow(max(dot(normalize(vd.xz + 1e-5), normalize(sunDir.xz + 1e-5)), 0.0), 2.5);
+        glow = (1.0 - uNight) * (1.0 - uDay) * toward * grass * (0.07 + 0.20 * G) + 0.085 * (1.0 - uNight * 0.8);
+        return base;
       }`)
     .replace('#include <color_fragment>', `#include <color_fragment>
       vec2 p = vDesertWorld.xz;
@@ -4857,31 +5252,25 @@ desertMaterial.onBeforeCompile = shader => {
       vec3 natGround = mix(basinGround, foothillGround, nwH(bioS, 4800.0, 10800.0));
       natGround = mix(natGround, gorgeGround, nwH(bioS, 11200.0, 16800.0));
       natGround = mix(natGround, valleyFloor, nwH(bioS, 19500.0, 24800.0));
+      vec3 pGlowCol = vec3(0.0);
+      float pGlowK = 0.0;
       if (p.x > 4600.0) {
         float plainsBiome = nwH(p.x, 42000.0, 48000.0);
         float steppeRamp = nwH(p.x, 4600.0, 42000.0);
-        float pNoise1 = sandNoise(p * 0.008);
-        float pNoise2 = sandNoise(p * 0.028);
-        float pPatch = sandNoise(p * 0.0017 + 31.0);
-        float grassMix = smoothstep(0.30, 0.70, 0.45 * pNoise1 + 0.25 * pNoise2 + 0.55 * pPatch - 0.12);
-        vec3 straw = mix(vec3(.66, .56, .31), vec3(.74, .54, .26), pNoise2);
-        vec3 greenGold = mix(vec3(.40, .48, .22), vec3(.24, .30, .13), pNoise2 * 0.8);
-        vec3 plainsBase = mix(straw, greenGold, grassMix);
-        // dry bare scuffs and darker swale patches
-        plainsBase = mix(plainsBase, vec3(.55, .46, .30), smoothstep(0.72, 0.9, sandNoise(p * 0.011 + 7.0)) * 0.5);
-        plainsBase *= 0.86 + 0.28 * sandNoise(p * 0.09);
-        float dRoad = abs(p.y);
-        float vergeMask = smoothstep(3.4, 12.0, dRoad);
-        vec3 vergeColor = mix(vec3(.61, .56, .42), plainsBase, vergeMask);
-        float gustPhase = (p.x * 0.72 + p.y * 0.69) / 420.0 - uTime * 0.0333;
-        float gustStreak = sin(gustPhase * 6.28318) * 0.5 + 0.5;
-        // wind streaks: long ribbons stretched along the gust direction, drifting with the gust field
-        vec2 gd = vec2(0.72, 0.69), gp = vec2(-0.69, 0.72);
-        float ribbon = sandNoise(vec2(dot(p, gd) * 0.006 - uTime * 0.0333 * 2.3, dot(p, gp) * 0.0045));
-        float streak = 0.5 * gustStreak + 0.9 * (ribbon - 0.5);
-        vergeColor = mix(vergeColor * 0.84, vergeColor * 1.16, clamp(streak + 0.5, 0.0, 1.0) * vergeMask + (1.0 - vergeMask) * 0.5);
-        vec3 steppeGround = mix(basinGround, vergeColor, 0.5 + 0.5 * steppeRamp);
-        natGround = mix(steppeGround, vergeColor, plainsBiome);
+        float dCam = length(vDesertWorld - cameraPosition);
+        float pGlow, pGrassy;
+        vec3 pr = prairieColor(p, dCam, plainsBiome, pGlow, pGrassy);
+        // verge: a dry shoulder strip beside the asphalt where the grass has not yet closed in
+        float vergeMask = smoothstep(3.4, 8.0, abs(p.y));
+        vec2 pv = p - 5000.0 * floor(p / 5000.0);
+        vec3 vergeC = vec3(0.55, 0.49, 0.35) * (0.74 + 0.30 * gn(pv * 1.7) + 0.22 * gn(pv * 13.0));
+        vergeC = mix(vergeC, vec3(0.68, 0.64, 0.55), smoothstep(0.78, 0.9, gn(pv * 29.0)) * 0.7);   // pale gravel chips
+        vergeC = mix(vergeC, vec3(0.30, 0.34, 0.15), smoothstep(0.55, 0.85, gn(pv * 0.35 + 5.0)) * 0.55 * smoothstep(5.0, 8.0, abs(p.y)));
+        pr = mix(vergeC, pr, vergeMask);
+        vec3 steppeGround = mix(basinGround, pr, 0.30 + 0.70 * steppeRamp);
+        natGround = mix(steppeGround, pr, plainsBiome);
+        pGlowCol = natGround;
+        pGlowK = pGlow * (0.25 + 0.75 * steppeRamp) * vergeMask;
       }
       if (bioS > 5200.0) {
         // Slope decides rock; moisture decides grass or conifer forest on the soil between.
@@ -5029,6 +5418,18 @@ desertMaterial.onBeforeCompile = shader => {
       ground = mix(ground, vec3(.24,.23,.20) * (0.85 + 0.25 * n), plainsGravel);
       if (asphaltMask > 0.0) {
         vec3 asphalt = vec3(.040,.042,.050) * (.93 + .14 * n);
+        float aPlains = nwH(p.x, 4600.0, 14000.0);
+        if (aPlains > 0.0) {
+          // a prairie county road: sun-bleached chip seal with aggregate, darker tar patches, and the odd pale repair
+          vec2 pq = p - 5000.0 * floor(p / 5000.0);
+          float chip = gn(pq * vec2(23.0, 31.0)), chip2 = gn(pq * 7.0);
+          float tarPatch = smoothstep(0.60, 0.68, gn(vec2(pq.x * 0.045, pq.y * 0.35) + 4.0));
+          float bleach = smoothstep(0.40, 0.75, gn(pq * 0.012 + 11.0));
+          vec3 asp2 = vec3(.125, .122, .120) * (0.78 + 0.40 * chip) * (0.84 + 0.32 * chip2) * (1.0 + 0.28 * bleach);
+          asp2 = mix(asp2, vec3(.055, .057, .064), tarPatch * 0.85);
+          asp2 = mix(asp2, vec3(.115, .110, .104), smoothstep(0.80, 0.86, gn(pq * 0.09 + 2.0)) * 0.6);
+          asphalt = mix(asphalt, asp2, aPlains);
+        }
         float tarSeam = (1.0 - smoothstep(.035, .075, abs(mod(p.x + 4.2 + .18 * sin(latCoord * 1.7), 18.0) - 9.0))) * road;
         float wheelTrack = (1.0 - smoothstep(.18, .72, abs(abs(latCoord) - 1.55))) * road;
         asphalt *= 1.0 - .22 * tarSeam - .09 * wheelTrack;
@@ -5076,7 +5477,16 @@ desertMaterial.onBeforeCompile = shader => {
         float contact = 1.0 - smoothstep(.10,1.0,dot(tire,tire));
         ground *= 1.0 - max(body * .48, contact * .64);
       }
-      diffuseColor.rgb *= ground;`);
+      diffuseColor.rgb *= ground;
+      pGlowCol *= pGlowK * (1.0 - max(asphaltMask, max(pavedApron, max(plainsGravel, srTurnout))));`)
+    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n      totalEmissiveRadiance += pGlowCol;')
+    .replace('#include <fog_fragment>', `
+      #ifdef USE_FOG
+        float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
+        vec3 hzDir = normalize(vDesertWorld - cameraPosition);
+        vec3 hzCol = mix(fogColor, plainsSkyCol(vec3(hzDir.x, 0.0, hzDir.z)), nwH(vDesertWorld.x, 42000.0, 48000.0));
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, hzCol, fogFactor);
+      #endif`);
 };
 var desertSurface = new dt(desertGeometry, desertMaterial);
 desertSurface.name = 'Continuous desert surface';
@@ -12027,6 +12437,118 @@ function makeCylinderParts(rTop, rBot, height, segs, role, opts = {}) {
   return { ...latheGeom(pts, opts.radialSegs || 12), matrix: opts.matrix || matIdentity() };
 }
 
+
+// ---------------------------------------------------------------------------
+// Weathered prairie materials: world-space procedural boards, corrugation, concrete and straw instead of flat colour.
+// ---------------------------------------------------------------------------
+const PLAINS_WEATHER_GLSL = `
+  vec3 prairieSurface(float kind, vec3 wp, vec3 wn, vec3 col) {
+    bool alongX = abs(wn.x) > abs(wn.z);
+    float u = alongX ? wp.z : wp.x;
+    u = u - 1024.0 * floor(u / 1024.0);
+    float v = wp.y;
+    if (abs(wn.y) > 0.6) { v = alongX ? wp.x : wp.z; v = v - 1024.0 * floor(v / 1024.0); }
+    vec2 uv = vec2(u, v);
+    if (kind < 1.5) {
+      float bv = v / 0.20;
+      float f = fract(bv);
+      float seam = smoothstep(0.0, 0.10, f) * smoothstep(1.0, 0.90, f);
+      float plank = gh(ivec2(int(floor(bv)), int(floor(u * 0.55))));
+      float grain = gn(vec2(u * 2.0, v * 38.0));
+      float streak = gn(vec2(u * 6.0, v * 0.35));
+      float wear = smoothstep(0.50, 0.78, gn(uv * vec2(0.9, 0.7) + 3.0) + 0.35 * gn(uv * 5.0));
+      vec3 c = mix(col, vec3(0.50, 0.46, 0.40), wear * 0.65);
+      return c * mix(0.55, 1.0, seam) * (0.86 + 0.28 * plank) * (0.86 + 0.28 * grain) * (0.82 + 0.28 * streak);
+    } else if (kind < 2.5) {
+      float rib = 0.5 + 0.5 * cos(u * 34.9);
+      float rust = smoothstep(0.52, 0.80, gn(uv * vec2(0.7, 0.35)) + 0.45 * gn(uv * 4.0));
+      float st = gn(vec2(u * 3.0, v * 0.25));
+      vec3 c = mix(col, vec3(0.42, 0.21, 0.11), rust * 0.75);
+      return c * (0.80 + 0.26 * rib) * (0.82 + 0.30 * st);
+    } else if (kind < 3.5) {
+      float speck = gn(uv * 28.0), mott = gn(uv * 1.7), stain = gn(vec2(u * 1.3, v * 0.18));
+      vec3 c = col * (0.84 + 0.20 * speck) * (0.82 + 0.34 * mott) * (0.74 + 0.40 * stain);
+      return mix(c, c * vec3(0.78, 0.82, 0.70), smoothstep(0.6, 0.85, gn(uv * 3.0 + 9.0)) * 0.5);
+    }
+    float s = gn(vec2(u * 18.0, v * 4.0)) * 0.6 + gn(uv * 40.0) * 0.4;
+    return col * (0.70 + 0.50 * s);
+  }`;
+function weatherRole(role, hex, kind) {
+  PAL[role] = hex;
+  const m = roleMat(role);
+  m.side = 2;
+  if (kind > 0) {
+    m.onBeforeCompile = shader => {
+      shader.uniforms.uKind = { value: kind };
+      shader.uniforms.uNightW = Xm.material.uniforms.uNight;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vWP; varying vec3 vWN;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWP=(modelMatrix*vec4(transformed,1.0)).xyz; vWN=normalize(mat3(modelMatrix)*objectNormal);');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vWP; varying vec3 vWN; uniform float uKind; uniform float uNightW;\n' + PLAINS_NOISE_GLSL + PLAINS_WEATHER_GLSL)
+        .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = prairieSurface(uKind, vWP, normalize(vWN), diffuseColor.rgb);')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * 0.16 * (1.0 - uNightW);');
+    };
+  }
+  return m;
+}
+weatherRole('prairieBarn', 0x8c3d30, 1);
+weatherRole('prairieWhite', 0xcdc7b6, 1);
+weatherRole('prairieGrey', 0x8d877a, 1);
+weatherRole('prairieTin', 0x989c9c, 2);
+weatherRole('prairieRust', 0x8c5842, 2);
+weatherRole('prairieConcrete', 0xaaa79d, 3);
+weatherRole('prairieHay', 0xb59f58, 4);
+weatherRole('prairieSteel', 0x7f8685, 1);
+weatherRole('prairieDark', 0x1d2022, 0);
+weatherRole('prairieIron', 0x3c3a39, 0);
+
+// ---- shape helpers (parts are {pos, nor, idx, matrix?}; double-sided materials, flat normals) ----
+function trisPart(tris) {
+  const pos = [], nor = [], idx = [];
+  for (const [a, b, c] of tris) {
+    const n = V3norm(V3cross(V3sub(b, a), V3sub(c, a))), i = pos.length / 3;
+    pos.push(...a, ...b, ...c); nor.push(...n, ...n, ...n); idx.push(i, i + 1, i + 2);
+  }
+  return { pos, nor, idx };
+}
+function slab(cx, cy, cz, sx, sy, sz, rotZ, rotY) {
+  return { ...boxPart(0, 0, 0, sx, sy, sz), matrix: matMul(matTranslate(cx, cy, cz), matMul(matRotY(rotY || 0), matRotZ(rotZ || 0))) };
+}
+// gable-ended house/shed body: walls up to y0 + wallH, roof ridge along the z axis (or x when ridgeX)
+function gabledBuilding(add, wallRole, roofRole, cx, y0, cz, w, d, wallH, rise, ridgeX, overhang) {
+  const ov = overhang === undefined ? 0.5 : overhang;
+  const a = ridgeX ? d : w, len = ridgeX ? w : d;           // a = span across the ridge
+  const th = Math.atan2(rise, a / 2), L = Math.hypot(a / 2, rise) + ov;
+  const rot = ridgeX ? Math.PI / 2 : 0;
+  const R = (lx, ly, lz) => ridgeX ? [cx + lz, y0 + ly, cz - lx] : [cx + lx, y0 + ly, cz + lz];
+  add(wallRole, boxPart(cx, y0 + wallH / 2, cz, w, wallH, d));
+  for (const s of [-1, 1]) {
+    const m = R(s * a / 4 - s * ov * 0.15, wallH + rise / 2 + 0.04, 0);
+    add(roofRole, slab(m[0], m[1], m[2], L, 0.1, len + 2 * ov, -s * th, ridgeX ? Math.PI / 2 : 0));
+    // gable triangle fills the wall above the eaves
+  }
+  const g = (z) => { const p0 = R(-a / 2, wallH, z), p1 = R(a / 2, wallH, z), p2 = R(0, wallH + rise, z); return [p0, p1, p2]; };
+  add(wallRole, trisPart([g(-len / 2), g(len / 2)]));
+}
+function cylinderPart(r0, r1, h, segs, x, y, z) { return { ...latheGeom([[r0, 0], [r1, h]], segs), matrix: matTranslate(x, y, z) }; }
+function legTube(add, role, a, b, r) { add(role, tubeGeom([a, b], r, 4, true)); }
+// vertical lattice tower: four tapered legs, ring struts and X braces
+function latticeTower(add, role, x, y, z, w0, w1, h, levels, r) {
+  const lerp = (a, b, t) => a + (b - a) * t;
+  for (let l = 0; l < levels; l++) {
+    const t0 = l / levels, t1 = (l + 1) / levels, a = lerp(w0, w1, t0) / 2, b = lerp(w0, w1, t1) / 2, y0 = y + h * t0, y1 = y + h * t1;
+    const c0 = [[-a, -a], [a, -a], [a, a], [-a, a]], c1 = [[-b, -b], [b, -b], [b, b], [-b, b]];
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) % 4;
+      legTube(add, role, [x + c0[i][0], y0, z + c0[i][1]], [x + c1[i][0], y1, z + c1[i][1]], r);
+      legTube(add, role, [x + c1[i][0], y1, z + c1[i][1]], [x + c1[j][0], y1, z + c1[j][1]], r * 0.7);
+      legTube(add, role, [x + c0[i][0], y0, z + c0[i][1]], [x + c1[j][0], y1, z + c1[j][1]], r * 0.55);
+    }
+  }
+}
+
+
 (function buildGreatPlainsSetPieces() {
   const parts = {}, add = (role, p) => (parts[role] = parts[role] || []).push(p);
 
@@ -12034,136 +12556,100 @@ function makeCylinderParts(rTop, rBot, height, segs, role, opts = {}) {
   // 1. Concrete Silo (x=47600, z=+70)
   // -------------------------------------------------------------
   const sx = 47600, sz = 70, sy = os(sx, sz);
-  // Silo main concrete tube (diam 6m, h 18m)
-  add('plaster', { ...latheGeom([[3.0, 0], [3.0, 18.0]], 16), matrix: matTranslate(sx, sy, sz) });
-  // Dome cap
-  const domePts = [];
-  for (let i = 0; i <= 8; i++) {
-    const a = (i / 8) * (Math.PI / 2);
-    domePts.push([3.0 * Math.cos(a), 18.0 + 2.8 * Math.sin(a)]);
-  }
-  add('wornMetal', { ...latheGeom(domePts, 16), matrix: matTranslate(sx, sy, sz) });
-  // Exterior ladder cage
-  for (let y = 1; y < 18; y += 0.8) {
-    add('wornMetal', boxPart(sx + 3.15, sy + y, sz, 0.1, 0.04, 0.5));
-  }
-  // Lean-to equipment shed at foot (6 x 3.5 x 3.8m)
-  add('weatheredWood', boxPart(sx, sy + 1.9, sz - 4.5, 5.8, 3.8, 3.2));
-  add('roofMetal', boxPart(sx, sy + 3.9, sz - 4.6, 6.2, 0.12, 3.6));
+  // 1. Concrete stave silo: banded with iron hoops, a rusted dome, a caged ladder and a lean-to shed
+  add('prairieConcrete', cylinderPart(3.0, 3.0, 18.0, 20, sx, sy, sz));
+  for (let hy = 1.0; hy < 18.0; hy += 1.5) add('prairieIron', cylinderPart(3.07, 3.07, 0.12, 20, sx, sy + hy, sz));
+  add('prairieRust', { ...latheGeom([[3.05, 0], [2.6, 0.9], [1.5, 1.9], [0.5, 2.5], [0, 2.75]], 20), matrix: matTranslate(sx, sy + 18, sz) });
+  legTube(add, 'prairieIron', [sx + 3.2, sy + 0.2, sz - 0.35], [sx + 3.2, sy + 19.6, sz - 0.35], 0.05);
+  legTube(add, 'prairieIron', [sx + 3.2, sy + 0.2, sz + 0.35], [sx + 3.2, sy + 19.6, sz + 0.35], 0.05);
+  for (let y = 0.6; y < 19.5; y += 0.45) add('prairieIron', boxPart(sx + 3.2, sy + y, sz, 0.05, 0.05, 0.72));
+  for (let y = 4.0; y < 19.0; y += 3.0) add('prairieIron', { ...tubeGeom([[sx + 3.2, sy + y, sz - 0.9], [sx + 3.9, sy + y, sz], [sx + 3.2, sy + y, sz + 0.9]], 0.03, 4, true), matrix: matIdentity() });
+  gabledBuilding(add, 'prairieGrey', 'prairieRust', sx, sy, sz - 4.5, 5.8, 3.2, 3.3, 0.9, true, 0.4);
   Dt(sx - 3.2, sz - 3.2, sx + 3.2, sz + 3.2, sy, sy + 21);
   Dt(sx - 3.0, sz - 6.2, sx + 3.0, sz - 2.8, sy, sy + 4.2);
 
-  // -------------------------------------------------------------
-  // 2. Grain Elevator & Dead Siding (x=52400, z=-70)
-  // -------------------------------------------------------------
+  // 2. Grain elevator & dead siding: a crib shaft, shouldered headhouse, annex, drive shed, gallery and a faded co-op sign
   const ex = 52400, ez = -70, ey = os(ex, ez);
-  // Crib elevator main body (10m wide, 14m deep, 24m high)
-  add('elevatorWood', boxPart(ex, ey + 12.0, ez, 10.0, 24.0, 14.0));
-  // Headhouse on top (6 x 8 x 5m)
-  add('elevatorWood', boxPart(ex, ey + 26.5, ez, 6.0, 5.0, 8.0));
-  add('roofMetal', boxPart(ex, ey + 29.2, ez, 6.6, 0.3, 8.6));
-  // Enclosed conveyor gallery / bridge down to siding
-  add('elevatorWood', boxPart(ex, ey + 18.0, ez + 12.0, 2.4, 3.2, 10.0));
-  // Loading boom & spout
-  add('wornMetal', boxPart(ex, ey + 14.0, ez + 18.0, 0.4, 0.4, 6.0));
-  // Ground office shack
-  add('weatheredWood', boxPart(ex + 6.8, ey + 1.8, ez, 3.4, 3.6, 4.2));
-  add('roofMetal', boxPart(ex + 6.8, ey + 3.7, ez, 3.8, 0.1, 4.6));
-  Dt(ex - 5.5, ez - 7.5, ex + 5.5, ez + 7.5, ey, ey + 30);
-  Dt(ex + 5.0, ez - 2.5, ex + 8.8, ez + 2.5, ey, ey + 4.0);
+  gabledBuilding(add, 'prairieGrey', 'prairieRust', ex, ey, ez, 9.6, 12.6, 21.0, 2.8, false, 0.5);
+  gabledBuilding(add, 'prairieGrey', 'prairieRust', ex, ey + 23.8, ez, 4.4, 5.6, 3.6, 1.8, false, 0.4);
+  add('prairieIron', boxPart(ex, ey + 29.6, ez, 0.12, 1.6, 0.12));
+  gabledBuilding(add, 'prairieWhite', 'prairieRust', ex - 8.2, ey, ez + 0.5, 6.2, 10.5, 7.5, 1.6, false, 0.4);
+  add('prairieDark', boxPart(ex - 8.2, ey + 2.2, ez + 5.78, 3.4, 3.6, 0.08));
+  for (const px of [-2.6, 2.6]) { legTube(add, 'prairieGrey', [ex + px + 12, ey, ez + 5.5], [ex + px + 12, ey + 3.4, ez + 5.5], 0.14); }
+  add('prairieRust', slab(ex + 12, ey + 3.5, ez + 1.5, 7.2, 0.12, 9.5, 0.06));
+  for (const px of [-3.0, 3.0]) for (const pz of [-3.0, 3.0]) legTube(add, 'prairieGrey', [ex + 12 + px, ey, ez + 1.5 + pz], [ex + 12 + px, ey + 3.4, ez + 1.5 + pz], 0.13);
+  {   // inclined gallery from the headhouse down toward the siding
+    const ang = Math.atan2(15, 24), len = Math.hypot(24, 15);
+    add('prairieGrey', slab(ex, ey + 15.5, ez + 17.0, len, 1.9, 2.3, ang, Math.PI / 2));
+    add('prairieRust', slab(ex, ey + 16.7, ez + 17.0, len + 0.4, 0.1, 2.9, ang, Math.PI / 2));
+    for (let gz = 4; gz <= 28; gz += 8) { const gy2 = 23 - (gz - 5) * 15 / 24; legTube(add, 'prairieGrey', [ex, ey, ez + 5 + gz - 3.5 + 3.5 - 0.5], [ex, ey + gy2 - 0.6, ez + 5 + gz - 3.5 + 3.5 - 0.5], 0.16); }
+    legTube(add, 'prairieIron', [ex, ey + 8.2, ez + 29], [ex, ey + 5.0, ez + 33.0], 0.22);
+  }
+  // faded lettering on the road face, a ghost of the co-op's name
+  paintedSurface(7.6, 2.0, (ctx) => {
+    ctx.fillStyle = 'rgba(0,0,0,0)'; ctx.clearRect(0, 0, 768, 256);
+    ctx.fillStyle = 'rgba(205,198,178,0.46)'; ctx.font = 'bold 74px Georgia,serif'; ctx.textAlign = 'center';
+    ctx.fillText("FARMERS CO-OP", 384, 112); ctx.font = 'bold 56px Georgia,serif'; ctx.fillText('ELEVATOR', 384, 190);
+    ctx.fillStyle = 'rgba(40,36,30,0.35)'; for (let i = 0; i < 26; i++) ctx.fillRect(i * 30 + (i * 7) % 11, 0, 3 + (i % 4), 256);
+  }, matTranslate(ex, ey + 14.5, ez + 6.36), { transparent: true });
+  add('prairieGrey', boxPart(ex + 5.5, ey + 1.8, ez + 0.4, 3.4, 3.6, 4.2));
+  add('prairieRust', slab(ex + 5.5, ey + 3.7, ez + 0.4, 3.9, 0.1, 4.7, 0.0));
+  Dt(ex - 11.5, ez - 7.5, ex + 5.5, ez + 7.5, ey, ey + 30);
+  Dt(ex + 8.0, ez - 3.4, ex + 16.0, ez + 6.4, ey, ey + 4.0);
 
   // Dead siding: 600m ballast bed (x=52100..52700, z=-40), NO rails
   for (let bx = 52100; bx <= 52700; bx += 2.0) {
     const by = os(bx, -40);
-    // Half-buried weathered ties
     add('weatheredWood', boxPart(bx, by + 0.08, -40, 0.22, 0.14, 2.6));
   }
 
-  // -------------------------------------------------------------
-  // 3. Water Tower (x=53100, z=+210)
-  // -------------------------------------------------------------
+  // 3. Water tower: braced steel legs, riveted tank with hoops, ladder, catwalk and a washed-out name
   const wx = 53100, wz = 210, wy = os(wx, wz);
-  // 4 steel lattice legs up to 20m
-  for (const dx of [-3.8, 3.8]) {
-    for (const dz of [-3.8, 3.8]) {
-      add('wornMetal', boxPart(wx + dx, wy + 10.0, wz + dz, 0.35, 20.0, 0.35));
+  const legs = [[-3.9, -3.9], [3.9, -3.9], [3.9, 3.9], [-3.9, 3.9]];
+  for (let i = 0; i < 4; i++) {
+    const [lx, lz] = legs[i], [nx, nz] = legs[(i + 1) % 4];
+    legTube(add, 'prairieIron', [wx + lx, wy, wz + lz], [wx + lx * 0.82, wy + 20, wz + lz * 0.82], 0.17);
+    for (const [y0, y1] of [[0.5, 7.5], [7.5, 14.0], [14.0, 19.8]]) {
+      const k0 = 1 - 0.18 * y0 / 20, k1 = 1 - 0.18 * y1 / 20;
+      legTube(add, 'prairieIron', [wx + lx * k0, wy + y0, wz + lz * k0], [wx + nx * k1, wy + y1, wz + nz * k1], 0.05);
+      legTube(add, 'prairieIron', [wx + nx * k0, wy + y0, wz + nz * k0], [wx + lx * k1, wy + y1, wz + lz * k1], 0.05);
+      legTube(add, 'prairieIron', [wx + lx * k1, wy + y1, wz + lz * k1], [wx + nx * k1, wy + y1, wz + nz * k1], 0.07);
     }
   }
-  // Cross bracing
-  for (let h = 4.0; h <= 18.0; h += 4.5) {
-    add('wornMetal', boxPart(wx, wy + h, wz - 3.8, 7.6, 0.2, 0.2));
-    add('wornMetal', boxPart(wx, wy + h, wz + 3.8, 7.6, 0.2, 0.2));
-    add('wornMetal', boxPart(wx - 3.8, wy + h, wz, 0.2, 0.2, 7.6));
-    add('wornMetal', boxPart(wx + 3.8, wy + h, wz, 0.2, 0.2, 7.6));
-  }
-  // Central riser pipe (diam 0.85m)
-  add('wornMetal', { ...latheGeom([[0.42, 0], [0.42, 20.0]], 8), matrix: matTranslate(wx, wy, wz) });
-  // Cylindrical tank (diam 9m, h 6.5m)
-  add('wornMetal', { ...latheGeom([[4.5, 20.0], [4.5, 26.5]], 16), matrix: matTranslate(wx, wy, wz) });
-  // Tank conical roof
-  const tankRoofPts = [];
-  for (let i = 0; i <= 6; i++) {
-    const t = i / 6;
-    tankRoofPts.push([(1 - t) * 4.6, 26.5 + t * 2.2]);
-  }
-  add('wornMetal', { ...latheGeom(tankRoofPts, 16), matrix: matTranslate(wx, wy, wz) });
+  add('prairieIron', { ...latheGeom([[0.42, 0], [0.42, 20.0]], 10), matrix: matTranslate(wx, wy, wz) });
+  add('prairieSteel', { ...latheGeom([[0.0, 20.0], [3.7, 20.1], [4.4, 21.2], [4.65, 23.0], [4.55, 25.2], [4.2, 26.6], [3.6, 27.1]], 24), matrix: matTranslate(wx, wy, wz) });
+  add('prairieRust', { ...latheGeom([[4.7, 27.0], [3.0, 28.4], [1.2, 29.4], [0.0, 29.9]], 24), matrix: matTranslate(wx, wy, wz) });
+  for (const hy of [21.4, 23.6, 25.7]) add('prairieIron', cylinderPart(4.68, 4.68, 0.1, 24, wx, wy + hy, wz));
+  add('prairieIron', { ...latheGeom([[4.2, 19.95], [5.3, 19.95]], 24), matrix: matTranslate(wx, wy, wz) });
+  for (let a = 0; a < 24; a++) { const t = a / 24 * 6.28318; legTube(add, 'prairieIron', [wx + Math.cos(t) * 5.3, wy + 19.95, wz + Math.sin(t) * 5.3], [wx + Math.cos(t) * 5.3, wy + 20.95, wz + Math.sin(t) * 5.3], 0.03); }
+  legTube(add, 'prairieIron', [wx - 4.0, wy + 0.2, wz - 4.2], [wx - 4.0, wy + 21.2, wz - 5.1], 0.05);
+  legTube(add, 'prairieIron', [wx - 3.4, wy + 0.2, wz - 4.2], [wx - 3.4, wy + 21.2, wz - 5.1], 0.05);
+  for (let y = 0.8; y < 21; y += 0.5) add('prairieIron', boxPart(wx - 3.7, wy + y, wz - 4.2 - 0.9 * y / 21, 0.65, 0.04, 0.04));
   Dt(wx - 4.2, wz - 4.2, wx + 4.2, wz + 4.2, wy, wy + 29);
-
-  // Painted washed-away town name on tank face
   paintedSurface(4.2, 1.8, (ctx) => {
-    ctx.fillStyle = '#8a8880';
-    ctx.fillRect(0, 0, 512, 256);
-    ctx.fillStyle = 'rgba(50, 48, 44, 0.55)';
-    ctx.font = 'bold 54px Georgia,serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('PRAIRIE VIEW', 256, 120);
-    ctx.font = '24px Georgia,serif';
-    ctx.fillText('MUNICIPAL WATER', 256, 165);
-    // Weathering streaks
-    ctx.fillStyle = 'rgba(120, 115, 100, 0.35)';
-    for (let i = 0; i < 20; i++) {
-      ctx.fillRect(i * 26 + 10, 0, 6 + (i % 5) * 2, 256);
-    }
-  }, matTranslate(wx, wy + 23.5, wz - 4.52));
+    ctx.clearRect(0, 0, 512, 256);
+    ctx.fillStyle = 'rgba(205,200,186,0.5)'; ctx.font = 'bold 54px Georgia,serif'; ctx.textAlign = 'center';
+    ctx.fillText('PRAIRIE VIEW', 256, 118); ctx.font = '24px Georgia,serif'; ctx.fillText('MUNICIPAL WATER', 256, 165);
+    ctx.fillStyle = 'rgba(40,36,30,0.55)'; for (let i = 0; i < 20; i++) ctx.fillRect(i * 26 + 10, 0, 6 + (i % 5) * 2, 256);
+  }, matMul(matTranslate(wx, wy + 23.5, wz - 4.70), matRotY(Math.PI)), { transparent: true });
 
-  // -------------------------------------------------------------
-  // 4. Hay Stacks (x=55200, z=-35 and +60)
-  // -------------------------------------------------------------
+  // 4. Round bales in the stubble, one stack still under a ragged tarp
   for (const [hx, hz] of [[55200, -35], [55200, 60]]) {
     const hy = os(hx, hz);
-    // 5 round bales in pyramid (diam 1.7m, length 1.8m)
-    for (const [bx, bz, by] of [[-1.2, 0, 0.85], [1.2, 0, 0.85], [-0.6, 0, 2.3], [0.6, 0, 2.3], [0, 0, 3.6]]) {
-      add('plainsStraw', boxPart(hx + bx, hy + by, hz + bz, 1.7, 1.6, 1.8));
+    for (const [bx, by] of [[-1.9, 0.92], [0, 0.92], [1.9, 0.92], [-0.95, 2.6], [0.95, 2.6]]) {
+      add('prairieHay', { ...latheGeom([[0.0, -0.8], [0.92, -0.8], [0.92, 0.8], [0.0, 0.8]], 16), matrix: matMul(matTranslate(hx + bx, hy + by, hz), matRotX(Math.PI / 2)) });
     }
-    // Weathered dark grey tarp over top
-    add('rubber', boxPart(hx, hy + 2.6, hz, 3.4, 2.4, 2.2));
-    Dt(hx - 2.0, hz - 1.2, hx + 2.0, hz + 1.2, hy, hy + 4.0);
+    add('prairieDark', slab(hx + 0.5, hy + 3.7, hz, 3.6, 0.05, 2.2, 0.16));
+    Dt(hx - 3.0, hz - 1.2, hx + 3.0, hz + 1.2, hy, hy + 4.0);
   }
 
-  // -------------------------------------------------------------
-  // 5. Windmill & Stock Tank (x=57000, z=+95)
-  // -------------------------------------------------------------
+  // 5. Windmill & stock tank: lattice tower, platform, brake lever, galvanised tank
   const mx = 57000, mz = 95, my = os(mx, mz);
-  // 4-leg lattice tower (height 11m)
-  for (const dx of [-1.1, 1.1]) {
-    for (const dz of [-1.1, 1.1]) {
-      add('wornMetal', boxPart(mx + dx * 0.9, my + 5.5, mz + dz * 0.9, 0.12, 11.0, 0.12));
-    }
-  }
-  for (let h = 2.0; h <= 10.0; h += 2.2) {
-    add('wornMetal', boxPart(mx, my + h, mz - 0.9, 1.8, 0.08, 0.08));
-    add('wornMetal', boxPart(mx, my + h, mz + 0.9, 1.8, 0.08, 0.08));
-    add('wornMetal', boxPart(mx - 0.9, my + h, mz, 0.08, 0.08, 1.8));
-    add('wornMetal', boxPart(mx + 0.9, my + h, mz, 0.08, 0.08, 1.8));
-  }
-  // Brake lever on tower leg at y=1.3m
-  add('wornMetal', boxPart(mx + 0.95, my + 1.3, mz, 0.18, 0.45, 0.08));
-
-  // Circular galvanized stock tank (diam 4.2m, h 0.9m) at x=57000, z=93
+  latticeTower(add, 'prairieIron', mx, my, mz, 2.6, 0.9, 11.0, 4, 0.06);
+  add('prairieIron', boxPart(mx, my + 11.0, mz, 1.5, 0.12, 1.5));
+  add('prairieIron', boxPart(mx + 0.95, my + 1.3, mz, 0.18, 0.45, 0.08));
   const tankGround = os(mx, mz - 2.0);
-  // Tank rim
-  add('wornMetal', { ...latheGeom([[2.1, 0], [2.1, 0.9], [1.98, 0.9], [1.98, 0]], 16), matrix: matTranslate(mx, tankGround, mz - 2.0) });
-  // Dark algae water disc
+  add('prairieTin', { ...latheGeom([[2.1, 0], [2.1, 0.9], [1.98, 0.9], [1.98, 0]], 18), matrix: matTranslate(mx, tankGround, mz - 2.0) });
   add('wetAsphalt', boxPart(mx, tankGround + 0.78, mz - 2.0, 3.9, 0.04, 3.9));
   Dt(mx - 1.2, mz - 1.2, mx + 1.2, mz + 1.2, my, my + 12);
   Dt(mx - 2.2, mz - 4.2, mx + 2.2, mz + 0.2, tankGround, tankGround + 1.0);
@@ -12194,24 +12680,6 @@ function makeCylinderParts(rTop, rBot, height, segs, role, opts = {}) {
       add('wornMetal', boxPart(cx, cy + 0.92, cz, 3.4, 0.08, 0.46));
       Dt(cx - 1.7, cz - 0.25, cx + 1.7, cz + 0.25, cy, cy + 1.1);
     }
-  }
-
-  // -------------------------------------------------------------
-  // 8. Shelterbelts (Cottonwoods at z=-300 and z=+260)
-  // -------------------------------------------------------------
-  // West shelterbelt: x=58000..59600, z=-300
-  for (let tx = 58000; tx <= 59600; tx += 65) {
-    const tz = -300 + (tx % 3) * 14;
-    const ty = os(tx, tz);
-    add('darkWood', boxPart(tx, ty + 7.5, tz, 0.9, 15.0, 0.9));
-    add('cottonwoodFoliage', boxPart(tx, ty + 15.0, tz, 14.0, 10.0, 14.0));
-  }
-  // East shelterbelt: x=66500..68500, z=+260
-  for (let tx = 66500; tx <= 68500; tx += 70) {
-    const tz = 260 + (tx % 3) * 12;
-    const ty = os(tx, tz);
-    add('darkWood', boxPart(tx, ty + 7.5, tz, 0.9, 15.0, 0.9));
-    add('cottonwoodFoliage', boxPart(tx, ty + 15.0, tz, 14.0, 10.0, 14.0));
   }
 
   // Add all set pieces to plainsGroup
@@ -12493,31 +12961,69 @@ hungSpeakerOnCoupe = (function() {
 // GREAT PLAINS: INSTANCED GRASS TUFTS & ROADSIDE FENCES
 // ===========================================================================
 
-const PLAINS_GRASS_NEAR_N = 3600;
-const PLAINS_GRASS_MID_N = 2400;
+// Value noise on the same integer-lattice hash as the ground shader (gn), so patches line up with what is painted.
+function plainsGn(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = plainsHash(ix, iy), b = plainsHash(ix + 1, iy), c = plainsHash(ix, iy + 1), d = plainsHash(ix + 1, iy + 1);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+const plainsSmooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-// A tuft of thin tapered blades, fanned and leaning, with vertex colours from dark olive at the root to
-// straw gold at the tip. Normals point up so the Lambert material lights it like the ground (without
-// normals every tuft rendered black).
-function makeGrassGeometry() {
+// A tuft of tapered, curling blades. Vertex colour is only a brightness ramp (dark root to bright tip); the hue comes from the
+// ground's own wild-prairie palette in the vertex shader, so tufts melt into the field they stand in.
+function makeGrassTuftGeometry(blades, hMin, hMax, width, seedBase) {
   const geo = new It();
   const pos = [], col = [], nor = [], idx = [];
-  const blades = 9;
   for (let i = 0; i < blades; i++) {
-    const a = i * 2.399963 + .4;                 // golden-angle fan
-    const r = .05 + .16 * ((i * 37 % 9) / 9);    // root offset from the tuft centre
-    const h = .38 + .52 * ((i * 53 % 7) / 7);    // 0.38 to 0.90 m
-    const lean = .10 + .22 * ((i * 29 % 5) / 5);
-    const w = .045;
-    const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
-    const tx = cx + Math.cos(a) * lean * h, tz = cz + Math.sin(a) * lean * h;
-    const px = -Math.sin(a) * w, pz = Math.cos(a) * w;
+    const a = i * 2.399963 + 0.4 + seedBase;
+    const r = 0.03 + 0.17 * ((i * 37 % 9) / 9);
+    const h = hMin + (hMax - hMin) * ((i * 53 % 7) / 7);
+    const lean = 0.10 + 0.26 * ((i * 29 % 5) / 5);
+    const w = width * (0.8 + 0.4 * ((i * 17 % 4) / 4));
+    const dx = Math.cos(a), dz = Math.sin(a);
+    const cx = dx * r, cz = dz * r;
+    const mx = cx + dx * lean * h * 0.35, mz = cz + dz * lean * h * 0.35;
+    const tx = cx + dx * lean * h * 1.25, tz = cz + dz * lean * h * 1.25;
+    const px = -dz, pz = dx;
     const base = pos.length / 3;
-    pos.push(cx - px, 0, cz - pz,  cx + px, 0, cz + pz,  tx, h, tz);
-    const tipMix = .85 + .15 * ((i * 17 % 4) / 4);
-    col.push(.15, .18, .09,  .15, .18, .09,  .56 * tipMix, .49 * tipMix, .28 * tipMix);
-    nor.push(0, 1, 0,  0, 1, 0,  0, 1, 0);
-    idx.push(base, base + 1, base + 2);
+    pos.push(cx - px * w, 0, cz - pz * w, cx + px * w, 0, cz + pz * w,
+      mx - px * w * 0.72, h * 0.55, mz - pz * w * 0.72, mx + px * w * 0.72, h * 0.55, mz + pz * w * 0.72,
+      tx, h, tz);
+    const t = 0.88 + 0.12 * ((i * 17 % 4) / 4);
+    col.push(0.16, 0.17, 0.16, 0.16, 0.17, 0.16, 0.58 * t, 0.60 * t, 0.56 * t, 0.58 * t, 0.60 * t, 0.56 * t, 0.92 * t, 0.94 * t, 0.84 * t);
+    for (let k = 0; k < 5; k++) nor.push(0, 1, 0);
+    idx.push(base, base + 1, base + 2, base + 1, base + 3, base + 2, base + 2, base + 3, base + 4);
+  }
+  geo.setAttribute('position', new Et(new Float32Array(pos), 3));
+  geo.setAttribute('color', new Et(new Float32Array(col), 3));
+  geo.setAttribute('normal', new Et(new Float32Array(nor), 3));
+  geo.setIndex(idx);
+  return geo;
+}
+// A wildflower: a leaning stalk with a ring of petals round a dark eye. Petal vertices are pure white in the colour
+// attribute so the shader knows to tint them; the eye and stalk keep their own colours.
+function makeForbGeometry() {
+  const geo = new It();
+  const pos = [], col = [], nor = [], idx = [];
+  const push = (x, y, z, r, g, b) => { pos.push(x, y, z); col.push(r, g, b); nor.push(0, 1, 0); return pos.length / 3 - 1; };
+  const H = 1.0, lean = 0.07;
+  const s0 = push(-0.012, 0, 0, 0.16, 0.22, 0.09), s1 = push(0.012, 0, 0, 0.16, 0.22, 0.09);
+  const s2 = push(-0.008, H * 0.55, 0.02, 0.24, 0.32, 0.12), s3 = push(0.008, H * 0.55, 0.02, 0.24, 0.32, 0.12);
+  const s4 = push(0, H, lean, 0.30, 0.38, 0.14);
+  idx.push(s0, s1, s2, s1, s3, s2, s2, s3, s4);
+  const hy = H + 0.012, hz = lean;
+  const eye = push(0, hy + 0.012, hz, 0.20, 0.12, 0.07);
+  const petals = 9;
+  for (let p = 0; p < petals; p++) {
+    const a0 = (p / petals) * 6.28318, a1 = ((p + 0.5) / petals) * 6.28318, a2 = ((p + 1) / petals) * 6.28318;
+    const rIn = 0.030, rOut = 0.115;
+    const i0 = push(Math.cos(a0) * rIn, hy, hz + Math.sin(a0) * rIn, 1, 1, 1);
+    const i1 = push(Math.cos(a1) * rOut, hy - 0.035, hz + Math.sin(a1) * rOut, 1, 1, 1);
+    const i2 = push(Math.cos(a2) * rIn, hy, hz + Math.sin(a2) * rIn, 1, 1, 1);
+    idx.push(i0, i1, i2);
+    idx.push(i0, i2, eye);
   }
   geo.setAttribute('position', new Et(new Float32Array(pos), 3));
   geo.setAttribute('color', new Et(new Float32Array(col), 3));
@@ -12526,15 +13032,439 @@ function makeGrassGeometry() {
   return geo;
 }
 
-const grassMat = new Lm({ vertexColors: true, side: 2 });
-const plainsNearGrassMesh = new ar(makeGrassGeometry(), grassMat, PLAINS_GRASS_NEAR_N);
-const plainsMidGrassMesh = new ar(makeGrassGeometry(), grassMat, PLAINS_GRASS_MID_N);
-plainsNearGrassMesh.name = 'Plains near grass tufts';
-plainsMidGrassMesh.name = 'Plains mid grass tufts';
-plainsNearGrassMesh.frustumCulled = false;
-plainsMidGrassMesh.frustumCulled = false;
-Nt.add(plainsNearGrassMesh);
-Nt.add(plainsMidGrassMesh);
+// Lambert material, bent by the same gust field that rides across the ground shader, tinted from the ground palette.
+function makeGrassMaterial(opts) {
+  const mat = new Lm({});
+  mat.vertexColors = true;   // Lm ignores constructor options other than colour, so the flags are set directly
+  mat.side = 2;
+  mat.flatShading = false;
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uTime = terrainTimeUniform;
+    shader.uniforms.uStormWind = plainsStormWindUniform;
+    shader.uniforms.sunDir = Xm.material.uniforms.sunDir;
+    shader.uniforms.uNight = Xm.material.uniforms.uNight;
+    shader.uniforms.uDay = Xm.material.uniforms.uDay;
+    shader.uniforms.uFadeOut = { value: new P(opts.out0, opts.out1, 0) };
+    shader.uniforms.uFadeIn = { value: new P(opts.in0, opts.in1, 0) };
+    shader.uniforms.uForb = { value: opts.forb ? 1 : 0 };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>
+        uniform float uTime; uniform float uStormWind; uniform vec3 uFadeOut; uniform vec3 uFadeIn; uniform float uForb;
+        varying vec3 vWorldP; varying float vTip;
+        ${PLAINS_NOISE_GLSL}`)
+      .replace('#include <color_vertex>', `#include <color_vertex>
+        {
+          vec3 r0 = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
+          float sd = instanceMatrix[0][3];
+          float pk = instanceMatrix[1][3];
+          float qa = floor(pk / 64.0) / 63.0, qb = mod(pk, 64.0) / 63.0;
+          vec3 w = mix(vec3(0.64, 0.51, 0.255), vec3(0.26, 0.335, 0.125), qa);
+          w = mix(w, vec3(0.50, 0.325, 0.165), qb * 0.55);
+          w *= 0.74 + 0.52 * instanceMatrix[2][3];
+          float rnd = fract(sd * 13.37);
+          if (uForb > 0.5) {
+            float petal = step(0.97, min(color.r, min(color.g, color.b)));
+            float cp = fract(sd * 91.7);
+            vec3 pc = cp < 0.34 ? vec3(0.62, 0.40, 0.74) : (cp < 0.62 ? vec3(0.96, 0.78, 0.18) : (cp < 0.82 ? vec3(0.93, 0.89, 0.78) : vec3(0.88, 0.34, 0.22)));
+            vColor = mix(color.rgb * vec3(1.15, 1.25, 0.8), pc, petal);
+          } else {
+            vColor = color.rgb * mix(w, w * vec3(1.20, 0.96, 0.70), rnd * 0.5) * 1.15;
+          }
+          vTip = color.g;
+        }`)
+      .replace('#include <project_vertex>', `
+        vec4 gp = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          gp = instanceMatrix * gp;
+          gp.w = 1.0;   // the per-instance seed lives in the matrix w-row; it must not leak into w
+        #endif
+        vec3 root = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
+        float seed = instanceMatrix[0][3];
+        float hgt = max(gp.y - root.y, 0.0);
+        float G = plainsGustG(root.xz, uTime, uStormWind);
+        float fl = sin(uTime * (1.7 + seed * 1.6) + root.x * 0.9 + root.z * 0.7 + seed * 31.0);
+        float h01 = clamp(hgt / 0.9, 0.0, 1.0);
+        float lean = (0.05 + 0.42 * G) * h01 * h01;
+        vec2 wd = vec2(0.72, 0.69);
+        gp.xz += wd * (lean * 0.9 + 0.020 * fl * h01) + vec2(-wd.y, wd.x) * 0.035 * fl * h01;
+        gp.y -= lean * lean * hgt * 0.5;
+        float dc = length(root.xz - cameraPosition.xz);
+        float vis = (1.0 - smoothstep(uFadeOut.x, uFadeOut.y, dc)) * smoothstep(uFadeIn.x, uFadeIn.y, dc) * step(0.0, seed);
+        gp.xyz = root + (gp.xyz - root) * vis;
+        vWorldP = gp.xyz;
+        vec4 mvPosition = modelViewMatrix * gp;
+        gl_Position = projectionMatrix * mvPosition;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform vec3 sunDir; uniform float uNight; uniform float uDay;
+        varying vec3 vWorldP; varying float vTip;`)
+      .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
+        normal = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        {
+          vec3 vdG = vWorldP - cameraPosition;
+          float towardG = pow(max(dot(normalize(vdG.xz + 1e-5), normalize(sunDir.xz + 1e-5)), 0.0), 2.5);
+          float lowSunG = (1.0 - uNight) * (1.0 - uDay);
+          totalEmissiveRadiance += vColor * (lowSunG * towardG * 0.45 * smoothstep(0.25, 1.0, vTip) + 0.05 * (1.0 - uNight * 0.8));
+        }`);
+  };
+  return mat;
+}
+
+// Cell-addressed instance layers. Every world cell owns a fixed slot range (torus addressing), so crossing a cell only rewrites
+// the row of cells that just came into range; a U-turn restores exactly the same field because content is a pure function of the cell.
+function makeGrassLayer(name, geo, mat, cell, N, K, R, fill) {
+  const mesh = new ar(geo, mat, N * N * K);
+  mesh.name = name;
+  mesh.frustumCulled = false;
+  const src = new Float32Array(N * N * K * 16);
+  for (let i = 0; i < N * N * K; i++) { src[i * 16 + 3] = -1; src[i * 16 + 15] = 1; }
+  mesh.count = 0;
+  Nt.add(mesh);
+  return { mesh, src, cell, N, K, R, fill, ownX: new Int32Array(N * N).fill(1e9), ownZ: new Int32Array(N * N).fill(1e9), lastCx: 1e9, lastCz: 1e9 };
+}
+function plainsInKeepOut(gx, gz) {
+  if (gx >= 64490 && gx <= 64710 && gz <= -6 && gz >= -216) return true;
+  for (const [x0, z0, x1, z1] of plainsPads) if (gx >= x0 - 2.5 && gx <= x1 + 2.5 && gz >= z0 - 2.5 && gz <= z1 + 2.5) return true;
+  return false;
+}
+function plainsWildPack(x, z) {
+  const lowN = plainsGn(x * 0.0025 + 3.7, z * 0.0025 + 1.9), midN = plainsGn(x * 0.011 + 8.1, z * 0.011 + 2.2), hiN = plainsGn(x * 0.045 + 1.3, z * 0.045 + 6.4);
+  const a = plainsSmooth(0.30, 0.70, lowN * 0.7 + midN * 0.5 - 0.15), b = plainsSmooth(0.55, 0.85, midN * 0.6 + hiN * 0.45);
+  return [Math.floor(a * 63) * 64 + Math.floor(b * 63), hiN];
+}
+function writeInstance(arr, o, gx, gy, gz, rot, sx, sy, seed, pk, hi) {
+  const c = Math.cos(rot), s = Math.sin(rot);
+  arr[o] = sx * c; arr[o + 1] = 0; arr[o + 2] = -sx * s; arr[o + 3] = seed;
+  arr[o + 4] = 0; arr[o + 5] = sy; arr[o + 6] = 0; arr[o + 7] = pk || 0;
+  arr[o + 8] = sx * s; arr[o + 9] = 0; arr[o + 10] = sx * c; arr[o + 11] = hi || 0;
+  arr[o + 12] = gx; arr[o + 13] = gy; arr[o + 14] = gz; arr[o + 15] = 1;
+}
+function killInstance(arr, o) { arr[o + 3] = -1; arr[o] = arr[o + 5] = arr[o + 10] = 0; }
+// Tufts: dense on the verge and the wild margin of the road corridor, thinning out where the farm mosaic takes over.
+function fillTuftCell(L, ix, iz, slotBase) {
+  const arr = L.src;
+  for (let k = 0; k < L.K; k++) {
+    const o = (slotBase + k) * 16;
+    const hx = plainsHash(ix * 977 + k * 13, iz * 389 + 5), hz = plainsHash(ix * 211 + 7, iz * 733 + k * 29);
+    const gx = (ix + hx) * L.cell, gz = (iz + hz) * L.cell, az = Math.abs(gz);
+    const hd = plainsHash(ix * 17 + k * 3, iz * 91 + k * 7 + 2);
+    const ramp = plainsSmooth(4600, 42000, gx);
+    let keep = 1;
+    if (az < 5.4) keep = 0;
+    else if (az < 13) keep = 0.15 + 0.85 * plainsSmooth(5.4, 13, az);
+    if (az > 52) keep *= 1 - plainsSmooth(52, 82, az);
+    keep *= ramp * ramp * (3 - 2 * ramp) * 0.9 + 0.1 * ramp;
+    if (hd > keep || plainsInKeepOut(gx, gz)) { killInstance(arr, o); continue; }
+    const hs = plainsHash(ix * 61 + k, iz * 53 + 11);
+    const sc = (0.75 + 0.55 * plainsHash(ix * 7 + k * 5, iz * 3 + 1)) * L.scale;
+    const wp = plainsWildPack(gx, gz);
+    writeInstance(arr, o, gx, os(gx, gz), gz, hs * 6.2832, sc, sc * (0.8 + 0.6 * plainsHash(ix + k * 11, iz * 5)), hs, wp[0], wp[1]);
+  }
+}
+function fillForbCell(L, ix, iz, slotBase) {
+  const arr = L.src;
+  for (let k = 0; k < L.K; k++) {
+    const o = (slotBase + k) * 16;
+    const hx = plainsHash(ix * 631 + k * 19, iz * 277 + 9), hz = plainsHash(ix * 149 + 3, iz * 541 + k * 23);
+    const gx = (ix + hx) * L.cell, gz = (iz + hz) * L.cell, az = Math.abs(gz);
+    const patch = plainsSmooth(0.52, 0.80, plainsGn(gx * 0.035 + 3, gz * 0.035 + 3));
+    const hd = plainsHash(ix * 47 + k * 3, iz * 83 + k * 5 + 1);
+    const ramp = plainsSmooth(4600, 42000, gx);
+    let keep = (0.07 + 0.75 * patch) * ramp;
+    if (az < 6) keep = 0; else if (az > 48) keep *= 1 - plainsSmooth(48, 70, az);
+    if (hd > keep || plainsInKeepOut(gx, gz)) { killInstance(arr, o); continue; }
+    const hs = plainsHash(ix * 71 + k, iz * 59 + 13);
+    const sc = 0.65 + 0.7 * plainsHash(ix * 9 + k * 7, iz * 11 + 2);
+    writeInstance(arr, o, gx, os(gx, gz), gz, hs * 6.2832, sc, sc, hs);
+  }
+}
+function updateGrassLayer(L, camX, camZ) {
+  const cx = Math.floor(camX / L.cell);
+  const zc = L.free ? camZ : Math.max(-82 + L.R, Math.min(82 - L.R, camZ));
+  const cz = Math.floor(zc / L.cell);
+  if (cx === L.lastCx && cz === L.lastCz) return;
+  L.lastCx = cx; L.lastCz = cz;
+  const half = L.N >> 1, N = L.N;
+  let changed = false;
+  for (let i = cx - half; i < cx - half + N; i++) {
+    for (let j = cz - half; j < cz - half + N; j++) {
+      const s = (((i % N) + N) % N) + N * (((j % N) + N) % N);
+      if (L.ownX[s] === i && L.ownZ[s] === j) continue;
+      L.fill(L, i, j, s * L.K);
+      L.ownX[s] = i; L.ownZ[s] = j; changed = true;
+    }
+  }
+  if (changed) compactGrassLayer(L);
+}
+function compactGrassLayer(L) {
+  const src = L.src, dst = L.mesh.instanceMatrix.array, total = L.N * L.N * L.K;
+  let n = 0;
+  for (let i = 0; i < total; i++) {
+    const o = i * 16;
+    if (src[o + 3] < 0) continue;
+    const d = n * 16;
+    for (let k = 0; k < 16; k++) dst[d + k] = src[o + k];
+    n++;
+  }
+  L.mesh.count = n;
+  L.mesh.instanceMatrix.needsUpdate = true;
+}
+const PLAINS_GRASS_NEAR = makeGrassLayer('Plains meadow (near)', makeGrassTuftGeometry(6, 0.32, 0.80, 0.024, 0.0),
+  makeGrassMaterial({ out0: 28, out1: 41, in0: -1, in1: 0 }), 6, 14, 200, 41, fillTuftCell);
+PLAINS_GRASS_NEAR.scale = 1.0;
+const PLAINS_GRASS_MID = makeGrassLayer('Plains meadow (mid)', makeGrassTuftGeometry(5, 0.50, 1.05, 0.050, 1.7),
+  makeGrassMaterial({ out0: 100, out1: 128, in0: 26, in1: 42 }), 20, 13, 220, 130, fillTuftCell);
+PLAINS_GRASS_MID.scale = 1.35;
+const PLAINS_FORBS = makeGrassLayer('Plains wildflowers', makeForbGeometry(),
+  makeGrassMaterial({ out0: 52, out1: 72, in0: -1, in1: 0, forb: true }), 10, 10, 34, 50, fillForbCell);
+const grassMat = PLAINS_GRASS_NEAR.mesh.material;
+const plainsGrassLayers = [PLAINS_GRASS_NEAR, PLAINS_GRASS_MID, PLAINS_FORBS];
+
+// ---------------------------------------------------------------------------
+// Trees: cottonwoods and cedar windbreaks, shaped (not boxes), swaying with the gust field.
+// ---------------------------------------------------------------------------
+function treeBuilder() {
+  const pos = [], col = [], nor = [], idx = [];
+  const B = {
+    pos, col, nor, idx,
+    vert(x, y, z, nx, ny, nz, r, g, b) { pos.push(x, y, z); nor.push(nx, ny, nz); col.push(r, g, b); return pos.length / 3 - 1; },
+    // rough icosphere blob (20 faces, radially jittered), smooth radial normals, brightness from the up-facing side
+    blob(cx, cy, cz, rx, ry, rz, base, seed, dark) {
+      const t = (1 + Math.sqrt(5)) / 2;
+      const V = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]];
+      const F = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+      const base0 = pos.length / 3;
+      V.forEach((v, i) => {
+        const l = Math.hypot(v[0], v[1], v[2]);
+        const nx = v[0] / l, ny = v[1] / l, nz = v[2] / l;
+        const j = 0.82 + 0.34 * plainsHash(seed * 17 + i, seed * 5 + 3);
+        const br = (dark + (1 - dark) * (ny * 0.5 + 0.5)) * (0.86 + 0.28 * plainsHash(seed * 7 + i, i * 3 + 1));
+        B.vert(cx + nx * rx * j, cy + ny * ry * j, cz + nz * rz * j, nx, ny * 0.8 + 0.25, nz, base[0] * br, base[1] * br, base[2] * br);
+      });
+      F.forEach(f => idx.push(base0 + f[0], base0 + f[1], base0 + f[2]));
+    },
+    trunk(h, r0, r1, segs, c) {
+      const b0 = pos.length / 3;
+      for (let s = 0; s < segs; s++) {
+        const a = s / segs * 6.28318, ca = Math.cos(a), sa = Math.sin(a);
+        B.vert(ca * r0, 0, sa * r0, ca, 0, sa, c[0] * 0.8, c[1] * 0.8, c[2] * 0.8);
+        B.vert(ca * r1, h, sa * r1, ca, 0, sa, c[0], c[1], c[2]);
+      }
+      for (let s = 0; s < segs; s++) { const n = (s + 1) % segs; idx.push(b0 + s * 2, b0 + s * 2 + 1, b0 + n * 2, b0 + n * 2, b0 + s * 2 + 1, b0 + n * 2 + 1); }
+    },
+    limb(x0, y0, z0, x1, y1, z1, r, c) {
+      const b0 = pos.length / 3;
+      const dx = x1 - x0, dz = z1 - z0, l = Math.hypot(dx, dz) || 1, px = -dz / l * r, pz = dx / l * r;
+      B.vert(x0 - px, y0, z0 - pz, 0, 1, 0, c[0], c[1], c[2]); B.vert(x0 + px, y0, z0 + pz, 0, 1, 0, c[0], c[1], c[2]);
+      B.vert(x1, y1, z1, 0, 1, 0, c[0], c[1], c[2]);
+      idx.push(b0, b0 + 1, b0 + 2, b0 + 1, b0, b0 + 2);
+    },
+    cone(cy, h, r, segs, base, dark, seed) {
+      const b0 = pos.length / 3;
+      const tip = B.vert(0, cy + h, 0, 0, 1, 0, base[0], base[1], base[2]);
+      for (let s = 0; s < segs; s++) {
+        const a = s / segs * 6.28318, ca = Math.cos(a), sa = Math.sin(a);
+        const rr = r * (0.8 + 0.4 * plainsHash(seed * 13 + s, cy * 3 | 0));
+        B.vert(ca * rr, cy, sa * rr, ca * 0.8, 0.5, sa * 0.8, base[0] * dark, base[1] * dark, base[2] * dark);
+      }
+      for (let s = 0; s < segs; s++) idx.push(tip, b0 + 1 + s, b0 + 1 + (s + 1) % segs);
+    },
+    geometry() {
+      const g = new It();
+      g.setAttribute('position', new Et(new Float32Array(pos), 3));
+      g.setAttribute('color', new Et(new Float32Array(col), 3));
+      g.setAttribute('normal', new Et(new Float32Array(nor), 3));
+      g.setIndex(idx);
+      return g;
+    }
+  };
+  return B;
+}
+function makeCottonwoodGeometry() {
+  const B = treeBuilder(), bark = [0.30, 0.22, 0.15], leaf = [0.34, 0.47, 0.17];
+  B.trunk(7.0, 0.50, 0.26, 7, bark);
+  B.limb(0, 5.0, 0, -2.6, 9.5, 0.6, 0.18, bark); B.limb(0, 5.5, 0, 2.5, 10.0, -1.0, 0.18, bark); B.limb(0, 6.0, 0, 0.4, 11.0, 2.4, 0.16, bark);
+  // a broad, rounded, slightly ragged crown built from overlapping leaf masses
+  const blobs = [[0, 12.2, 0, 4.8, 3.6], [-4.0, 10.2, 0.8, 3.6, 2.8], [4.2, 10.6, -1.0, 3.7, 2.9], [0.6, 9.6, 3.9, 3.5, 2.7], [-0.8, 10.0, -3.9, 3.5, 2.8],
+    [-2.4, 13.6, -1.4, 3.1, 2.5], [2.6, 14.0, 1.6, 3.1, 2.5], [0.4, 15.4, 0.2, 2.7, 2.1], [-5.2, 12.0, -1.6, 2.7, 2.3], [5.4, 12.4, 1.8, 2.7, 2.3], [2.0, 8.7, -2.6, 2.6, 2.0], [-3.0, 8.9, 2.4, 2.5, 2.0]];
+  blobs.forEach((b, i) => B.blob(b[0], b[1], b[2], b[3], b[4], b[3] * 0.95, leaf, i + 1, 0.30));
+  return B.geometry();
+}
+function makeCedarGeometry() {
+  const B = treeBuilder(), bark = [0.26, 0.18, 0.13], leaf = [0.14, 0.26, 0.15];
+  B.trunk(1.6, 0.30, 0.22, 5, bark);
+  const tiers = [[0.8, 4.4, 3.0], [3.0, 4.2, 2.5], [5.0, 4.0, 2.0], [6.9, 3.6, 1.5], [8.6, 3.2, 1.0]];
+  tiers.forEach((t, i) => B.cone(t[0], t[1], t[2], 9, leaf, 0.34, i + 7));
+  return B.geometry();
+}
+function makeTreeMaterial() {
+  const mat = new Lm({});
+  mat.vertexColors = true; mat.side = 2; mat.flatShading = false;
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.uTime = terrainTimeUniform;
+    shader.uniforms.uStormWind = plainsStormWindUniform;
+    shader.uniforms.sunDir = Xm.material.uniforms.sunDir;
+    shader.uniforms.uNight = Xm.material.uniforms.uNight;
+    shader.uniforms.uDay = Xm.material.uniforms.uDay;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>
+        uniform float uTime; uniform float uStormWind;
+        varying vec3 vWorldP; varying float vTip;
+        ${PLAINS_NOISE_GLSL}`)
+      .replace('#include <color_vertex>', `#include <color_vertex>
+        {
+          float sd = instanceMatrix[0][3];
+          float rnd = fract(sd * 13.37);
+          float foliage = step(color.r * 1.05, color.g);
+          vec3 tint = mix(vec3(1.0), mix(vec3(1.22, 1.08, 0.70), vec3(0.88, 1.0, 0.92), fract(sd * 5.1)), rnd * foliage);
+          vColor = color.rgb * tint;
+          vTip = foliage;
+        }`)
+      .replace('#include <project_vertex>', `
+        vec4 gp = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          gp = instanceMatrix * gp;
+          gp.w = 1.0;   // the per-instance seed lives in the matrix w-row; it must not leak into w
+        #endif
+        vec3 root = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
+        float seed = instanceMatrix[0][3];
+        float hgt = max(gp.y - root.y, 0.0);
+        float G = plainsGustG(root.xz, uTime, uStormWind);
+        float fl = sin(uTime * (1.1 + seed) + gp.x * 0.35 + gp.z * 0.3 + seed * 17.0);
+        float h01 = clamp(hgt / 15.0, 0.0, 1.0);
+        gp.xz += vec2(0.72, 0.69) * (0.10 + 0.55 * G) * h01 * h01 * 1.4 + vec2(-0.69, 0.72) * 0.18 * fl * h01 * h01;
+        float dc = length(root.xz - cameraPosition.xz);
+        float vis = (1.0 - smoothstep(2000.0, 2350.0, dc)) * step(0.0, seed);
+        gp.xyz = root + (gp.xyz - root) * vis;
+        vWorldP = gp.xyz;
+        vec4 mvPosition = modelViewMatrix * gp;
+        gl_Position = projectionMatrix * mvPosition;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform vec3 sunDir; uniform float uNight; uniform float uDay;
+        varying vec3 vWorldP; varying float vTip;`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        {
+          vec3 vdG = vWorldP - cameraPosition;
+          float towardG = pow(max(dot(normalize(vdG.xz + 1e-5), normalize(sunDir.xz + 1e-5)), 0.0), 2.0);
+          totalEmissiveRadiance += vColor * vTip * ((1.0 - uNight) * (1.0 - uDay) * towardG * 0.5 + 0.07 * (1.0 - uNight));
+        }`);
+  };
+  return mat;
+}
+// Rows of trees follow the survey grid: shelterbelts along some parcel edges, as on a real plain.
+function fillTreeCell(L, ix, iz, slotBase) {
+  const arr = L.src, S = PLAINS_PARCEL;
+  const rowZ = plainsHash(ix * 3 + 1, iz * 5 + 2) < 0.34, rowX = plainsHash(ix * 7 + 3, iz * 3 + 9) < 0.20;
+  const ramp = plainsSmooth(44000, 48000, (ix + 0.5) * S);
+  for (let k = 0; k < L.K; k++) {
+    const o = (slotBase + k) * 16;
+    const second = k >= L.K / 2, kk = second ? k - L.K / 2 : k, n = L.K / 2;
+    let gx, gz;
+    const jx = plainsHash(ix * 41 + k * 3, iz * 19 + 4), jz = plainsHash(ix * 23 + 9, iz * 53 + k * 5);
+    if (!second) { if (!rowZ) { killInstance(arr, o); continue; } gx = (ix + (kk + jx * 0.7) / n) * S; gz = iz * S + (jz - 0.5) * 10; }
+    else { if (!rowX) { killInstance(arr, o); continue; } gz = (iz + (kk + jz * 0.7) / n) * S; gx = ix * S + (jx - 0.5) * 10; }
+    const kind = plainsHash(ix * 5 + k, iz * 9 + 77) < 0.30 ? 1 : 0;
+    const gap = plainsHash(ix * 31 + k * 7, iz * 13 + 2);
+    if (kind !== L.kind || gap < 0.14 || ramp < gap || Math.abs(gz) < 46 || plainsInKeepOut(gx, gz)) { killInstance(arr, o); continue; }
+    const hs = plainsHash(ix * 83 + k, iz * 29 + 5);
+    const sc = (kind ? 0.8 + 0.6 * hs : 0.75 + 0.7 * hs);
+    writeInstance(arr, o, gx, os(gx, gz) - 0.2, gz, hs * 6.2832, sc, sc * (0.9 + 0.2 * plainsHash(ix + k, iz)), hs);
+  }
+}
+const treeMat = makeTreeMaterial();
+const PLAINS_TREES_BROAD = makeGrassLayer('Plains cottonwoods', makeCottonwoodGeometry(), treeMat, PLAINS_PARCEL, 11, 40, 2200, fillTreeCell);
+PLAINS_TREES_BROAD.kind = 0;
+const PLAINS_TREES_CEDAR = makeGrassLayer('Plains cedars', makeCedarGeometry(), treeMat, PLAINS_PARCEL, 11, 40, 2200, fillTreeCell);
+PLAINS_TREES_CEDAR.kind = 1;
+// The tree window is centred on the camera in both axes, unlike the roadside meadow, which is pinned to the corridor.
+PLAINS_TREES_BROAD.free = PLAINS_TREES_CEDAR.free = true;
+plainsGrassLayers.push(PLAINS_TREES_BROAD, PLAINS_TREES_CEDAR);
+// ---- farmsteads at the ends of the farm lanes: dark, still, long abandoned ----
+const plainsFarmParts = {}, plainsFarmAdd = (role, p) => (plainsFarmParts[role] = plainsFarmParts[role] || []).push(p);
+const PLAINS_FARMS = [];
+function buildFarmstead(x, z, side, seed) {
+  const add = plainsFarmAdd;
+  const W = (lx, lz) => [x + lx, z + side * lz];               // local frame: +lz is away from the road
+  const gy = os(x, z);
+  const place = (lx, lz) => { const p = W(lx, lz); return [p[0], os(p[0], p[1]), p[1]]; };
+  // farmhouse
+  const h = place(-15, -4), tall = seed > 0.7;
+  gabledBuilding(add, seed < 0.55 ? 'prairieWhite' : 'prairieGrey', 'prairieTin', h[0], h[1], h[2], 8.2, 7.0, tall ? 6.2 : 3.4, tall ? 3.2 : 2.6, true, 0.5);
+  if (tall) add('prairieGrey', boxPart(h[0] + 5.2, h[1] + 1.4, h[2], 2.4, 2.8, 5.0));
+  add('prairieConcrete', boxPart(h[0] - 2.2, h[1] + 7.2, h[2] + 1.0, 0.7, 2.4, 0.7));
+  for (const wx of [-2.6, 2.6]) for (const wy of tall ? [1.7, 4.4] : [1.7]) {
+    add('prairieDark', boxPart(h[0] + wx, h[1] + wy, h[2] - 3.52 * side, 1.0, 1.4, 0.06));
+    add('prairieWhite', boxPart(h[0] + wx, h[1] + wy, h[2] - 3.50 * side, 1.3, 1.7, 0.05));
+  }
+  add('prairieDark', boxPart(h[0], h[1] + 1.1, h[2] - 3.52 * side, 1.0, 2.2, 0.06));
+  Dt(h[0] - 4.3, h[2] - 3.7, h[0] + 4.3, h[2] + 3.7, h[1], h[1] + 9);
+  // barn
+  const b = place(16, 5), bw = 12, bd = 9, wallH = 4.2;
+  add('prairieBarn', boxPart(b[0], b[1] + wallH / 2, b[2], bw, wallH, bd));
+  for (const s of [-1, 1]) {
+    add('prairieTin', slab(b[0] + s * bw * 0.275, b[1] + wallH + 1.25, b[2], 3.1, 0.1, bd + 1.0, -s * 0.97, 0));
+    add('prairieTin', slab(b[0] + s * bw * 0.10, b[1] + wallH + 3.55, b[2], 3.6, 0.1, bd + 1.0, -s * 0.42, 0));
+  }
+  const gable = zz => [[b[0] - bw / 2, b[1] + wallH, zz], [b[0] + bw / 2, b[1] + wallH, zz], [b[0] + bw * 0.38, b[1] + wallH + 2.3, zz], [b[0] - bw * 0.38, b[1] + wallH + 2.3, zz], [b[0], b[1] + wallH + 4.1, zz]];
+  for (const zz of [b[2] - bd / 2, b[2] + bd / 2]) { const g = gable(zz); add('prairieBarn', trisPart([[g[0], g[1], g[2]], [g[0], g[2], g[3]], [g[3], g[2], g[4]]])); }
+  const front = b[2] - side * (bd / 2 + 0.04);
+  add('prairieWhite', boxPart(b[0], b[1] + 1.7, front, 3.4, 3.4, 0.08));
+  add('prairieDark', boxPart(b[0], b[1] + 1.7, front - 0.03 * side, 2.9, 3.0, 0.05));
+  for (const dx of [-1.5, 1.5]) legTube(add, 'prairieWhite', [b[0] - dx, b[1] + 0.1, front - 0.06 * side], [b[0] + dx, b[1] + 3.3, front - 0.06 * side], 0.05);
+  add('prairieDark', boxPart(b[0], b[1] + wallH + 2.5, front, 1.6, 1.4, 0.06));
+  Dt(b[0] - bw / 2, b[2] - bd / 2, b[0] + bw / 2, b[2] + bd / 2, b[1], b[1] + 9);
+  // silo beside the barn
+  const s0 = place(30, 8);
+  add('prairieConcrete', cylinderPart(2.2, 2.2, 15 + 4 * seed, 14, s0[0], s0[1], s0[2]));
+  for (let hy = 1.5; hy < 15 + 4 * seed; hy += 1.5) add('prairieIron', cylinderPart(2.26, 2.26, 0.1, 14, s0[0], s0[1] + hy, s0[2]));
+  add('prairieRust', { ...latheGeom([[2.25, 0], [1.8, 1.0], [0.9, 1.9], [0.0, 2.2]], 14), matrix: matTranslate(s0[0], s0[1] + 15 + 4 * seed, s0[2]) });
+  Dt(s0[0] - 2.3, s0[2] - 2.3, s0[0] + 2.3, s0[2] + 2.3, s0[1], s0[1] + 22);
+  // machine shed
+  const m = place(-2, 16);
+  gabledBuilding(add, 'prairieGrey', 'prairieRust', m[0], m[1], m[2], 9, 5, 2.9, 1.2, true, 0.4);
+  if (seed > 0.55) { const w = place(-28, 14); latticeTower(add, 'prairieIron', w[0], w[1], w[2], 2.4, 0.8, 11, 4, 0.05); add('prairieIron', slab(w[0], w[1] + 11.4, w[2], 0.35, 0.35, 1.2)); add('prairieIron', slab(w[0], w[1] + 11.4, w[2] + 1.1, 0.05, 0.9, 1.6)); }
+  PLAINS_FARMS.push({ x, z, side, seed, gy });
+}
+function plainsFarmGrove(addTree, x, z, side, seed) {
+  // windbreak: cedars and cottonwoods in an L on the far and weather sides, a few yard trees near the house
+  const W = (lx, lz) => [x + lx, z + side * lz];
+  for (let i = -5; i <= 5; i++) { const p = W(i * 9 + 2, 36 + (i & 1) * 3); addTree((i + 7) % 3 === 0 ? 0 : 1, p[0], p[1], 0.9 + 0.3 * plainsHash(i + 9, Math.floor(seed * 99))); }
+  for (let i = 0; i < 6; i++) { const p = W(-44 - (i & 1) * 3, 4 + i * 6); addTree(i % 2 ? 1 : 0, p[0], p[1], 0.9 + 0.3 * plainsHash(i, 5)); }
+  for (const [lx, lz, k] of [[-20, -12, 0], [-9, -14, 0], [-24, 4, 0], [6, -6, 0], [22, -2, 0]]) { const p = W(lx, lz); addTree(k, p[0], p[1], 0.7 + 0.35 * plainsHash(lx, lz)); }
+}
+// Static instanced groves: the two named shelterbelts and every farmstead windbreak.
+const plainsStaticTrees = [new ar(makeCottonwoodGeometry(), treeMat, 700), new ar(makeCedarGeometry(), treeMat, 700)];
+plainsStaticTrees.forEach((m, i) => { m.name = i ? 'Plains windbreak cedars' : 'Plains groves'; m.frustumCulled = false; m.count = 0; const a = m.instanceMatrix.array; for (let k = 0; k < 700; k++) { a[k * 16 + 3] = -1; } Nt.add(m); });
+function plainsAddTree(kind, x, z, sc, rot) {
+  const m = plainsStaticTrees[kind], n = m.count;
+  if (n >= 700) return;
+  const hs = plainsHash(Math.round(x * 3), Math.round(z * 3));
+  writeInstance(m.instanceMatrix.array, n * 16, x, os(x, z) - 0.2, z, rot === undefined ? hs * 6.2832 : rot, sc, sc * (0.92 + 0.16 * hs), hs);
+  m.count = n + 1; m.instanceMatrix.needsUpdate = true;
+}
+(function buildPlainsFarms() {
+  for (const [lx, side, len, seed] of PLAINS_LANES) {
+    if (seed <= 0.38) continue;
+    const fz = side * (16 + len);
+    buildFarmstead(lx, fz, side, seed);
+    plainsFarmGrove(plainsAddTree, lx, fz, side, seed);
+  }
+  // named shelterbelts: three staggered rows, cedar windbreak outside, cottonwoods inside
+  const belts = [[PLAINS_LAYOUT.shelterbeltW, -1], [PLAINS_LAYOUT.shelterbeltE, 1]];
+  for (const [b, dir] of belts) {
+    for (let x = b.x0, i = 0; x <= b.x1; x += 19, i++) {
+      for (let r = 0; r < 3; r++) {
+        const h = plainsHash(i * 3 + r, Math.round(b.z));
+        if (h < 0.12 || r === 1) continue;
+        const z = b.z + dir * (r === 0 ? -8 : r === 1 ? 0 : 9) + (h - 0.5) * 5;
+        plainsAddTree(r === 0 ? 1 : 0, x + (h - 0.5) * 6 + r * 4, z, r === 0 ? 0.95 + 0.4 * h : 1.0 + 0.5 * h);
+      }
+    }
+  }
+  for (const role in plainsFarmParts) addRoleMesh(plainsGroup, role, plainsFarmParts[role]);
+})();
 
 // Fences along US 66: posts at z=+-14.5m every 4m, 4 strands of wire
 const PLAINS_FENCE_N = 280;
@@ -12571,15 +13501,13 @@ const plainsGrassMat = new $e();
 const plainsGrassScale = new P();
 
 function updatePlainsStreaming(camX, camZ, time) {
+  const grassOn = camX > 4600;
+  for (const L of plainsGrassLayers) { L.mesh.visible = grassOn; if (grassOn) updateGrassLayer(L, camX, camZ); }
   if (camX < 40000) {
-    plainsNearGrassMesh.visible = false;
-    plainsMidGrassMesh.visible = false;
     fencePostMesh.visible = false;
     fenceWireMesh.visible = false;
     return;
   }
-  plainsNearGrassMesh.visible = true;
-  plainsMidGrassMesh.visible = true;
   fencePostMesh.visible = true;
   fenceWireMesh.visible = true;
 
@@ -12617,55 +13545,6 @@ function updatePlainsStreaming(camX, camZ, time) {
     fenceWireMesh.instanceMatrix.needsUpdate = true;
   }
 
-  // 2. Update Grass Tufts (Deterministic per cell)
-  const currentCell = Math.floor(camX / 30.0);
-  if (currentCell !== lastPlainsGrassCell) {
-    lastPlainsGrassCell = currentCell;
-    let nSlot = 0, mSlot = 0;
-
-    // Stream grid around camera: -4 to +4 cells x -4 to +4 cells
-    for (let cx = -4; cx <= 4; cx++) {
-      for (let cz = -4; cz <= 4; cz++) {
-        const cellX = (currentCell + cx) * 30.0;
-        const cellZ = Math.round(camZ / 30.0) * 30.0 + cz * 30.0;
-
-        // Seeded generation within cell
-        for (let k = 0; k < 100; k++) {
-          const rx = Un(cellX * 0.11 + k * 13.7, cellZ * 0.17 + k * 7.1) * 30.0;
-          const rz = Un(cellX * 0.19 + k * 5.3, cellZ * 0.23 + k * 11.9) * 30.0;
-          const gx = cellX + rx;
-          const gz = cellZ + rz;
-
-          // Avoid highway surface and shoulders
-          if (Math.abs(gz) < 4.8) continue;
-          // Avoid drive-in main lot & buildings
-          if (gx >= 64520 && gx <= 64680 && gz <= -10 && gz >= -150) continue;
-
-          const dist = Math.hypot(gx - camX, gz - camZ);
-          const gy = os(gx, gz);
-          const sc = 0.75 + 0.5 * Un(gx * 0.31, gz * 0.43);
-
-          if (dist <= 85.0 && nSlot < PLAINS_GRASS_NEAR_N) {
-            plainsGrassMat.makeRotationY(Un(gx * 0.7, gz * 0.9) * 6.283).scale(plainsGrassScale.set(sc, sc * (0.8 + 0.5 * Un(gz * 0.13, gx * 0.21)), sc)).setPosition(gx, gy, gz);
-            plainsNearGrassMesh.setMatrixAt(nSlot++, plainsGrassMat);
-          } else if (dist <= 210.0 && mSlot < PLAINS_GRASS_MID_N) {
-            plainsGrassMat.makeRotationY(Un(gx * 0.7, gz * 0.9) * 6.283).scale(plainsGrassScale.set(sc * 1.4, sc * 1.4, sc * 1.4)).setPosition(gx, gy, gz);
-            plainsMidGrassMesh.setMatrixAt(mSlot++, plainsGrassMat);
-          }
-        }
-      }
-    }
-    while (nSlot < PLAINS_GRASS_NEAR_N) {
-      plainsGrassMat.makeTranslation(0, -999, 0);
-      plainsNearGrassMesh.setMatrixAt(nSlot++, plainsGrassMat);
-    }
-    while (mSlot < PLAINS_GRASS_MID_N) {
-      plainsGrassMat.makeTranslation(0, -999, 0);
-      plainsMidGrassMesh.setMatrixAt(mSlot++, plainsGrassMat);
-    }
-    plainsNearGrassMesh.instanceMatrix.needsUpdate = true;
-    plainsMidGrassMesh.instanceMatrix.needsUpdate = true;
-  }
 }
 
 function buildStationGestures() {
@@ -17919,9 +18798,11 @@ terrainWetnessUniform.value = Math.max(0, Math.min(1, Math.max(wetRegion * (0.45
 
 Xm.material.uniforms.uNight.value = uNight;
 Xm.material.uniforms.uDay.value = uDay;
-grassMat.color.setScalar(.34 + .66 * uDay);
-grassMat.emissive.setRGB(.13*uDay+.008, .11*uDay+.007, .06*uDay+.004);  // Lambert tufts read too dark in daylight; fade the lift out at dusk and night
 Xm.material.uniforms.uOvercast.value = nwCloud;
+Xm.material.uniforms.uTime.value = eg.elapsedTime;
+terrainTimeUniform.value = eg.elapsedTime;
+plainsStormWindUniform.value = plainsStormWind;
+Xm.material.uniforms.uCover.value = 0.18 + 0.50 * weatherSwing;   // some evenings carry more sky weather than others
 Xm.material.uniforms.uForestSkyline.value = nwBiome;
 
 Xm.position.copy(Nn.position);
@@ -17973,6 +18854,20 @@ Nt.fog.color.multiplyScalar(fb);
 const baseFar = 1400 + 90 * (Hm(t * .03, 9.2) - .5) * 2;
 Nt.fog.far = baseFar * (1.0 - 0.62 * gloom);
 Nt.fog.near = 70 - 46 * gloom;
+{
+  // The plain is seen a long way: hold the haze back (far fields stay legible) and take its colour from the horizon we face.
+  const pf = Math.max(0, Math.min(1, (Nn.position.x - 42000) / 6000));
+  if (pf > 0) {
+    Nn.getWorldDirection(plainsFwd);
+    const hl = Math.hypot(plainsFwd.x, plainsFwd.z) || 1;
+    const hc = plainsHorizonColor(plainsFwd.x / hl, plainsFwd.z / hl, sunV, uNight, uDay, nwCloud);
+    Nt.fog.color.r += (hc[0] - Nt.fog.color.r) * pf;
+    Nt.fog.color.g += (hc[1] - Nt.fog.color.g) * pf;
+    Nt.fog.color.b += (hc[2] - Nt.fog.color.b) * pf;
+    Nt.fog.far = Nt.fog.far * (1 - pf) + 3400 * (1 - 0.35 * gloom) * pf;
+    Nt.fog.near = Nt.fog.near * (1 - pf) + 160 * pf;
+  }
+}
 terrainSkyTone.value.setRGB(Nt.fog.color.r, Nt.fog.color.g, Nt.fog.color.b).multiplyScalar(0.55);
 // Under cloud the fill light takes the cool grey-green of the overcast instead of the clear-dusk violet.
 {
@@ -18271,7 +19166,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   toggleFernDoor, toggleFernLamp,
   inspectFernNote, inspectRidgePlaque, sitAtRidgeOverlook,
   updateForestPool, updateMileposts, updateRiverSurface,
-  plainsGroup, harvestMoonGroup, updatePlainsStreaming, plainsGust, us66RoadY,
+  plainsGroup, harvestMoonGroup, updatePlainsStreaming, plainsGust, us66RoadY, plainsGrassLayers, PLAINS_LANES, PLAINS_FARMS, renderer: mn,
   get harvestLampOn() { return harvestLampOn; },
   set harvestLampOn(v) { harvestLampOn = v; if(harvestLampLight) harvestLampLight.intensity = v ? 8.5 : 0; },
   get plainsSpeakerHung() { return plainsSpeakerHung; },

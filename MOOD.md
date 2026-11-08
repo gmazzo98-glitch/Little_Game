@@ -63,7 +63,7 @@ Ranked by fit and build cost. Each needs a mood card and a roadmap entry before 
 
 | Biome | Emotional key | Neon payoff | Notes |
 | --- | --- | --- | --- |
-| **Great Plains (built)** (Kansas, Nebraska) | Waiting, expectancy | Harvest Moon Drive-In red neon sign under a huge sky; unlit grain elevator, water tower, windmill | Built and verified on `vibe/neon-gas-voxel-f660eb`. Warm summer dusk, crickets, distant storm cloud with silent heat lightning. Red coal in mirror for 3–5 km. |
+| **Great Plains (built)** (Kansas, Nebraska) | Waiting, expectancy | Harvest Moon Drive-In red neon sign under a huge sky; unlit grain elevator, water tower, windmill | Built and verified on `vibe/neon-gas-voxel-f660eb`. Warm summer dusk, crickets, distant storm cloud with silent heat lightning. Red coal in mirror for 3–5 km. Overhauled 2026-11-09: layered dusk sky, painted farm-mosaic ground with a visible gust field, dense wind-bent meadow, shaped cottonwoods, dark farmsteads at the ends of farm lanes; see ROADMAP. |
 | **Great Lakes off-season resort strip** | A season that ended | "Vacancy" neon in grey cold light; boarded kiosks; empty beach lot | Strong 1960s nostalgia. Lake gives a flat horizon without waves. No gulls or crowds. |
 | **Gulf Coast bayou** | Memory, decay | Neon on black water, haloed in humid air | Heaviest to build. Dense insect sound conflicts with "sparse insects"; use it only if the station becomes a pocket of silence inside thick sound. |
 | **Northern snow** (Montana, Dakotas) | Hush | Neon glow on snow at blue hour | Overlaps the NW's muffling. Keep for later. |
