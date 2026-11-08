@@ -31,7 +31,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 4 — Procedural audio | Wind, localized neon (Sunset Service, Cinder Court, Starlite Diner), indoor shelter muffling, multi-surface footsteps (sand, asphalt, canopy concrete, linoleum, timber bridge), shelter-aware night insects, 3-speed V8 coupe engine with tire roll and multi-surface grip, highway tar-joint thumps, dual-tone horn, turn-signal relay tick, static/beacon AM radio, and obstruction-aware hum timbre implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign implemented (source-level); under-canopy dust motes removed on 2026-11-06 at the user's request (they read as fireflies between the pumps); tumbleweed re-added on 2026-11-06 per the user's request (procedural lattice, one at a time, desert-only paths); acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle refueling (`Pump fuel into coupe`), Cinder Court show room, Starlite Diner & Bar, full coupe driving & handling dynamics (highway coasting glide, speed-sensitive caster return, passing kickdown, carburetor induction moan, RWD loose-surface throttle oversteer/counter-steer, driver bench seat inertia, dual-axle joint cadence, speedometer needle quiver, and cozy amber dash illumination) | Separate glovebox/map, refueling, cabin controls, multi-surface driving, and full period land-yacht handling verified offline. Full stillness acceptance remains open. |
-| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestones O0 baseline and O1 strip skeleton verified (2026-11-08g)**; O2–O8 in progress. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, 2026-11-08f, and 2026-11-08g records. |
+| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestones O0 baseline, O1 strip skeleton, and O2 hero upgrades verified (2026-11-08h)**; O3–O8 in progress. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, 2026-11-08f, 2026-11-08g, and 2026-11-08h records. |
 | World expansion — Pacific Northwest | Implemented prototype. Visual acceptance open following user review. | The user rejected the terrain and biome transition. The source audit found a river-carving arithmetic defect and position-driven biome/weather rules. [PACIFIC_NORTHWEST.md](PACIFIC_NORTHWEST.md#feasibility-review--2026-11-05) recommends prototyping a curved mountain tunnel between authored dry and wet regions, then reviewing its terrain, trees, driving, sound, and performance before extending the route. Earlier implementation and measurement records remain below. 2026-11-05 terrain and mood pass implemented locally (see record); acceptance still open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
@@ -214,6 +214,47 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-08h — Drift Outpost overhaul: hero upgrades for Orbit Gas, Nova Nosh, Drift Inn (Milestone O2)
+
+- **Tier A hero upgrades implemented in code:**
+  - **ORBIT GAS (`x = -40, z = 48`):**
+    - Googie boomerang canopy with dramatic upward-swept eastern prow (canted from 6.4m to 8.6m with upturned prow wedge at 9.4m), chamfered fascia trim, under-canopy recessed warm ceiling troffer light panels.
+    - Dual neon perimeter ribbons: magenta upper (`#ff4fd8`) and cyan lower (`#4df3ff`).
+    - 4 canted tubular Googie steel columns with brass fin collars and splayed stance.
+    - Stepped vintage dual pumps on radiused concrete islands: stepped mint upper hood, plum lower body, dark bezels with analog dial faces, ticks, and roller digits, side nozzle holsters with brass trigger nozzles, spherical glass crown globes with soft glowing cyan halos, and catenary sagging rubber hoses.
+    - Preserved traces of care: Pump 1 hose wrapped with black friction electrical tape; pylon sign with hero cyan and magenta neon rings, starburst crest, and repaired letter 'I' with brass splice sleeve and exposed jumper wire; ghost rectangle on deck preserved.
+    - New hero prop: Air · Water · Warp post with cast-iron fluted pedestal, brass analog pressure gauge with needle, coiled air whip, stamped brass plates (`AIR`, `WATER`, `WARP`), and crooked weathered yellow tag: `"OUT OF ORDER"`.
+  - **NOVA NOSH (`x = 23, z = 44`):**
+    - 1960s streamliner food truck with curved aerodynamic front cab cowl, rounded rear quarter, polished horizontal chrome belt ribs, chrome wrap-around bumpers, wide whitewall tires with magenta star center hubcaps.
+    - Swooping scalloped canvas awning in salmon pink (`#ff7b7b`) and cream stripes with decorative valance fringe and brass scissor support arms.
+    - Wide service hatch with warm peach interior illumination, stainless steel counter shelf.
+    - 3 retro swivel counter stools on chrome pedestals with round vinyl cushions bolted to deck.
+    - Counter props: red ketchup & yellow mustard squeeze bottles, chrome napkin dispenser box, paper cup stack.
+    - Rotating rooftop cosmic taco sign (crispy golden shell, neon lettuce/tomato, pink neon planetary ring) animated via `spSpin` (speed 0.38 rad/s).
+    - Rooftop stainless exhaust elbow vent with 14 rising, gently swaying and dispersing steam puffs.
+    - Preserved handwritten menu board with crossed-out red grease pencil prices (`3.50 -> 5.00`, `2.50 -> 3.50`) and `"EXACT CREDIT ONLY"`.
+    - 2 outdoor atomic picnic tables on the pavement.
+  - **DRIFT INN (`x = 80, z = -14`):**
+    - Central tapered Googie space needle rising to 28m with 5 concentric glowing neon rings and pulsing magenta beacon (`spNeonPulse`).
+    - 9 modular pods each finished in a distinct retro pastel (`podPastels`: Powder Blue, Dusty Rose, Seafoam Mint, Buttercup Yellow, Lilac Lavender, Soft Coral, Sage Green, Periwinkle, Champagne Cream), capsule shells, dark skirts, structural belts, and twin warm glowing portholes.
+    - Exterior yellow/brass service ladders and catwalks connecting staggered pods vertically.
+    - Rooftop sunbathing deck on the top pod (pod 8) with chrome safety railing, atomic folding chaise lounge deck chair, and tilted sun parasol.
+    - Towel line strung between pods with 4 hanging beach towels pinned with clothespins ("BRING A TOWEL").
+    - Ground-level lobby pod with curved panoramic observation window, reception desk, desk lamp, and key rack.
+    - Front-desk call bell with worn brass clapper on podium at `spBell` `(SP.ax + 72.5, SP.py, SP.az - 4)`.
+    - Dynamic neon VACANCY sign: when player rings the bell, `spBellRingTimer` triggers, the `NO` lights up bright red and `VACANCY` flickers erratically for 6 seconds before returning to steady `VACANCY`.
+- **Draw call optimization via batching:**
+  - Added `ufoBatch()` helper utilizing `ufoMerge()` to batch static sub-components per building and material (troffers, column shafts/collars, pump island bases, pump cabinets, stool pedestals/cushions, tables, motel ladder rails/rungs, pod trusses, sputnik lamp spikes, bench legs/slats, waste bins, bollards).
+  - Total `spGroup` draw calls reduced from baseline 384 to 412 (comfortably within the ≤ 450 draw calls budget).
+  - Total `spGroup` triangles: 96,498 (comfortably within the ≤ 140,000 budget).
+  - Constant light count preserved: exactly 15 lights (12 point, 2 spot, 1 dir), zero lights added.
+- **Verification:**
+  - `node --check` passed on all extracted inline scripts.
+  - `scripts/verify_offline.js` confirmed zero runtime network requests (PASS).
+  - `scripts/check_cabin_clip.js` verified 71 meshes, 0 failures, min margin 7.03 cm (PASS).
+  - `scripts/test_o1_skeleton.js` confirmed 7 valid warps, correct coordinates for `main` and `plaza`, and 0 collisions along the entire pedestrian walking path from runway through gate, Main Street, Plaza, and Drift Inn.
+  - Captured matched viewpoint stills at 150m, 30m, and 3m for Orbit Gas, Nova Nosh, and Drift Inn (`o2_orbit_gas_150m.png`, `30m.png`, `3m.png`, `o2_nova_nosh_150m.png`, `30m.png`, `3m.png`, `o2_drift_inn_150m.png`, `30m.png`, `3m.png`).
 
 ### 2026-11-08g — Drift Outpost overhaul: strip skeleton, street deck, props & warps (Milestone O1)
 

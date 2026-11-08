@@ -141,7 +141,7 @@ async function main() {
         { x: g.SP.ax - 190, z: g.SP.az + 99 },   // runway
         { x: g.SP.ax - 125, z: g.SP.az + 85 },   // gate arch center
         { x: g.SP.ax - 40,  z: g.SP.az + 85 },   // taxiway junction
-        { x: g.SP.ax - 40,  z: g.SP.az + 60 },   // taxiway south
+        { x: g.SP.ax - 40,  z: g.SP.az + 42 },   // Main street west
         { x: g.SP.ax - 20,  z: g.SP.az + 42 },   // Main street center
         { x: g.SP.ax + 12,  z: g.SP.az + 42 },   // Main street mid
         { x: g.SP.ax + 12,  z: g.SP.az + 10 },   // Plaza
