@@ -2,7 +2,7 @@
 
 This file is the mood card for the space layer of Neon Gas, the way [MOOD.md](MOOD.md) is for the highway regions. It sits under MOOD.md's shared grammar and next to [AESTHETIC.md](AESTHETIC.md) (light and palette) and [AMBIENCE.md](AMBIENCE.md) (sound). [ROADMAP.md](ROADMAP.md) holds status and validation. Everything here is a design proposal until a roadmap entry says otherwise.
 
-**Status (2026-11-08):** S1 saucer polish, S4 space sky and S6 reachability are implemented and verified in index.html (see the 2026-11-08d record in [ROADMAP.md](ROADMAP.md)). **The outpost direction below is superseded by the owner's 2026-11-08 review**: the first outpost was "really boring" and "doesn't transmit any vibe". The Drift Outpost overhaul (milestones O0–O8 in [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md)) is proposed, not implemented. The saucer, cabin, sound drone, chart and fast travel stay as built.
+**Status (2026-11-08):** S1 saucer polish, S4 space sky and S6 reachability are implemented and verified in index.html (see the 2026-11-08d record in [ROADMAP.md](ROADMAP.md)). Drift Outpost overhaul: **Milestone O0 (baseline and budgets) measured and locked** (see 2026-11-08f record). S0–S6 verified. Locked budgets: spGroup ≤ 140,000 triangles, hero ≤ 12,000 triangles, draw calls ≤ 450, lights strictly constant (12 point, 2 spot), texture memory ≤ 24 MB. Milestones O1–O8 in progress. The saucer, cabin, sound drone, chart and fast travel stay as built.
 
 The space layer is a **user-requested exception** (see AGENTS.md): a hidden saucer in the desert, a climb out of the atmosphere, and an asteroid outpost. The ground game is untouched. This file keeps the exception coherent with the rest of the game instead of becoming a second, louder game, with one deliberate change: **the outpost is now allowed to be loud, colourful, inhabited and funny.** Everything else in space stays calm.
 
@@ -183,7 +183,7 @@ The brief asks for "good quality models". The bar for tier A:
 - **Surface richness without lights.** Vertex-colour gradients and baked ambient occlusion at contact edges; canvas trim sheets (panel lines, rivets, stripes, grime, stickers, tape); emissive maps for windows with variation (some off, some with curtains or silhouettes); decals for stickers and re-lettering. Textured or vertex-coloured parts use the standard material; the game's own stripped Lambert ignores maps and vertex colours.
 - **A story at 3 m.** At least fifteen distinct small parts per hero (vents, hose reels, hinges, rivets, hand-lettered tags, tape, dents, a forgotten cup).
 - **Share and merge.** Reuse materials; merge static parts per building per material into one mesh so draw calls drop. Instance anything repeated.
-- Proposed ceilings, to be calibrated against the O0 baseline and revised with measurements: hero ≤ 12,000 triangles, supporting ≤ 4,000, prop instance ≤ 600, and a stated total for the whole outpost.
+- Calibrated ceilings from O0 baseline (84,752 base tris, 384 draw calls): hero ≤ 12,000 triangles, supporting ≤ 4,000, prop instance ≤ 600, total spGroup ≤ 140,000 triangles, total draw calls ≤ 450. Texture memory ≤ 24 MB. Lights strictly constant (12 point, 2 spot).
 
 ### The deck surface
 

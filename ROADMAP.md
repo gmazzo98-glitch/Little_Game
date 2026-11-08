@@ -31,7 +31,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 4 — Procedural audio | Wind, localized neon (Sunset Service, Cinder Court, Starlite Diner), indoor shelter muffling, multi-surface footsteps (sand, asphalt, canopy concrete, linoleum, timber bridge), shelter-aware night insects, 3-speed V8 coupe engine with tire roll and multi-surface grip, highway tar-joint thumps, dual-tone horn, turn-signal relay tick, static/beacon AM radio, and obstruction-aware hum timbre implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign implemented (source-level); under-canopy dust motes removed on 2026-11-06 at the user's request (they read as fireflies between the pumps); tumbleweed re-added on 2026-11-06 per the user's request (procedural lattice, one at a time, desert-only paths); acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle refueling (`Pump fuel into coupe`), Cinder Court show room, Starlite Diner & Bar, full coupe driving & handling dynamics (highway coasting glide, speed-sensitive caster return, passing kickdown, carburetor induction moan, RWD loose-surface throttle oversteer/counter-steer, driver bench seat inertia, dual-axle joint cadence, speedometer needle quiver, and cozy amber dash illumination) | Separate glovebox/map, refueling, cabin controls, multi-surface driving, and full period land-yacht handling verified offline. Full stillness acceptance remains open. |
-| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). Saucer polish, outpost hierarchy, traces of care, circular star particles, transformer hum, boots on deck, calibrated radar & waypoints, clean fast travel. Visual acceptance open. **Outpost overhaul (O0–O8) specified, not started (2026-11-08e)**: owner found the outpost boring; direction is a colourful, inhabited Googie strip. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06 and 2026-11-08d records. |
+| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestone O0 baseline and budgets verified and locked (2026-11-08f)**; O1–O8 in progress. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, and 2026-11-08f records. |
 | World expansion — Pacific Northwest | Implemented prototype. Visual acceptance open following user review. | The user rejected the terrain and biome transition. The source audit found a river-carving arithmetic defect and position-driven biome/weather rules. [PACIFIC_NORTHWEST.md](PACIFIC_NORTHWEST.md#feasibility-review--2026-11-05) recommends prototyping a curved mountain tunnel between authored dry and wet regions, then reviewing its terrain, trees, driving, sound, and performance before extending the route. Earlier implementation and measurement records remain below. 2026-11-05 terrain and mood pass implemented locally (see record); acceptance still open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
@@ -214,6 +214,33 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-08f — Drift Outpost overhaul: baseline and locked budgets (Milestone O0)
+
+- **O0 Baseline measured and recorded:**
+  - Automated measurement harness (`scripts/measure_o0_baseline.js`) ran against headless Chrome/SwiftShader.
+  - Total triangles in `spGroup`: 84,752 (6,000 stars, 9,216 Earth + atmosphere, 10,752 Asteroid, 3,456 Deck, 4,224 debris instances, 4,400 crystal columns, 46,704 building/prop triangles).
+  - Draw calls: 384 objects (380 meshes, 1 points, 3 instanced meshes).
+  - Lights: constant light rig of 12 point lights + 2 spot lights (active outpost lights in `spLights`: 8).
+  - Texture memory: 17.88 MB (deck canvas 2048×2048 = 16.0 MB; signs = 1.88 MB).
+  - Build time of `spBuild()`: ~65 ms (includes 2048 canvas painting, asteroid vertex displacement, initial building placement).
+  - Software-rendered frame time: 130–150 ms (CPU/SwiftShader); physical laptop 60 fps measurement remains pending for G3/O7.
+- **Matched baseline stills captured:**
+  - `o0_gate_runway.png` (gate end of runway looking east toward outpost)
+  - `o0_runway_150m.png` (runway at 150m)
+  - `o0_pump_court_3m.png` (Pump Court at 3m)
+  - `o0_nova_nosh.png` (Nova Nosh from 12m)
+  - `o0_drift_inn.png` (Drift Inn from 25m)
+  - `o0_deck_centre_0deg.png`, `90deg`, `180deg`, `270deg` (deck centre 360-degree panorama)
+- **Locked budgets (calibrated against baseline):**
+  - Total `spGroup` triangle budget: ≤ 140,000 triangles (leaving ~55k triangles for the strip expansion).
+  - Hero models (Tier A): ≤ 12,000 triangles each.
+  - Supporting models (Tier B): ≤ 4,000 triangles each.
+  - Prop instances / batches: ≤ 600 triangles each.
+  - Total draw calls: ≤ 450 (achieved via per-building/material BufferGeometry merging and instancing repeated street props).
+  - Texture memory: ≤ 24 MB total.
+  - Light count: strictly constant (12 point lights, 2 spot lights; zero runtime light additions).
+- **Status:** O0 baseline complete and verified. Milestones O1–O8 in progress.
 
 ### 2026-11-08e — Outpost overhaul direction (documentation only; no index.html change)
 
