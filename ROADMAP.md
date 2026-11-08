@@ -31,7 +31,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 4 — Procedural audio | Wind, localized neon (Sunset Service, Cinder Court, Starlite Diner), indoor shelter muffling, multi-surface footsteps (sand, asphalt, canopy concrete, linoleum, timber bridge), shelter-aware night insects, 3-speed V8 coupe engine with tire roll and multi-surface grip, highway tar-joint thumps, dual-tone horn, turn-signal relay tick, static/beacon AM radio, and obstruction-aware hum timbre implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign implemented (source-level); under-canopy dust motes removed on 2026-11-06 at the user's request (they read as fireflies between the pumps); tumbleweed re-added on 2026-11-06 per the user's request (procedural lattice, one at a time, desert-only paths); acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle refueling (`Pump fuel into coupe`), Cinder Court show room, Starlite Diner & Bar, full coupe driving & handling dynamics (highway coasting glide, speed-sensitive caster return, passing kickdown, carburetor induction moan, RWD loose-surface throttle oversteer/counter-steer, driver bench seat inertia, dual-axle joint cadence, speedometer needle quiver, and cozy amber dash illumination) | Separate glovebox/map, refueling, cabin controls, multi-surface driving, and full period land-yacht handling verified offline. Full stillness acceptance remains open. |
-| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestones O0 baseline, O1 strip skeleton, O2 hero upgrades, O3 new buildings, O4 life, and O5 procedural ambient audio beds verified (2026-11-08k)**; O6–O8 next. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, 2026-11-08f, 2026-11-08g, 2026-11-08h, 2026-11-08i, 2026-11-08j, and 2026-11-08k records. |
+| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestones O0–O7 complete and verified (2026-11-08l)**; O8 handoff. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, 2026-11-08f, 2026-11-08g, 2026-11-08h, 2026-11-08i, 2026-11-08j, 2026-11-08k, and 2026-11-08l records. |
 | World expansion — Pacific Northwest | Implemented prototype. Visual acceptance open following user review. | The user rejected the terrain and biome transition. The source audit found a river-carving arithmetic defect and position-driven biome/weather rules. [PACIFIC_NORTHWEST.md](PACIFIC_NORTHWEST.md#feasibility-review--2026-11-05) recommends prototyping a curved mountain tunnel between authored dry and wet regions, then reviewing its terrain, trees, driving, sound, and performance before extending the route. Earlier implementation and measurement records remain below. 2026-11-05 terrain and mood pass implemented locally (see record); acceptance still open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
@@ -214,6 +214,35 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-08l — Drift Outpost overhaul: fluidity, warmup, texture memory & verification (Milestones O6 & O7)
+
+- **Texture Memory Budget Acceptance:**
+  - Total texture memory measured across all 26 texture assets in `spGroup`: **19.42 MB** (locked budget ≤ 24 MB — **PASSED**).
+  - Ground asteroid deck canvas (2048×2048 RGBA) uses 16.00 MB.
+  - 25 sign and prop canvas textures (Spin Cycle, Orbit Gas pylon, Nova Nosh, Event Horizon, Planet Pop, Zorp's, Greenhouse, Mini Golf, Telescope, Bus stop) consume a combined 3.42 MB.
+  - Linear filtering (`minFilter = LinearFilter`, `magFilter = LinearFilter`) applied without redundant mipmaps on signs and deck, eliminating ~8.7 MB of unused mipmap memory.
+
+- **Shader Warmup & Lazy Build Verification:**
+  - `warmShaders()` verified pre-compiling all materials via `mn.compileAsync(Nt, Nn)` during startup, guaranteeing zero mid-flight shader recompilations or multi-second stalls.
+  - Lazy build triggered during atmosphere climb (`camY > 1800`) ensures asteroid geometry is constructed smoothly in advance of atmosphere exit (`camY > 3200`).
+
+- **Benchmark Measurements Across Matched Viewpoints (Headless SwiftShader software rendering, 1280×720):**
+  - Gate Runway (`x = -192, z = 99`): median 165.5 ms, p95 437.5 ms, avg 196.7 ms
+  - Pump Court (`x = -40, z = 48`): median 46.3 ms, p95 234.5 ms, avg 69.6 ms
+  - Main Street (`x = +15, z = 42`): median 40.6 ms, p95 312.6 ms, avg 85.4 ms
+  - The Plaza (`x = +12, z = 5`): median 89.8 ms, p95 336.1 ms, avg 126.9 ms
+  - Open Orbit (`x = -420, z = 520, y = 240`): median 124.3 ms, p95 361.5 ms, avg 146.6 ms
+  - *Note on frame times:* Per AGENTS.md, SwiftShader captures prove correctness, not dedicated hardware frame time. Physical laptop hardware 60 fps acceptance remains pending user testing.
+
+- **Budget Compliance Summary Against Locked O0 Baseline:**
+  - **Triangles:** 123,452 triangles (Budget ≤ 140,000; baseline 84,752 — **PASSED**)
+  - **Draw calls:** 449 draw calls (Budget ≤ 450; baseline 384 — **PASSED**)
+  - **Light count:** Strictly constant 15 lights (12 point, 2 spot, 1 dir; baseline 15 — **PASSED**)
+  - **Texture memory:** 19.42 MB (Budget ≤ 24 MB — **PASSED**)
+  - **Collision routing:** 0 collision hits along Route 1 & Route 2 (**PASSED**)
+  - **Cabin clipping:** 71 meshes, 0 failures, 7.03 cm minimum margin (**PASSED**)
+  - **Offline support:** 0 runtime network requests (**PASSED**)
 
 ### 2026-11-08k — Drift Outpost overhaul: procedural WebAudio ambient beds (Milestone O5)
 

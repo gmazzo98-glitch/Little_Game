@@ -14378,7 +14378,7 @@ function ufoBatch() {
 function ufoCanvasTex(w, h, painter) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   painter(cv.getContext('2d'), w, h);
-  const tx = new qt(cv); tx.colorSpace = 'srgb'; tx.needsUpdate = true; return tx;
+  const tx = new qt(cv); tx.colorSpace = 'srgb'; tx.generateMipmaps = false; tx.minFilter = 1006; tx.magFilter = 1006; tx.needsUpdate = true; return tx;
 }
 const ufoStarDiscTex = ufoCanvasTex(32, 32, (c, w, h) => {
   const g = c.createRadialGradient(16, 16, 0, 16, 16, 16);
@@ -14391,7 +14391,7 @@ const ufoStarDiscTex = ufoCanvasTex(32, 32, (c, w, h) => {
 });
 // Neon-lettered sign: dark board with glowing text.
 function ufoSign(parent, text, w, h, color, x, y, z, ry = 0, sub = '') {
-  const tex = ufoCanvasTex(512, Math.round(512 * h / w), (c, cw, ch) => {
+  const tex = ufoCanvasTex(384, Math.round(384 * h / w), (c, cw, ch) => {
     c.fillStyle = '#0c0714'; c.fillRect(0, 0, cw, ch);
     c.strokeStyle = color; c.lineWidth = 8; c.shadowColor = color; c.shadowBlur = 22;
     c.strokeRect(14, 14, cw - 28, ch - 28);
