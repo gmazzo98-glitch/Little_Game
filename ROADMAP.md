@@ -31,7 +31,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 4 — Procedural audio | Wind, localized neon (Sunset Service, Cinder Court, Starlite Diner), indoor shelter muffling, multi-surface footsteps (sand, asphalt, canopy concrete, linoleum, timber bridge), shelter-aware night insects, 3-speed V8 coupe engine with tire roll and multi-surface grip, highway tar-joint thumps, dual-tone horn, turn-signal relay tick, static/beacon AM radio, and obstruction-aware hum timbre implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign implemented (source-level); under-canopy dust motes removed on 2026-11-06 at the user's request (they read as fireflies between the pumps); tumbleweed re-added on 2026-11-06 per the user's request (procedural lattice, one at a time, desert-only paths); acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle refueling (`Pump fuel into coupe`), Cinder Court show room, Starlite Diner & Bar, full coupe driving & handling dynamics (highway coasting glide, speed-sensitive caster return, passing kickdown, carburetor induction moan, RWD loose-surface throttle oversteer/counter-steer, driver bench seat inertia, dual-axle joint cadence, speedometer needle quiver, and cozy amber dash illumination) | Separate glovebox/map, refueling, cabin controls, multi-surface driving, and full period land-yacht handling verified offline. Full stillness acceptance remains open. |
-| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestones O0 baseline, O1 strip skeleton, O2 hero upgrades, and O3 new buildings verified (2026-11-08i)**; O4–O8 in progress. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, 2026-11-08f, 2026-11-08g, 2026-11-08h, and 2026-11-08i records. |
+| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestones O0 baseline, O1 strip skeleton, O2 hero upgrades, O3 new buildings, and O4 life (residents & ambient creatures) verified (2026-11-08j)**; O5–O8 next. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, 2026-11-08f, 2026-11-08g, 2026-11-08h, 2026-11-08i, and 2026-11-08j records. |
 | World expansion — Pacific Northwest | Implemented prototype. Visual acceptance open following user review. | The user rejected the terrain and biome transition. The source audit found a river-carving arithmetic defect and position-driven biome/weather rules. [PACIFIC_NORTHWEST.md](PACIFIC_NORTHWEST.md#feasibility-review--2026-11-05) recommends prototyping a curved mountain tunnel between authored dry and wet regions, then reviewing its terrain, trees, driving, sound, and performance before extending the route. Earlier implementation and measurement records remain below. 2026-11-05 terrain and mood pass implemented locally (see record); acceptance still open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
@@ -214,6 +214,45 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-08j — Drift Outpost overhaul: life — residents and ambient creatures (Milestone O4)
+
+- **Silent Non-Human Residents implemented in code:**
+  - **Pumpkin (`x = -40, z = 47`, Pump Court):**
+    - Single-wheel unicycle robot attendant in mint chassis (`sm.mint`) and dark trim (`sm.dark`).
+    - Round pumpkin-orange head (`ji({color: 0xff8a30, emissive: 0x5a2005})`) with warm glowing cyan sensor eye (`0x4df3ff`) and additive halo.
+    - Squeegee arm with brass armature (`ufoM.brass`) and rubber wiper blade.
+    - Behavior state machine: patrols a ±1.4m beat along the pump island; smoothly pivots towards the player or parked saucer when within 9.0m, actively oscillating squeegee arm in a windscreen-washing motion.
+  - **The Cook (`x = 22.6, y = 1.8, z = 45.25`, Nova Nosh serving window):**
+    - Plump, round 4-armed alien creature in salmon pink skin (`ji({color: 0xffa080, emissive: 0x3a1510})`).
+    - Paper chef hat tilted askew (`sm.cream`) and three glossy black/cream eyes.
+    - Operating the grill: front spatula arm flips a sizzling burger patty (`ji({color: 0x5a2a18})`) on a steady cooking cadence (`Math.sin(t * 3.5)`).
+    - Smoothly leans forward and pivots towards the player when approaching the food counter within 6.0m.
+  - **The Clerk (`x = 72.5, y = 0.72, z = -5.2`, Drift Inn lobby desk):**
+    - Fluffy moth-like desk clerk in plum velvet body (`sm.plum`) with two cream wings (`sm.cream`) folded over the counter and yellow sensory antennae (`sm.yellow`).
+    - Behavior: naturally dozes with head resting on desk and dark closed eyes (`clerkEyeMat`); when the player rings the call bell at `(72.5, -4.0)` (`spBellRingTimer > 0`), the clerk instantly wakes up, lifts head alertly (`clerkHead.position.y = 0.38`), and opens bright glowing lavender eyes (`0xb49be8`) for 6 seconds before slowly nodding back to sleep.
+  - **The Lizard (`x = 80 + podPositions[8].x, y = 18.25, z = -14 + podPositions[8].z`, Drift Inn rooftop sunbathing deck):**
+    - Slender turquoise space lizard (`sm.mint`) lounging horizontally on a retro chaise lounge chair.
+    - Tiny dark sunglasses/sun visor (`sm.dark`).
+    - Behavior: relaxes on the roof under the stars, lazily curling its long tail (`Math.sin(t * 1.2) * 0.25`) and tilting its head up toward the cosmos.
+
+- **Ambient Creatures implemented in code:**
+  - **Hop-Hops (12 fuzzy critters across Plaza, Nova Nosh, and Patio):**
+    - Small spherical critters in pastel palette (mint green `#8be3c3`, lavender `#c4b0dc`, buttercup yellow `#f5db7a`, salmon `#ffa080`) with two glossy dark boba eyes.
+    - Master state machine loop in `spLife.update(t, dt)`: each critter hops in place with rhythmic vertical arcs (`Math.abs(Math.sin(...)) * 0.45`); if the player walks within 5.0m, the critter smoothly scatters and hops away from the player with soft avoidance steering, returning peacefully toward its home territory when the player steps back. Zero player-collision hits.
+  - **Sky Jellies (8 translucent glowing jellyfish hovering above the strip):**
+    - Translucent bell lathes (`wi({color: jd.col, transparent: true, opacity: .38})`) in bioluminescent lime, coral, cyan, and orchid hues, each with 4 trailing tentacles and an additive glowing core halo (`ufoHaloMat`).
+    - Hovering and drifting gently between `y = 19m` and `y = 31m` with sinusoidal vertical buoyancy and gentle orbital drift.
+  - **Moths (24 glowing micro-particles circling brightest neon signs):**
+    - Batched `Points` geometry circling in clusters around the 4 brightest outpost landmarks: Orbit Gas pylon sign, Event Horizon martini glass, Drift Inn vacancy sign, and Spin Cycle neon sock.
+
+- **Performance & Budget Verification:**
+  - **Triangles:** 123,452 triangles (well under the locked budget of ≤ 140,000; baseline was 84,752, O3 was 120,644).
+  - **Draw calls:** 449 draw calls (locked budget ≤ 450; achieved by batching static parts of character bodies, planter pots/leaves/bulbs, pylon ladder rungs, truck dark components, and kiosk shelves).
+  - **Light count:** Strictly constant 15 lights (12 point, 2 spot, 1 dir), zero runtime light additions or deletions; all life glow and highlights provided by emissive materials and additive halos.
+  - **Colliders & walking:** Verified 0 collision hits along Route 1 (Main Street) and 0 collision hits along Route 2 (Plaza/Back Lot/Telescope).
+  - **Offline & self-containment:** `verify_offline.js` passed with 0 runtime network requests; `check_cabin_clip.js` passed with 71 meshes, 0 failures, 7.03 cm minimum margin; `node --check` passed cleanly.
+  - **Stills captured:** 5 matched stills in `captures/` (`o4_pumpkin_robot.png`, `o4_cook_window.png`, `o4_clerk_desk.png`, `o4_hophop_plaza.png`, `o4_sky_jellies.png`).
 
 ### 2026-11-08i — Drift Outpost overhaul: new buildings across Tier A & B (Milestone O3)
 

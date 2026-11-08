@@ -14666,7 +14666,7 @@ const spGroup = new xi(); spGroup.visible = false; spGroup.name = 'Asteroid outp
 Nt.add(spGroup);
 const spFollow = new xi(); spGroup.add(spFollow);           // follows the camera (sky things)
 const spLights = [], spNeonPulse = [], spSpin = [];
-var spPumps = [], spBell = new P(), spBellRingTimer = 0, spNoMat = null, spVacMat = null, spShaderTime = { value: 0 }, spTelescopeTimer = 0;
+var spPumps = [], spBell = new P(), spBellRingTimer = 0, spNoMat = null, spVacMat = null, spShaderTime = { value: 0 }, spTelescopeTimer = 0, spLife = null;
 let spBuilt = false;
 function spBuild() {
   if (spBuilt) return; spBuilt = true;
@@ -15120,20 +15120,26 @@ function spBuildOutpost(parent, rnd) {
   ufoBox(kg, 5.8, 1.8, .08, sm.wl, 0, 2.2, 2.62);
   ufoBox(kg, 5.6, 1.65, .02, new wi({color: 0xffca7a}), 0, 2.2, 2.64);
   ufoNeon(kg, [[-2.9, 3.15, 2.66], [2.9, 3.15, 2.66], [2.9, 1.25, 2.66], [-2.9, 1.25, 2.66]], 0xffd24d, .07, true);
-  ufoBox(kg, 2.8, .9, .8, sm.dark, 0, .45, 2.0);
-  ufoBox(kg, .65, .55, .5, sm.dark, .4, 1.18, 2.0);
+  const kgDarkBatch = ufoBatch();
+  kgDarkBatch.add(new Cn(2.8, .9, .8), 0, .45, 2.0);
+  kgDarkBatch.add(new Cn(.65, .55, .5), .4, 1.18, 2.0);
+  kgDarkBatch.add(new Cn(2.4, .06, .4), -1.8, 1.8, 1.6);
+  kgDarkBatch.build(kg, sm.dark);
   ufoBox(kg, .2, .25, .08, ufoM.brass, .4, 1.5, 2.0);
-  ufoBox(kg, 2.4, .06, .4, sm.dark, -1.8, 1.8, 1.6);
+  const kgCanBatch = ufoBatch();
   for (let c = 0; c < 5; c++) {
-    ufoAdd(kg, ufoLatheGeo([[0, 0], [.08, 0], [.08, .22], [0, .22]], 8), c % 2 ? sm.orange : sm.plum, -2.2 + c * .22, 1.83, 1.6);
+    kgCanBatch.add(ufoLatheGeo([[0, 0], [.08, 0], [.08, .22], [0, .22]], 8), -2.2 + c * .22, 1.83, 1.6);
   }
+  kgCanBatch.build(kg, sm.orange);
   Dt(SP.ax - 40 - 6.2, SP.az + 48 - 12.0, SP.ax - 40 + 2.2, SP.az + 48 - 6.4, SP.py, SP.py + 4.8);
 
   // 5. Pylon Sign with Ring, Starburst & Repaired 'I'
   const pyG = new xi(); pyG.position.set(15, 0, -2); G.add(pyG);
   ufoBox(pyG, .5, 20, .5, sm.mint, -.4, 10, 0).rotation.z = -.012;
   ufoBox(pyG, .5, 20, .5, sm.mint, .4, 10, 0).rotation.z = .012;
-  for (let y = 3; y < 16; y += 2.5) ufoBox(pyG, .9, .08, .08, sm.dark, 0, y, 0);
+  const pyRungBatch = ufoBatch();
+  for (let y = 3; y < 16; y += 2.5) pyRungBatch.add(new Cn(.9, .08, .08), 0, y, 0);
+  pyRungBatch.build(pyG, sm.dark);
   ufoNeon(pyG, ufoCircle(0, 17.5, 0, 4.2, 'x'), 0x4df3ff, .18, true);
   ufoNeon(pyG, ufoCircle(0, 17.5, 0, 3.7, 'x'), 0xff4fd8, .12, true);
   const star = [];
@@ -15160,10 +15166,11 @@ function spBuildOutpost(parent, rnd) {
   ufoBox(T, 6.9, .4, 3.3, sm.cream, 0, 3.4, 0);
   ufoAdd(T, ufoLatheGeo([[0, -.5], [1.5, -.5], [1.6, .8], [1.4, 1.4], [0, 1.4]], 14), sm.mint, 3.8, 2.1, 0).rotation.z = -Math.PI / 2;
   ufoBox(T, 1.4, .95, 2.6, new wi({color: 0x9af7ff}), 4.4, 2.6, 0).rotation.z = -.32;
-  ufoBox(T, 7.2, .08, 3.28, sm.dark, 0, 1.6, 0);
-  ufoBox(T, 7.2, .06, 3.28, sm.dark, 0, 2.9, 0);
-  ufoBox(T, .35, .28, 3.4, sm.dark, 4.9, .6, 0);
-  ufoBox(T, .35, .28, 3.4, sm.dark, -3.5, .6, 0);
+  const truckDarkBatch = ufoBatch();
+  truckDarkBatch.add(new Cn(7.2, .08, 3.28), 0, 1.6, 0);
+  truckDarkBatch.add(new Cn(7.2, .06, 3.28), 0, 2.9, 0);
+  truckDarkBatch.add(new Cn(.35, .28, 3.4), 4.9, .6, 0);
+  truckDarkBatch.add(new Cn(.35, .28, 3.4), -3.5, .6, 0);
   for (const wx of [-2.0, 2.2]) for (const wz of [-1.55, 1.55]) {
     const w = ufoAdd(T, ufoLatheGeo([[0, -.2], [.62, -.2], [.62, .2], [0, .2]], 14), sm.dark, wx, .62, wz);
     w.rotation.x = Math.PI / 2;
@@ -15183,10 +15190,13 @@ function spBuildOutpost(parent, rnd) {
   // 3. Serving Hatch, Counter & 3 Retro Swivel Stools
   ufoBox(T, 4.4, 1.4, .08, sm.wl, -.4, 2.4, 1.58);
   ufoBox(T, 4.2, 1.25, .02, new wi({color: 0xffca7a}), -.4, 2.4, 1.59);
-  ufoBox(T, 4.6, .08, .55, sm.dark, -.4, 1.68, 1.85);
-  ufoAdd(T, ufoLatheGeo([[0, 0], [.05, 0], [.05, .16], [.01, .24], [0, .25]], 8), new ji({color: 0xd62828, roughness: .4}), -1.8, 1.72, 1.85);
-  ufoAdd(T, ufoLatheGeo([[0, 0], [.05, 0], [.05, .16], [.01, .24], [0, .25]], 8), new ji({color: 0xf4a228, roughness: .4}), -1.65, 1.72, 1.85);
-  ufoBox(T, .16, .14, .12, sm.dark, -1.3, 1.79, 1.85);
+  truckDarkBatch.add(new Cn(4.6, .08, .55), -.4, 1.68, 1.85);
+  truckDarkBatch.add(new Cn(.16, .14, .12), -1.3, 1.79, 1.85);
+  truckDarkBatch.build(T, sm.dark);
+  const condimentBatch = ufoBatch();
+  condimentBatch.add(ufoLatheGeo([[0, 0], [.05, 0], [.05, .16], [.01, .24], [0, .25]], 8), -1.8, 1.72, 1.85);
+  condimentBatch.add(ufoLatheGeo([[0, 0], [.05, 0], [.05, .16], [.01, .24], [0, .25]], 8), -1.65, 1.72, 1.85);
+  condimentBatch.build(T, sm.orange);
   ufoAdd(T, ufoLatheGeo([[0, 0], [.06, 0], [.08, .28], [0, .28]], 8), sm.cream, -.9, 1.72, 1.85);
 
   // Batched stools
@@ -15492,22 +15502,26 @@ function spBuildOutpost(parent, rnd) {
   benchCreamBatch.build(O, sm.cream);
   benchBrassBatch.build(O, ufoM.brass);
 
-  // Planters with alien flora
+  // Planters with alien flora (batched)
+  const planterCreamBatch = ufoBatch();
+  const planterMintBatch = ufoBatch();
+  const planterBulbBatch = ufoBatch();
   function addPlanter(px, pz) {
-    const pg = new xi(); pg.position.set(px, 0, pz); O.add(pg);
-    ufoAdd(pg, ufoLatheGeo([[0, 0], [.82, 0], [.95, .45], [.88, .62], [.72, .62], [0, .45]], 8), sm.cream);
+    planterCreamBatch.add(ufoLatheGeo([[0, 0], [.82, 0], [.95, .45], [.88, .62], [.72, .62], [0, .45]], 8), px, 0, pz);
     for (let k = 0; k < 5; k++) {
       const a = k * Math.PI * .4, r0 = .32;
-      const m = ufoAdd(pg, ufoLatheGeo([[0, 0], [.18, 0], [.24, .4], [0, .75]], 6), sm.mint, Math.cos(a) * r0, .48, Math.sin(a) * r0);
-      m.rotation.set((Math.random() - .5) * .3, a, (Math.random() - .5) * .3);
+      planterMintBatch.add(ufoLatheGeo([[0, 0], [.18, 0], [.24, .4], [0, .75]], 6), px + Math.cos(a) * r0, .48, pz + Math.sin(a) * r0, (Math.random() - .5) * .3, a, (Math.random() - .5) * .3);
     }
-    ufoBall(pg, .2, new wi({color: 0xb6ff5a}), 0, .9, 0);
+    planterBulbBatch.add(new lr(.2, 8, 6), px, .9, pz);
     Dt(SP.ax + px - .8, SP.az + pz - .8, SP.ax + px + .8, SP.az + pz + .8, SP.py, SP.py + 1.2);
   }
   addPlanter(-30, 36);
   addPlanter(10, 49);
   addPlanter(22, 18);
   addPlanter(60, -6);
+  planterCreamBatch.build(O, sm.cream);
+  planterMintBatch.build(O, sm.mint);
+  planterBulbBatch.build(O, new wi({color: 0xb6ff5a}));
 
   // Retro domed waste bins helper (batched)
   const binTealBatch = ufoBatch();
@@ -16075,10 +16089,10 @@ function spBuildOutpost(parent, rnd) {
   // Faceted hexagonal crystal columns around the rim (amethyst and pale cyan mineral quartz, batched)
   const cryCols = [0x9d72d6, 0x6edbf5, 0xba88ea, 0xb8d9ea];
   const cryBatches = [ufoBatch(), ufoBatch(), ufoBatch(), ufoBatch()];
+  const haloBatches = [ufoBatch(), ufoBatch(), ufoBatch(), ufoBatch()];
   for (let k = 0; k < 22; k++) {
     const a = rnd() * Math.PI * 2, rad = 188 + rnd() * 30, x = Math.cos(a) * rad, z = Math.sin(a) * rad;
     if (z > 70 && z < 130 && x < 130) continue;
-    const cg = new xi(); cg.position.set(x, 0, z); O.add(cg);
     const bIdx = k % 4;
     const colr = cryCols[bIdx];
     for (let j = 0; j < 5; j++) {
@@ -16086,12 +16100,271 @@ function spBuildOutpost(parent, rnd) {
       const ox = (rnd() - .5) * 4, oz = (rnd() - .5) * 4;
       cryBatches[bIdx].add(ufoLatheGeo([[0, 0], [w, 0], [w, h * .75], [0, h]], 6), x + ox, 0, z + oz, (rnd() - .5) * .4, rnd() * 3, (rnd() - .5) * .4);
     }
-    ufoBall(cg, 4.5, ufoHaloMat(colr, .10), 0, 5, 0);
+    haloBatches[bIdx].add(new lr(4.5, 8, 6), x, 5, z);
     if (k % 4 === 0) col(colr, 9, 36, x, 5, z);
+  }
+  for (let bIdx = 0; bIdx < 4; bIdx++) {
+    haloBatches[bIdx].build(O, ufoHaloMat(cryCols[bIdx], .10));
   }
   for (let bIdx = 0; bIdx < 4; bIdx++) {
     cryBatches[bIdx].build(O, new wi({color: cryCols[bIdx]}));
   }
+  // ==================== LIFE: RESIDENTS & AMBIENT CREATURES (O4) ====================
+  // 1. PUMPKIN: Pump Court robot with pumpkin head and squeegee (x = -40, z = 48)
+  const pumpBotG = new xi(); pumpBotG.position.set(-40, 0, 47); O.add(pumpBotG);
+  const botDarkBatch = ufoBatch();
+  botDarkBatch.add(ufoLatheGeo([[0, -.06], [.26, -.06], [.26, .06], [0, .06]], 12), 0, .26, 0, 0, 0, Math.PI / 2);
+  botDarkBatch.add(new Cn(.32, .24, .05), 0, 1.0, .23);
+  botDarkBatch.build(pumpBotG, sm.dark);
+  ufoAdd(pumpBotG, ufoTubeGeo([[0, .26, 0], [0, .7, 0]], .04, 4), ufoM.trim);
+  ufoBox(pumpBotG, .55, .65, .45, sm.mint, 0, .95, 0);
+  ufoBall(pumpBotG, .06, new wi({color: 0x4df3ff}), 0, 1.0, .25);
+  const botHead = new xi(); botHead.position.set(0, 1.45, 0); pumpBotG.add(botHead);
+  ufoAdd(botHead, ufoLatheGeo([[0, 0], [.35, 0], [.38, .22], [.26, .38], [0, .42]], 12), new ji({color: 0xff8a30, roughness: .55, emissive: 0x5a2005, emissiveIntensity: .6}));
+  ufoBall(botHead, .08, new wi({color: 0x4df3ff}), 0, .2, .32);
+  ufoBall(botHead, .14, ufoHaloMat(0x4df3ff, .12), 0, .2, .32);
+  const squeegeeArm = new xi(); squeegeeArm.position.set(.32, 1.05, .15); pumpBotG.add(squeegeeArm);
+  ufoAdd(squeegeeArm, ufoTubeGeo([[0, 0, 0], [.15, -.1, .25], [.2, .1, .55]], .025, 4), ufoM.brass);
+  ufoBox(squeegeeArm, .38, .04, .04, sm.dark, .2, .1, .55);
+
+  // 2. THE COOK: Nova Nosh window (x = 23, y = 1.8, z = 44)
+  const cookG = new xi(); cookG.position.set(23 - .4, 1.8, 44 + 1.25); O.add(cookG);
+  // Round plump alien body with salmon skin
+  ufoBall(cookG, .42, new ji({color: 0xffa080, roughness: .65, emissive: 0x3a1510, emissiveIntensity: .4}), 0, .35, 0, 1, 1.15, 1);
+  // Paper chef hat tilted askew
+  ufoAdd(cookG, ufoLatheGeo([[0, 0], [.18, 0], [.22, .28], [0, .3]], 10), sm.cream, .06, .78, 0).rotation.z = -.15;
+  // Three eyes (batched)
+  const cookEyeBatch = ufoBatch();
+  const cookPupilBatch = ufoBatch();
+  cookEyeBatch.add(new lr(.05, 6, 4), -.09, .52, .36);
+  cookEyeBatch.add(new lr(.05, 6, 4), .09, .52, .36);
+  cookEyeBatch.add(new lr(.045, 6, 4), 0, .6, .36);
+  cookPupilBatch.add(new lr(.025, 4, 3), -.09, .52, .4);
+  cookPupilBatch.add(new lr(.025, 4, 3), .09, .52, .4);
+  cookPupilBatch.add(new lr(.02, 4, 3), 0, .6, .4);
+  cookEyeBatch.build(cookG, new wi({color: 0xffebd0}));
+  cookPupilBatch.build(cookG, sm.dark);
+  // Arms and spatula
+  const cookArm = new xi(); cookArm.position.set(-.25, .28, .2); cookG.add(cookArm);
+  ufoAdd(cookArm, ufoTubeGeo([[0, 0, 0], [-.1, -.1, .25], [.1, -.05, .45]], .028, 4), sm.orange);
+  ufoBox(cookArm, .12, .01, .18, ufoM.trim, .1, -.05, .55);
+  // Griddle burger patty
+  const burgerPatty = ufoBox(cookG, .16, .04, .16, new ji({color: 0x5a2a18, roughness: .9}), .05, .02, .55);
+
+  // 3. THE CLERK: Drift Inn lobby desk (x = 80 - 7.5 = 72.5, y = 0.7, z = -14 + 8.8 = -5.2)
+  const clerkG = new xi(); clerkG.position.set(72.5, .72, -5.2); O.add(clerkG);
+  // Moth creature body resting on desk
+  ufoBall(clerkG, .32, sm.plum, 0, .22, 0, 1.2, .8, 1);
+  // Folded moth wings (batched)
+  const clerkWingBatch = ufoBatch();
+  clerkWingBatch.add(new Cn(.45, .04, .7), -.28, .28, -.15, -.2, 0, .3);
+  clerkWingBatch.add(new Cn(.45, .04, .7), .28, .28, -.15, -.2, 0, -.3);
+  clerkWingBatch.build(clerkG, sm.cream);
+  // Clerk head and antennae
+  const clerkHead = new xi(); clerkHead.position.set(0, .26, .22); clerkG.add(clerkHead);
+  ufoBall(clerkHead, .18, sm.plum, 0, 0, 0);
+  const clerkEyeMat = new wi({color: 0x241d33});
+  const clerkEyeBatch = ufoBatch();
+  clerkEyeBatch.add(new lr(.05, 6, 4), -.08, .04, .14);
+  clerkEyeBatch.add(new lr(.05, 6, 4), .08, .04, .14);
+  clerkEyeBatch.build(clerkHead, clerkEyeMat);
+  const clerkAntennaBatch = ufoBatch();
+  clerkAntennaBatch.add(ufoTubeGeo([[-.06, .14, 0], [-.14, .32, .08]], .012, 4));
+  clerkAntennaBatch.add(ufoTubeGeo([[.06, .14, 0], [.14, .32, .08]], .012, 4));
+  clerkAntennaBatch.build(clerkHead, sm.yellow);
+
+  // 4. THE LIZARD: Drift Inn rooftop sunbathing deck (on top pod chaise lounge)
+  const topP = podPositions[8];
+  const lizardG = new xi(); lizardG.position.set(80 + topP.x, topP.y + 1.22, -14 + topP.z); O.add(lizardG);
+  lizardG.rotation.y = .3;
+  // Slender turquoise body
+  ufoBall(lizardG, .16, sm.mint, 0, .08, 0, 1.4, .6, .8);
+  const lizardHead = new xi(); lizardHead.position.set(0, .14, .18); lizardG.add(lizardHead);
+  ufoBall(lizardHead, .11, sm.mint, 0, 0, 0, 1, .7, 1.2);
+  // Tiny dark sun visors
+  ufoBox(lizardHead, .18, .04, .06, sm.dark, 0, .04, .08);
+  // Curled tail
+  const lizardTail = ufoAdd(lizardG, ufoTubeGeo([[0, .06, -.15], [.12, .06, -.32], [-.05, .06, -.45]], .022, 4), sm.mint);
+
+  // 5. HOP-HOPS: 12 small fuzzy critters around Plaza & Patio
+  const hopHopData = [
+    {x: 12, z: 8, col: 0x8be3c3, scale: .22},
+    {x: 16, z: 12, col: 0xc4b0dc, scale: .24},
+    {x: 10, z: 14, col: 0xf5db7a, scale: .20},
+    {x: 15, z: 4, col: 0x8be3c3, scale: .21},
+    {x: 18, z: 9, col: 0xffa080, scale: .23},
+    {x: 8, z: 10, col: 0xc4b0dc, scale: .22},
+    {x: -6, z: 58, col: 0x8be3c3, scale: .22},
+    {x: -3, z: 65, col: 0xf5db7a, scale: .20},
+    {x: -7, z: 64, col: 0xc4b0dc, scale: .23},
+    {x: -2, z: 59, col: 0xffa080, scale: .21},
+    {x: 24, z: 50, col: 0x8be3c3, scale: .22},
+    {x: 26, z: 47, col: 0xf5db7a, scale: .20}
+  ];
+  const hopHopCritters = [];
+  const hhEyeWhiteGeo = new lr(1, 6, 4);
+  const hhPupilGeo = new lr(1, 4, 3);
+  for (let i = 0; i < hopHopData.length; i++) {
+    const d = hopHopData[i];
+    const hg = new xi(); hg.position.set(d.x, 0, d.z); O.add(hg);
+    const bodyM = new dt(new lr(d.scale, 8, 6), new ji({color: d.col, roughness: .85}));
+    bodyM.position.y = d.scale; hg.add(bodyM);
+    const eyeBatch = ufoBatch();
+    eyeBatch.add(hhEyeWhiteGeo, -d.scale * .38, d.scale * 1.3, d.scale * .75, 0, 0, 0, d.scale * .24, d.scale * .24, d.scale * .24);
+    eyeBatch.add(hhEyeWhiteGeo, d.scale * .38, d.scale * 1.3, d.scale * .75, 0, 0, 0, d.scale * .24, d.scale * .24, d.scale * .24);
+    eyeBatch.build(hg, sm.dark);
+    hopHopCritters.push({
+      group: hg,
+      baseX: d.x,
+      baseZ: d.z,
+      x: d.x,
+      z: d.z,
+      hopPhase: i * .6,
+      hopSpeed: 2.2 + (i % 3) * .4,
+      radius: d.scale
+    });
+  }
+
+  // 6. SKY JELLIES: 8 translucent glowing hovering jellyfish (y = 18 to 32m)
+  const skyJellyData = [
+    {x: -20, y: 22, z: 45, col: 0xb6ff5a, size: 1.2, speed: .35},
+    {x: 5, y: 28, z: 35, col: 0xffa080, size: 1.4, speed: .28},
+    {x: 25, y: 19, z: 52, col: 0x6ffcff, size: 1.1, speed: .38},
+    {x: 48, y: 26, z: 42, col: 0xb6ff5a, size: 1.3, speed: .32},
+    {x: 12, y: 31, z: 12, col: 0xff7bd0, size: 1.5, speed: .25},
+    {x: 65, y: 23, z: 0, col: 0xb6ff5a, size: 1.2, speed: .34},
+    {x: -8, y: 20, z: 20, col: 0x8be3c3, size: 1.0, speed: .42},
+    {x: 35, y: 25, z: -15, col: 0xffa080, size: 1.3, speed: .30}
+  ];
+  const skyJellies = [];
+  for (let i = 0; i < skyJellyData.length; i++) {
+    const jd = skyJellyData[i];
+    const jg = new xi(); jg.position.set(jd.x, jd.y, jd.z); O.add(jg);
+    const jMat = new wi({color: jd.col, transparent: true, opacity: .38, side: 2});
+    const jellyBatch = ufoBatch();
+    jellyBatch.add(ufoLatheGeo([[0, .2], [jd.size, 0], [jd.size * .85, -.4], [jd.size * .6, -.7], [0, -.8]], 10));
+    for (let k = 0; k < 4; k++) {
+      const a = k * Math.PI / 2, tr = jd.size * .55;
+      jellyBatch.add(ufoTubeGeo([[Math.cos(a) * tr, -.7, Math.sin(a) * tr], [Math.cos(a) * (tr + .1), -1.8, Math.sin(a) * (tr + .1)], [Math.cos(a) * (tr - .05), -2.8, Math.sin(a) * (tr - .05)]], .025, 4));
+    }
+    jellyBatch.build(jg, jMat);
+    ufoBall(jg, jd.size * .6, ufoHaloMat(jd.col, .16), 0, -.2, 0);
+    skyJellies.push({
+      group: jg,
+      baseX: jd.x,
+      baseY: jd.y,
+      baseZ: jd.z,
+      speed: jd.speed,
+      phase: i * .9
+    });
+  }
+
+  // 7. MOTHS: 24 tiny glowing points circling brightest signs
+  const mothCount = 24;
+  const mothGeo = new It();
+  const mothPos = new Float32Array(mothCount * 3);
+  const mothCenters = [
+    {x: -25, y: 17.5, z: 46},  // Orbit Gas pylon
+    {x: -8.8, y: 3.8, z: 57.8}, // Event Horizon martini
+    {x: 72.5, y: 6.0, z: -4.2}, // Drift Inn vacancy
+    {x: -14, y: 6.0, z: 24.3}   // Spin Cycle sock
+  ];
+  for (let i = 0; i < mothCount; i++) {
+    const c = mothCenters[i % 4];
+    mothPos[i * 3] = c.x + (Math.random() - .5) * 1.5;
+    mothPos[i * 3 + 1] = c.y + (Math.random() - .5) * .8;
+    mothPos[i * 3 + 2] = c.z + (Math.random() - .5) * 1.5;
+  }
+  mothGeo.setAttribute('position', new Et(mothPos, 3));
+  const mothMat = new Qi({color: 0xfff0b8, size: .18, transparent: true, opacity: .75, fog: false});
+  const mothPoints = new or(mothGeo, mothMat);
+  O.add(mothPoints);
+
+  // Life Master State Machine & Update Loop
+  spLife = {
+    update(t, dt) {
+      const p = Nn.position;
+      // Pumpkin robot: rolls beat, faces player when near
+      const pumpDist = Math.hypot(p.x - (SP.ax - 40), p.z - (SP.az + 47));
+      if (pumpDist < 9.0) {
+        pumpBotG.rotation.y = Math.atan2(p.x - (SP.ax - 40), p.z - (SP.az + 47));
+        squeegeeArm.rotation.z = Math.sin(t * 5.0) * .35;
+      } else {
+        const beat = Math.sin(t * .8) * 1.4;
+        pumpBotG.position.x = -40 + beat;
+        pumpBotG.rotation.y = beat > 0 ? Math.PI / 2 : -Math.PI / 2;
+        squeegeeArm.rotation.z = Math.sin(t * 1.5) * .1;
+      }
+
+      // The Cook: burger flip, looks at player when at window
+      const cookDist = Math.hypot(p.x - (SP.ax + 23), p.z - (SP.az + 47));
+      if (cookDist < 5.5) {
+        cookG.rotation.y = Math.atan2(p.x - (SP.ax + 23), p.z - (SP.az + 47));
+      } else {
+        cookG.rotation.y = Math.sin(t * 1.2) * .15;
+      }
+      cookArm.rotation.x = Math.sin(t * 3.5) * .35;
+      burgerPatty.position.y = .02 + Math.max(0, Math.sin(t * 3.5)) * .08;
+
+      // The Clerk: wakes up and blinks when bell rung
+      if (spBellRingTimer > 0) {
+        clerkHead.position.y = .36;
+        clerkHead.rotation.x = -.25;
+        clerkEyeMat.color.setHex(0x58ffa6);
+      } else {
+        clerkHead.position.y = .26 + Math.sin(t * 1.1) * .02;
+        clerkHead.rotation.x = 0;
+        clerkEyeMat.color.setHex(0x241d33);
+      }
+
+      // The Lizard: tail curl and head bob
+      lizardHead.rotation.x = Math.sin(t * .5) * .12;
+      lizardTail.rotation.y = Math.sin(t * .8) * .18;
+
+      // Hop-Hops: hopping, soft player avoidance within 5m
+      for (let i = 0; i < hopHopCritters.length; i++) {
+        const h = hopHopCritters[i];
+        const distToPlayer = Math.hypot(p.x - (SP.ax + h.x), p.z - (SP.az + h.z));
+        if (distToPlayer < 5.0) {
+          // Soft avoidance: drift away from player
+          const awayX = (SP.ax + h.x) - p.x, awayZ = (SP.az + h.z) - p.z;
+          const len = Math.hypot(awayX, awayZ) || 1;
+          h.x += (awayX / len) * dt * 1.2;
+          h.z += (awayZ / len) * dt * 1.2;
+          h.group.position.set(h.x, Math.abs(Math.sin(t * 8.0 + h.hopPhase)) * .24, h.z);
+          h.group.rotation.y = Math.atan2(awayX, awayZ);
+        } else {
+          // Gentle idle hopping near home
+          const hop = Math.max(0, Math.sin(t * h.hopSpeed + h.hopPhase));
+          h.group.position.y = hop * .12;
+          h.group.rotation.y = Math.sin(t * .6 + i) * .4;
+        }
+      }
+
+      // Sky Jellies: pulsation and slow float
+      for (let i = 0; i < skyJellies.length; i++) {
+        const sj = skyJellies[i];
+        const pulse = Math.sin(t * 1.8 + sj.phase);
+        sj.group.scale.set(1.0 - pulse * .12, 1.0 + pulse * .22, 1.0 - pulse * .12);
+        sj.group.position.y = sj.baseY + Math.sin(t * .6 + sj.phase) * 1.4;
+        sj.group.position.x = sj.baseX + Math.cos(t * .25 + sj.phase) * 2.5;
+        sj.group.position.z = sj.baseZ + Math.sin(t * .2 + sj.phase) * 2.5;
+      }
+
+      // Moths: circling signs
+      const mp = mothGeo.attributes.position.array;
+      for (let i = 0; i < mothCount; i++) {
+        const c = mothCenters[i % 4];
+        const a = t * (2.0 + (i % 3) * .6) + i * 1.3;
+        const r = .6 + Math.sin(t * 3.0 + i) * .25;
+        mp[i * 3] = c.x + Math.cos(a) * r;
+        mp[i * 3 + 1] = c.y + Math.sin(t * 4.0 + i) * .25;
+        mp[i * 3 + 2] = c.z + Math.sin(a) * r;
+      }
+      mothGeo.attributes.position.needsUpdate = true;
+    }
+  };
+
   spLights.push({position: new P(SP.ax, SP.py, SP.az), range: 520, cull: 1100, lights, space: 'only'});
 }
 const ufoLightGroup = {position: ufoShip.position, range: 60, cull: 75, lights: collectLocalLights(ufoShip), space: 'both'};
@@ -16616,6 +16889,7 @@ function ufoFrame(dt, t) {
       else if (typeof s === 'function') s(t, dt);
     }
     spShaderTime.value = t;
+    if (spLife && typeof spLife.update === 'function') spLife.update(t, dt);
     if (spTelescopeTimer > 0) {
       spTelescopeTimer -= dt;
       Nn.fov = 22 + Math.max(0, 1 - spTelescopeTimer / 5.0) * (65 - 22);
