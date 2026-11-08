@@ -14291,6 +14291,75 @@ function ufoNeon(parent, pts, color, r = .09, closed = false) {
   ufoAdd(g, ufoTubeGeo(pts, r * 3.2, 6, closed), ufoHaloMat(color, .16));
   return g;
 }
+const _ufoTmpObj = new xt(), _ufoTmpV = new P(), _ufoTmpN = new P();
+function ufoMerge(geos) {
+  let totalPos = 0, totalIdx = 0, hasUv = false;
+  const prep = [];
+  for (const item of geos) {
+    if (!item) continue;
+    const g = item.isBufferGeometry ? item : item.geo;
+    if (!g || !g.attributes || !g.attributes.position) continue;
+    let mat = null;
+    if (item.matrix) {
+      mat = item.matrix;
+    } else if (item.pos || item.rot || item.scale || item.x !== undefined) {
+      _ufoTmpObj.position.set(item.x || (item.pos ? item.pos[0] : 0), item.y || (item.pos ? item.pos[1] : 0), item.z || (item.pos ? item.pos[2] : 0));
+      _ufoTmpObj.rotation.set(item.rx || (item.rot ? item.rot[0] : 0), item.ry || (item.rot ? item.rot[1] : 0), item.rz || (item.rot ? item.rot[2] : 0));
+      _ufoTmpObj.scale.set(item.sx !== undefined ? item.sx : (item.scale ? item.scale[0] : 1), item.sy !== undefined ? item.sy : (item.scale ? item.scale[1] : 1), item.sz !== undefined ? item.sz : (item.scale ? item.scale[2] : 1));
+      _ufoTmpObj.updateMatrix();
+      mat = _ufoTmpObj.matrix.clone();
+    }
+    prep.push({geo: g, mat});
+    totalPos += g.attributes.position.count;
+    totalIdx += g.index ? g.index.count : g.attributes.position.count;
+    if (g.attributes.uv) hasUv = true;
+  }
+  const posArr = new Float32Array(totalPos * 3);
+  const normArr = new Float32Array(totalPos * 3);
+  const uvArr = hasUv ? new Float32Array(totalPos * 2) : null;
+  const idxArr = totalPos > 65535 ? new Uint32Array(totalIdx) : new Uint16Array(totalIdx);
+  let vOffset = 0, iOffset = 0;
+  for (const p of prep) {
+    const g = p.geo, mat = p.mat, pos = g.attributes.position, norm = g.attributes.normal, uv = g.attributes.uv;
+    const cnt = pos.count;
+    for (let i = 0; i < cnt; i++) {
+      _ufoTmpV.fromBufferAttribute(pos, i);
+      if (mat) _ufoTmpV.applyMatrix4(mat);
+      posArr[(vOffset + i) * 3] = _ufoTmpV.x;
+      posArr[(vOffset + i) * 3 + 1] = _ufoTmpV.y;
+      posArr[(vOffset + i) * 3 + 2] = _ufoTmpV.z;
+      if (norm) {
+        _ufoTmpN.fromBufferAttribute(norm, i);
+        if (mat) _ufoTmpN.transformDirection(mat);
+        normArr[(vOffset + i) * 3] = _ufoTmpN.x;
+        normArr[(vOffset + i) * 3 + 1] = _ufoTmpN.y;
+        normArr[(vOffset + i) * 3 + 2] = _ufoTmpN.z;
+      }
+      if (uvArr) {
+        if (uv) {
+          uvArr[(vOffset + i) * 2] = uv.getX(i);
+          uvArr[(vOffset + i) * 2 + 1] = uv.getY(i);
+        } else {
+          uvArr[(vOffset + i) * 2] = 0;
+          uvArr[(vOffset + i) * 2 + 1] = 0;
+        }
+      }
+    }
+    if (g.index) {
+      const idx = g.index;
+      for (let i = 0; i < idx.count; i++) idxArr[iOffset++] = vOffset + idx.getX(i);
+    } else {
+      for (let i = 0; i < cnt; i++) idxArr[iOffset++] = vOffset + i;
+    }
+    vOffset += cnt;
+  }
+  const merged = new It();
+  merged.setAttribute('position', new Et(posArr, 3));
+  merged.setAttribute('normal', new Et(normArr, 3));
+  if (uvArr) merged.setAttribute('uv', new Et(uvArr, 2));
+  merged.setIndex(new Et(idxArr, 1));
+  return merged;
+}
 function ufoCanvasTex(w, h, painter) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   painter(cv.getContext('2d'), w, h);
@@ -14703,42 +14772,35 @@ function spBuild() {
 
 function spPaintDeck(c, W, H) {
   const R = SP.plR, S = W / (2 * R), X = x => (x + R) * S, Z = z => (z + R) * S;
+  // Base asteroid deck tarmac: rich deep cosmic asphalt
   const g = c.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, W / 2);
-  g.addColorStop(0, '#2d2540'); g.addColorStop(.8, '#221c33'); g.addColorStop(1, '#15111f');
+  g.addColorStop(0, '#261c38'); g.addColorStop(.5, '#1e162e'); g.addColorStop(.8, '#161022'); g.addColorStop(1, '#0e0a16');
   c.fillStyle = g; c.fillRect(0, 0, W, H);
+  
+  // Stippled star-grit / surface texture
   const rr = Vm(77);
-  for (let i = 0; i < 9000; i++) { c.fillStyle = 'rgba(' + (rr() < .5 ? '255,255,255' : '10,6,20') + ',' + (rr() * .05).toFixed(3) + ')'; c.fillRect(rr() * W, rr() * H, 2 + rr() * 6, 2 + rr() * 6); }
+  for (let i = 0; i < 9000; i++) {
+    c.fillStyle = 'rgba(' + (rr() < .5 ? '255,255,255' : '10,6,20') + ',' + (rr() * .05).toFixed(3) + ')';
+    c.fillRect(rr() * W, rr() * H, 2 + rr() * 6, 2 + rr() * 6);
+  }
   const glow = (col, blur) => { c.shadowColor = col; c.shadowBlur = blur; c.strokeStyle = col; c.fillStyle = col; };
-  // faint hex pavers on the aprons (toned down so they do not glow harshly at grazing angles)
-  const hexPatch = (x0, z0, x1, z1, col) => {
-    c.save(); c.beginPath(); c.rect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S); c.clip();
-    c.fillStyle = 'rgba(38,28,54,.45)'; c.fillRect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S);
-    c.strokeStyle = col; c.lineWidth = 1.0; c.globalAlpha = .11;
-    const q = 2.6 * S;
-    for (let yy = Z(z0); yy < Z(z1); yy += q * .87) for (let xx = X(x0) + ((Math.round(yy / (q * .87)) % 2) ? q / 2 : 0); xx < X(x1); xx += q) {
-      c.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; c.lineTo(xx + Math.cos(a) * q * .55, yy + Math.sin(a) * q * .55); } c.closePath(); c.stroke();
-    }
+
+  // Helper for painting soft glowing pools under buildings/signs (ZERO added lights needed)
+  const lightPool = (cx, cz, rx, rz, col, alpha = 0.5) => {
+    c.save();
+    const grad = c.createRadialGradient(X(cx), Z(cz), 0, X(cx), Z(cz), Math.max(rx, rz) * S);
+    grad.addColorStop(0, col);
+    grad.addColorStop(0.4, col);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    c.globalAlpha = alpha;
+    c.fillStyle = grad;
+    c.beginPath();
+    c.ellipse(X(cx), Z(cz), rx * S, rz * S, 0, 0, Math.PI * 2);
+    c.fill();
     c.restore();
   };
-  hexPatch(-64, 26, -16, 72, '#38a8b8'); hexPatch(4, 26, 44, 60, '#9a4c84');
-  // Trace of care: ghost rectangle on the deck where an old vending machine once stood
-  c.save();
-  c.fillStyle = 'rgba(16,11,26,.7)'; c.fillRect(X(-31), Z(36), 3.4 * S, 2.0 * S);
-  c.strokeStyle = 'rgba(110,85,140,.35)'; c.lineWidth = 1.5; c.strokeRect(X(-31), Z(36), 3.4 * S, 2.0 * S);
-  c.fillStyle = 'rgba(8,5,14,.9)';
-  for (const [bx, bz] of [[-30.7, 36.3], [-27.9, 36.3], [-30.7, 37.7], [-27.9, 37.7]]) {
-    c.beginPath(); c.arc(X(bx), Z(bz), .24 * S, 0, 7); c.fill();
-  }
-  c.restore();
-  // plaza spiral at the motel
-  c.save(); c.translate(X(80), Z(-14)); c.fillStyle = 'rgba(40,24,70,.9)'; c.beginPath(); c.arc(0, 0, 30 * S, 0, 7); c.fill();
-  glow('#c06bff', 12); c.lineWidth = 3; c.beginPath();
-  for (let a = 0; a < 6 * Math.PI; a += .05) { const r = a / (6 * Math.PI) * 28 * S; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.stroke();
-  c.restore();
-  // taxiway
-  c.shadowBlur = 0; c.fillStyle = '#1a1626'; c.fillRect(X(-46), Z(52), 12 * S, 36 * S);
-  glow('#ffb347', 8); c.lineWidth = 3; c.setLineDash([14, 14]); c.beginPath(); c.moveTo(X(-40), Z(52)); c.lineTo(X(-40), Z(86)); c.stroke(); c.setLineDash([]);
-  // runway
+
+  // 1. RUNWAY 07/25 (z: 85 to 113, x: -200 to 120)
   c.shadowBlur = 0; c.fillStyle = '#0f0c18'; c.fillRect(X(-200), Z(85), 320 * S, 28 * S);
   glow('#4df3ff', 14); c.lineWidth = 4; c.strokeRect(X(-200), Z(85), 320 * S, 28 * S);
   glow('#e9d9ff', 6); c.lineWidth = 5; c.setLineDash([36, 30]); c.beginPath(); c.moveTo(X(-186), Z(99)); c.lineTo(X(106), Z(99)); c.stroke(); c.setLineDash([]);
@@ -14747,12 +14809,159 @@ function spPaintDeck(c, W, H) {
   glow('#ff5fb8', 10); c.font = 'bold ' + (9 * S) + 'px Arial Black,Impact,sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.save(); c.translate(X(-168), Z(99)); c.rotate(-Math.PI / 2); c.fillText('07', 0, 0); c.restore();
   c.save(); c.translate(X(80), Z(99)); c.rotate(Math.PI / 2); c.fillText('25', 0, 0); c.restore();
-  // ship parking ring
+
+  // Taxiway from runway (z 86) to Orbit Gas (z 52)
+  c.shadowBlur = 0; c.fillStyle = '#181324'; c.fillRect(X(-46), Z(52), 12 * S, 36 * S);
+  glow('#ffb347', 8); c.lineWidth = 3; c.setLineDash([14, 14]); c.beginPath(); c.moveTo(X(-40), Z(52)); c.lineTo(X(-40), Z(86)); c.stroke(); c.setLineDash([]);
+
+  // Gate approach taxiway (x -132 to -116, z 76 to 92)
+  c.shadowBlur = 0; c.fillStyle = '#1c1628'; c.fillRect(X(-132), Z(76), 16 * S, 16 * S);
+  c.strokeStyle = 'rgba(255,190,80,.4)'; c.lineWidth = 2; c.strokeRect(X(-132), Z(76), 16 * S, 16 * S);
+  c.fillStyle = '#ffd24d'; c.font = 'bold ' + (3 * S) + 'px "Courier New",monospace'; c.textAlign = 'center';
+  c.fillText('SLOW 15', X(-124), Z(84));
+
+  // Ship parking ring at Orbit Gas (x -40, z 77)
   c.shadowBlur = 0; c.fillStyle = '#1b1630'; c.beginPath(); c.arc(X(-40), Z(77), 6.6 * S, 0, 7); c.fill();
   glow('#58ffa6', 14); c.lineWidth = 5; c.beginPath(); c.arc(X(-40), Z(77), 6.2 * S, 0, 7); c.stroke();
   c.font = 'bold ' + (4 * S) + 'px Arial Black,sans-serif'; c.fillText('P', X(-40), Z(77));
-  // glowing deck edge
+
+  // 2. MAIN STREET ROADWAY (x: -36 to 54, z: 36 to 48)
+  c.shadowBlur = 0; c.fillStyle = '#161220'; c.fillRect(X(-36), Z(36), 90 * S, 12 * S);
+  // Curbs
+  c.strokeStyle = 'rgba(143,240,216,.45)'; c.lineWidth = 2; // North curb (teal)
+  c.beginPath(); c.moveTo(X(-36), Z(36)); c.lineTo(X(54), Z(36)); c.stroke();
+  c.strokeStyle = 'rgba(255,122,58,.45)'; c.lineWidth = 2; // South curb (tangerine)
+  c.beginPath(); c.moveTo(X(-36), Z(48)); c.lineTo(X(54), Z(48)); c.stroke();
+  // Center road dashes (faded warm white)
+  c.strokeStyle = 'rgba(240,226,196,.5)'; c.lineWidth = 2.5; c.setLineDash([12, 10]);
+  c.beginPath(); c.moveTo(X(-34), Z(42)); c.lineTo(X(52), Z(42)); c.stroke(); c.setLineDash([]);
+  
+  // Zebra pedestrian crossings
+  const zebra = (zx) => {
+    c.fillStyle = 'rgba(235,220,250,.65)';
+    for (let k = 0; k < 5; k++) c.fillRect(X(zx - 1.2), Z(37.2 + k * 2.0), 2.4 * S, 1.2 * S);
+  };
+  zebra(-24); // near Spin Cycle
+  zebra(8);   // between Nova Nosh and Event Horizon
+  zebra(34);  // near Zorp's lot and Plaza entrance
+
+  // Parking bays on South curb (slanted white lines)
+  c.strokeStyle = 'rgba(255,255,255,.3)'; c.lineWidth = 1.5;
+  for (let bx = -2; bx < 32; bx += 5.5) {
+    c.beginPath(); c.moveTo(X(bx), Z(48)); c.lineTo(X(bx + 2.5), Z(44.5)); c.stroke();
+  }
+
+  // Asphalt wear, cracks, and mended crack with black tar sealant
+  c.strokeStyle = 'rgba(15,10,22,.9)'; c.lineWidth = 2.5;
+  c.beginPath(); c.moveTo(X(-12), Z(40)); c.lineTo(X(-8), Z(43)); c.lineTo(X(-3), Z(41)); c.lineTo(X(1), Z(45)); c.stroke();
+  c.strokeStyle = 'rgba(60,40,80,.4)'; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(X(18), Z(38)); c.lineTo(X(22), Z(39.5)); c.lineTo(X(20), Z(43)); c.stroke();
+
+  // Chalk hopscotch game near Spin Cycle (x -16, z 33)
+  c.save();
+  c.strokeStyle = 'rgba(255,160,220,.75)'; c.lineWidth = 1.5;
+  for (let i = 0; i < 4; i++) c.strokeRect(X(-17 + i * 1.4), Z(32.5), 1.2 * S, 1.2 * S);
+  c.strokeStyle = 'rgba(100,240,220,.75)';
+  c.strokeRect(X(-17 + 4 * 1.4), Z(31.8), 1.2 * S, 1.2 * S);
+  c.strokeRect(X(-17 + 4 * 1.4), Z(33.2), 1.2 * S, 1.2 * S);
+  c.restore();
+
+  // Oil/fluid stain near Orbit Gas and truck
+  c.fillStyle = 'rgba(8,5,15,.75)';
+  c.beginPath(); c.ellipse(X(-36), Z(45), 2.2 * S, 1.4 * S, .2, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(X(21), Z(41), 1.8 * S, 1.1 * S, -.1, 0, Math.PI * 2); c.fill();
+
+  // Ghost rectangle (retained from S2)
+  c.save();
+  c.fillStyle = 'rgba(16,11,26,.7)'; c.fillRect(X(-31), Z(36), 3.4 * S, 2.0 * S);
+  c.strokeStyle = 'rgba(110,85,140,.35)'; c.lineWidth = 1.5; c.strokeRect(X(-31), Z(36), 3.4 * S, 2.0 * S);
+  c.fillStyle = 'rgba(8,5,14,.9)';
+  for (const [bx, bz] of [[-30.7, 36.3], [-27.9, 36.3], [-30.7, 37.7], [-27.9, 37.7]]) {
+    c.beginPath(); c.arc(X(bx), Z(bz), .24 * S, 0, 7); c.fill();
+  }
+  c.restore();
+
+  // 3. THE PLAZA (x: 2 to 25, z: -2 to 20)
+  c.save();
+  c.fillStyle = 'rgba(42,26,62,.6)';
+  c.beginPath(); c.ellipse(X(13), Z(8), 14 * S, 12 * S, 0, 0, Math.PI * 2); c.fill();
+  // Radial paving pattern
+  c.strokeStyle = 'rgba(138,92,192,.3)'; c.lineWidth = 1.2;
+  for (let r = 3; r <= 13; r += 2.5) {
+    c.beginPath(); c.ellipse(X(13), Z(8), r * S, (r * .85) * S, 0, 0, Math.PI * 2); c.stroke();
+  }
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+    c.beginPath(); c.moveTo(X(13), Z(8));
+    c.lineTo(X(13 + Math.cos(a) * 13), Z(8 + Math.sin(a) * 11)); c.stroke();
+  }
+  // Fountain basin outline (x 4, z 8)
+  c.fillStyle = 'rgba(30,20,50,.9)'; c.beginPath(); c.arc(X(4), Z(8), 3.5 * S, 0, 7); c.fill();
+  glow('#4df3ff', 10); c.lineWidth = 2.5; c.beginPath(); c.arc(X(4), Z(8), 3.5 * S, 0, 7); c.stroke();
+  c.restore();
+
+  // 4. THE QUIET SIDE (x: 55 to 95, z: -30 to 5)
+  // Flagstone path leading to Drift Inn and Gertrude's Greenhouse
+  c.fillStyle = 'rgba(38,28,54,.55)';
+  c.beginPath();
+  c.moveTo(X(48), Z(36)); c.lineTo(X(58), Z(20)); c.lineTo(X(74), Z(0)); c.lineTo(X(78), Z(-10));
+  c.lineTo(X(72), Z(-10)); c.lineTo(X(68), Z(0)); c.lineTo(X(54), Z(20)); c.lineTo(X(44), Z(36));
+  c.closePath(); c.fill();
+  // Path spur to Greenhouse (x 48, z -20)
+  c.beginPath();
+  c.moveTo(X(56), Z(15)); c.lineTo(X(50), Z(-16)); c.lineTo(X(46), Z(-16)); c.lineTo(X(52), Z(15));
+  c.closePath(); c.fill();
+
+  // Drift Inn plaza spiral (retained and enhanced)
+  c.save(); c.translate(X(80), Z(-14)); c.fillStyle = 'rgba(40,24,70,.9)'; c.beginPath(); c.arc(0, 0, 30 * S, 0, 7); c.fill();
+  glow('#c06bff', 12); c.lineWidth = 3; c.beginPath();
+  for (let a = 0; a < 6 * Math.PI; a += .05) { const r = a / (6 * Math.PI) * 28 * S; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.stroke();
+  c.restore();
+
+  // 5. COLOURED LIGHT POOLS (Cast light onto ground without adding point lights!)
+  // Gate: pink & mustard
+  lightPool(-125, 85, 16, 12, 'rgba(255,79,163,.45)', 0.6);
+  lightPool(-125, 85, 9, 7, 'rgba(255,210,77,.35)', 0.5);
+  // Orbit Gas: cyan hero & pink accent
+  lightPool(-40, 48, 22, 16, 'rgba(77,243,255,.52)', 0.7);
+  lightPool(-34, 50, 14, 11, 'rgba(255,79,216,.40)', 0.6);
+  // Spin Cycle: turquoise & tangerine
+  lightPool(-14, 26, 13, 9, 'rgba(47,224,208,.48)', 0.65);
+  lightPool(-14, 26, 8, 6, 'rgba(255,122,58,.42)', 0.6);
+  // Nova Nosh: warm pink & amber/peach
+  lightPool(23, 42, 14, 10, 'rgba(255,123,208,.50)', 0.65);
+  lightPool(24, 44, 9, 7, 'rgba(255,200,100,.55)', 0.7);
+  // The Event Horizon: violet & mustard
+  lightPool(-5, 62, 16, 13, 'rgba(154,92,255,.52)', 0.7);
+  lightPool(-5, 56, 10, 8, 'rgba(255,200,60,.40)', 0.55);
+  // Planet Pop: candy multi-colour radiance
+  lightPool(14, 6, 18, 16, 'rgba(255,80,180,.48)', 0.65);
+  lightPool(14, 6, 11, 10, 'rgba(88,255,200,.42)', 0.6);
+  lightPool(14, 6, 6, 5, 'rgba(255,225,90,.55)', 0.7);
+  // Zorp's Used Rockets: mustard & mint
+  lightPool(45, 54, 18, 14, 'rgba(240,190,60,.42)', 0.6);
+  lightPool(46, 50, 10, 8, 'rgba(143,240,184,.38)', 0.5);
+  // Gertrude's Greenhouse: living lime & mint
+  lightPool(48, -20, 15, 14, 'rgba(143,240,184,.55)', 0.7);
+  lightPool(48, -20, 9, 8, 'rgba(182,255,90,.48)', 0.65);
+  // Drift Inn: violet & warm amber
+  lightPool(75, -6, 16, 14, 'rgba(192,107,255,.55)', 0.7);
+  lightPool(73, -4, 9, 8, 'rgba(255,210,120,.45)', 0.6);
+  // Par Sec Mini Golf: pink & cyan
+  lightPool(-22, -22, 14, 12, 'rgba(255,95,184,.38)', 0.5);
+  lightPool(-22, -22, 8, 7, 'rgba(77,243,255,.32)', 0.5);
+  // Observation Deck: brass & ivory
+  lightPool(32, -65, 11, 9, 'rgba(255,230,170,.35)', 0.5);
+
+  // 6. GLOWING DECK RIM WITH HAZARD MARKINGS
   glow('#ff4fd8', 18); c.lineWidth = 6; c.beginPath(); c.arc(W / 2, H / 2, (R - 3) * S, 0, 7); c.stroke();
+  // Perimeter caution hatches
+  c.strokeStyle = 'rgba(255,210,77,.35)'; c.lineWidth = 2.5;
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 72) {
+    c.beginPath();
+    c.moveTo(W / 2 + Math.cos(a) * (R - 7) * S, H / 2 + Math.sin(a) * (R - 7) * S);
+    c.lineTo(W / 2 + Math.cos(a + .02) * (R - 3) * S, H / 2 + Math.sin(a + .02) * (R - 3) * S);
+    c.stroke();
+  }
 }
 
 function spBuildOutpost(parent, rnd) {
@@ -14903,6 +15112,143 @@ function spBuildOutpost(parent, rnd) {
   ufoBall(bellStand, .025, ufoM.brass, 0, 1.135, 0); // clapper button
   ufoBox(bellStand, .02, .004, .02, ufoM.trim, 0, 1.155, 0); // worn thumb scuff
   spBell = new P(SP.ax + 72.5, SP.py, SP.az - 4);
+
+  // ---------- THE GATE ARCH & STREET SKELETON PROPS ----------
+  // Gate Arch across taxiway at x -125, z 85
+  const gateG = new xi(); gateG.position.set(-125, 0, 85); O.add(gateG);
+  // Twin Googie canted pylons
+  ufoAdd(gateG, ufoLatheGeo([[0, 0], [.55, 0], [.32, 5], [.42, 9.8], [0, 10.2]], 12), sm.mint, 0, 0, -10.5).rotation.z = .06;
+  ufoAdd(gateG, ufoLatheGeo([[0, 0], [.55, 0], [.32, 5], [.42, 9.8], [0, 10.2]], 12), sm.mint, 0, 0, 10.5).rotation.z = -.06;
+  // Boomerang crossbeam spanning 23m across the taxiway
+  ufoBox(gateG, 1.2, .8, 22.8, sm.plum, 0, 9.6, 0);
+  ufoNeon(gateG, [[-.65, 10.1, -11.4], [.65, 10.1, -11.4], [.65, 10.1, 11.4], [-.65, 10.1, 11.4]], 0xff4fd8, .12, true);
+  ufoNeon(gateG, [[-.65, 9.1, -11.4], [.65, 9.1, -11.4], [.65, 9.1, 11.4], [-.65, 9.1, 11.4]], 0x4df3ff, .09, true);
+  // Central starburst crest
+  const gStar = [];
+  for (let k = 0; k <= 8; k++) {
+    const a = k * Math.PI / 4, r1 = k % 2 === 0 ? 2.2 : 1.1;
+    gStar.push([0, 12.0 + Math.sin(a) * r1, Math.cos(a) * r1]);
+  }
+  ufoNeon(gateG, gStar, 0xffd24d, .09, true);
+  ufoBall(gateG, .45, new wi({color: 0xffebd0}), 0, 12.0, 0);
+  // Main gate signs
+  ufoSign(gateG, 'DRIFT OUTPOST', 6.8, 2.2, '#ff4fd8', 0, 10.8, 0, Math.PI / 2, 'POP. 6  ·  SPEED LIMIT 15');
+  ufoSign(gateG, 'DRIFT OUTPOST', 6.8, 2.2, '#ff4fd8', 0, 10.8, 0, -Math.PI / 2, 'POP. 6  ·  SPEED LIMIT 15');
+  ufoSign(gateG, 'WELCOME, DRIVE SLOWLY', 4.4, 1.3, '#ffd24d', 0, 4.5, -9.8, Math.PI / 2, 'NO WARP ON DECK');
+  Dt(SP.ax - 126, SP.az + 73.5, SP.ax - 124, SP.az + 75.5, SP.py, SP.py + 10.5);
+  Dt(SP.ax - 126, SP.az + 94.5, SP.ax - 124, SP.az + 96.5, SP.py, SP.py + 10.5);
+
+  // Sputnik lamp posts helper
+  function addSputnikLamp(lx, lz, lh = 6.2, colHex = 0xffebd0) {
+    const lg = new xi(); lg.position.set(lx, 0, lz); O.add(lg);
+    ufoAdd(lg, ufoLatheGeo([[0, 0], [.32, 0], [.18, .4], [.09, lh - .8], [.16, lh - .7], [.08, lh]], 10), sm.dark);
+    ufoAdd(lg, ufoLatheGeo([[0, lh - .8], [.45, lh - .8], [.48, lh - .72], [0, lh - .72]], 12), sm.mint); // Googie fin collar
+    ufoBall(lg, .38, new wi({color: colHex}), 0, lh + .32, 0);
+    ufoBall(lg, .85, ufoHaloMat(colHex, .18), 0, lh + .32, 0);
+    // 6 radial brass spikes
+    for (let k = 0; k < 6; k++) {
+      const a = k * Math.PI / 3, ca = Math.cos(a) * .85, sa = Math.sin(a) * .85;
+      ufoAdd(lg, ufoTubeGeo([[0, lh + .32, 0], [ca, lh + .32 + (k % 2 ? .3 : -.2), sa]], .018, 4), ufoM.brass);
+    }
+    Dt(SP.ax + lx - .35, SP.az + lz - .35, SP.ax + lx + .35, SP.az + lz + .35, SP.py, SP.py + lh);
+  }
+  // Placed sputnik lamps (8 posts)
+  addSputnikLamp(-130, 74, 6.2, 0xffd24d);
+  addSputnikLamp(-120, 96, 6.2, 0xffd24d);
+  addSputnikLamp(-28, 34, 5.8, 0x6ffcff);
+  addSputnikLamp(-20, 49, 5.8, 0xffa05a);
+  addSputnikLamp(-8, 51, 6.0, 0xc06bff);
+  addSputnikLamp(16, 49, 5.8, 0xffebd0);
+  addSputnikLamp(2, -1, 6.2, 0xff5fb8);
+  addSputnikLamp(24, 16, 6.2, 0x58ffa6);
+  addSputnikLamp(58, -2, 6.0, 0xc06bff);
+
+  // Retro atomic park benches helper
+  function addBench(bx, bz, bry = 0) {
+    const bg = new xi(); bg.position.set(bx, 0, bz); bg.rotation.y = bry; O.add(bg);
+    // 3 curved wood slats
+    for (let s = 0; s < 3; s++) {
+      ufoBox(bg, 2.2, .06, .22, sm.cream, 0, .45 + s * .04, -.22 + s * .22);
+    }
+    // backrest
+    ufoBox(bg, 2.2, .38, .05, sm.cream, 0, .85, -.28).rotation.x = -.18;
+    // Hairpin wire legs (brass)
+    for (const lx of [-.9, .9]) {
+      ufoAdd(bg, ufoTubeGeo([[lx, 0, -.2], [lx, .45, -.2], [lx, .45, .2], [lx, 0, .2]], .022, 4), ufoM.brass);
+      ufoAdd(bg, ufoTubeGeo([[lx, .45, -.2], [lx, .9, -.3]], .022, 4), ufoM.brass);
+    }
+    Dt(SP.ax + bx - 1.15, SP.az + bz - .45, SP.ax + bx + 1.15, SP.az + bz + .45, SP.py, SP.py + 1.2);
+  }
+  addBench(7, 3, .3);
+  addBench(14, 15, -Math.PI / 2);
+  addBench(28, 49, Math.PI);
+  addBench(36, -63, .8);
+
+  // Planters with alien flora helper
+  function addPlanter(px, pz) {
+    const pg = new xi(); pg.position.set(px, 0, pz); O.add(pg);
+    ufoAdd(pg, ufoLatheGeo([[0, 0], [.82, 0], [.95, .45], [.88, .62], [.72, .62], [0, .45]], 8), sm.cream);
+    // succulent cluster
+    for (let k = 0; k < 5; k++) {
+      const a = k * Math.PI * .4, r0 = .32;
+      const m = ufoAdd(pg, ufoLatheGeo([[0, 0], [.18, 0], [.24, .4], [0, .75]], 6), sm.mint, Math.cos(a) * r0, .48, Math.sin(a) * r0);
+      m.rotation.set((Math.random() - .5) * .3, a, (Math.random() - .5) * .3);
+    }
+    ufoBall(pg, .2, new wi({color: 0xb6ff5a}), 0, .9, 0); // glowing core
+    Dt(SP.ax + px - .8, SP.az + pz - .8, SP.ax + px + .8, SP.az + pz + .8, SP.py, SP.py + 1.2);
+  }
+  addPlanter(-30, 36);
+  addPlanter(10, 49);
+  addPlanter(22, 18);
+  addPlanter(60, -6);
+
+  // Retro domed waste bins helper
+  function addBin(bx, bz) {
+    const bg = new xi(); bg.position.set(bx, 0, bz); O.add(bg);
+    ufoAdd(bg, ufoLatheGeo([[0, 0], [.34, 0], [.34, .75], [.38, .85], [0, .85]], 12), sm.teal);
+    ufoAdd(bg, ufoLatheGeo([[0, .85], [.38, .85], [.32, 1.15], [0, 1.2]], 12), sm.plum);
+    ufoBox(bg, .28, .16, .02, sm.dark, 0, .95, .32); // swing flap
+    Dt(SP.ax + bx - .35, SP.az + bz - .35, SP.ax + bx + .35, SP.az + bz + .35, SP.py, SP.py + 1.2);
+  }
+  addBin(-26, 35);
+  addBin(20, 49);
+  addBin(8, 2);
+
+  // Street bollards with soft neon rings
+  for (const [bx, bz] of [[-34, 49], [-28, 49], [-2, 49], [4, 49], [32, 49], [38, 49]]) {
+    const bg = new xi(); bg.position.set(bx, 0, bz); O.add(bg);
+    ufoAdd(bg, ufoLatheGeo([[0, 0], [.15, 0], [.12, .68], [.16, .72], [0, .75]], 8), sm.dark);
+    ufoNeon(bg, ufoCircle(0, .68, 0, .17, 'y', 10), 0x4df3ff, .03, true);
+    Dt(SP.ax + bx - .2, SP.az + bz - .2, SP.ax + bx + .2, SP.az + bz + .2, SP.py, SP.py + .8);
+  }
+
+  // Bus stop with no bus (x 30, z 49)
+  const busG = new xi(); busG.position.set(30, 0, 49); busG.rotation.y = Math.PI; O.add(busG);
+  // Curved canopy
+  ufoBox(busG, 4.2, .14, 2.4, sm.mint, 0, 2.9, 0).rotation.x = .06;
+  ufoBox(busG, 4.2, 2.8, .08, new wi({color: 0x9af7ff, transparent: true, opacity: .35, side: 2}), 0, 1.45, -1.15); // back glass
+  ufoBox(busG, .08, 2.8, 2.2, new wi({color: 0x9af7ff, transparent: true, opacity: .35, side: 2}), -2.05, 1.45, 0); // side glass
+  ufoBox(busG, 3.6, .08, .5, sm.cream, 0, .45, -.8); // bench
+  // Timetable sign: "SOMETIME"
+  const ttTex = ufoCanvasTex(256, 320, (tc, tw, th) => {
+    tc.fillStyle = '#0f141a'; tc.fillRect(0, 0, tw, th);
+    tc.strokeStyle = '#58ffa6'; tc.lineWidth = 4; tc.strokeRect(6, 6, tw - 12, th - 12);
+    tc.fillStyle = '#ffd24d'; tc.font = 'bold 15px "Courier New",monospace'; tc.textAlign = 'center';
+    tc.fillText('TRANSIT AUTHORITY', tw / 2, 34);
+    tc.font = '12px "Courier New",monospace'; tc.fillStyle = '#9af7ff';
+    tc.fillText('ROUTE: ∞ OUTPOST LOOP', tw / 2, 60);
+    tc.strokeStyle = 'rgba(255,255,255,.2)'; tc.lineWidth = 1;
+    tc.beginPath(); tc.moveTo(14, 76); tc.lineTo(tw - 14, 76); tc.stroke();
+    tc.fillStyle = '#ffd24d'; tc.font = 'bold 13px "Courier New",monospace';
+    tc.fillText('NEXT ARRIVAL:', tw / 2, 130);
+    tc.font = 'bold 26px "Arial Black",sans-serif'; tc.fillStyle = '#ff4fd8';
+    tc.fillText('SOMETIME', tw / 2, 180);
+    tc.fillStyle = '#7a8e9e'; tc.font = 'italic 11px sans-serif';
+    tc.fillText('(Please hold all luggage)', tw / 2, 270);
+  });
+  const ttMesh = new dt(new ba(1.0, 1.35), new wi({map: ttTex, side: 2, fog: false}));
+  ttMesh.position.set(-1.95, 1.6, -.3); ttMesh.rotation.y = Math.PI / 2; busG.add(ttMesh);
+  Dt(SP.ax + 30 - 2.2, SP.az + 49 - 1.3, SP.ax + 30 + 2.2, SP.az + 49 + 1.3, SP.py, SP.py + 3.2);
 
   // ---------- runway lights and the radio mast ----------
   const bulbGeo = new lr(.28, 8, 6), n = 34;
@@ -15335,6 +15681,8 @@ const UFO_WARPS = [
   {special: 'orbit', name: 'DRIFT OUTPOST · ORBIT VIEW', route: 'FLIGHT', mile: 'above the deck'},
   {special: 'runway', name: 'DRIFT OUTPOST · RUNWAY 07', route: 'DECK', mile: 'threshold'},
   {special: 'pumps', name: 'DRIFT OUTPOST · ORBIT GAS', route: 'DECK', mile: 'parking ring'},
+  {special: 'main', name: 'DRIFT OUTPOST · MAIN STREET', route: 'DECK', mile: 'mid-strip'},
+  {special: 'plaza', name: 'DRIFT OUTPOST · THE PLAZA', route: 'DECK', mile: 'Planet Pop'},
 ];
 function ufoWarpList() { return UFO_WARPS.map(w => Object.assign({}, w)); }
 function ufoWarp(id) {
@@ -15345,6 +15693,9 @@ function ufoWarp(id) {
   else if (id === 'sky') { x = UFO_HOME.x; z = UFO_HOME.z; y = 1500; yaw = Math.PI / 2; land = false; }
   else if (id === 'orbit') { x = S.ax - 420; z = S.az + 520; y = S.py + 240; yaw = Math.atan2(-(S.ax - x), -(S.az - z)); land = false; }
   else if (id === 'runway') { x = S.ax - 192; z = S.az + 99; y = S.py + .97; yaw = -Math.PI / 2; }
+  else if (id === 'pumps') { x = S.ax - 40; z = S.az + 77; y = S.py + .97; yaw = 0; }
+  else if (id === 'main') { x = S.ax + 15; z = S.az + 42; y = S.py + .97; yaw = -Math.PI / 2; }
+  else if (id === 'plaza') { x = S.ax + 12; z = S.az + 5; y = S.py + .97; yaw = 0; }
   else { x = S.ax - 40; z = S.az + 77; y = S.py + .97; yaw = 0; }
   if (y > 3200) { spBuild(); ufoSetSpace(true); } else { ufoSetSpace(false); recenterDesert(x, z, Infinity); }
   ufoShip.position.set(x, y, z); ufoShip.rotation.set(0, yaw, 0); ufoHull.rotation.set(0, 0, 0);
@@ -16233,6 +16584,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   gasSign.localToWorld(gasMothPoint).toArray(mothPos,mi*3);
 }mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);ufoLateAudio();shadersWarm&&renderWithInspection()}document.getElementById("app")._game = {
   ufo, ufoShip, spGroup, SP, ufoLamp, ufoWarp, ufoToggleLights, UFO_DOME, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt,
+  UFO_WARPS, ufoWarpList, Mc, Dt,
   Nt, Nn, coupe, os, nwRoadZ, nwRoadSlopeZ, nwRoadY, nwSFromX, nwXFromS, carSurfaceAt,
   ROUTE_CATALOG, throughTurnout, sitInCar, leaveCar, setRoadMapOpen, driveCar, groundCoupe, recenterDesert,
   updateTelephoneLine, fn, driverDoor, glovebox, roadMap,
