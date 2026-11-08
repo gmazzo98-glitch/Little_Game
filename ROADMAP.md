@@ -217,10 +217,10 @@ For each `index.html` change:
 
 ### 2026-11-08b — Space rain removed, alien engine voice, longer fuel (user request)
 
-- **Rain removed.** The owner clarified there should be no rain in space. The rain streaks, rain sound, wet-deck roughness, cover test and \`spRain\` export were deleted; SPACE_MOOD.md now has a "No rain, no weather" section and AGENT_PROMPT_SPACE.md forbids reintroducing any weather. The 2026-11-08 record below describes the rain as built before this removal.
+- **Rain removed.** The owner clarified there should be no rain in space. The rain streaks, rain sound, wet-deck roughness, cover test and `spRain` export were deleted; SPACE_MOOD.md now has a "No rain, no weather" section and AGENT_PROMPT_SPACE.md forbids reintroducing any weather. The 2026-11-08 record below describes the rain as built before this removal.
 - **Engine sound replaced.** The saw-and-noise whine became a low alien drone: two detuned voices a tritone apart (beating slowly), a swelling sub-octave, a slow vibrato and a soft filtered breath, rising from about 66 Hz at idle to about 120 Hz at warp, with nothing above roughly 1.4 kHz. Verified only that it starts and updates without errors; **not listened to by ear**, so the character and level need the owner's judgement.
 - **Fuel.** Drain per second is a tenth of before (about an hour of continuous warp, about eighteen minutes at the top speed). An empty tank still only limits cruise speed.
-- **Checks:** inline script passes \`node --check\`; headless boot, boarding and thrust ran with no exceptions and fuel read 99.994 % after about ten seconds at cruise.
+- **Checks:** inline script passes `node --check`; headless boot, boarding and thrust ran with no exceptions and fuel read 99.994 % after about ten seconds at cruise.
 
 ### 2026-11-08 — Saucer cabin rebuild, lamp switch, rain in space, star chart and fast travel (user review)
 
