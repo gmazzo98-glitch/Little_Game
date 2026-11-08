@@ -42,7 +42,7 @@ async function main() {
       const data = await res.json();
       wsUrl = data.webSocketDebuggerUrl;
       if (wsUrl) break;
-    } catch (e) {}
+    } catch (e) { }
   }
   if (!wsUrl) throw new Error('Could not connect to Chrome debugging port');
 
@@ -91,7 +91,7 @@ async function main() {
         returnByValue: true
       });
       if (result.value) break;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   const evalRes = await sendSession('Runtime.evaluate', {
