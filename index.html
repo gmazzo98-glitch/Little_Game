@@ -13551,7 +13551,7 @@ function updateCarriedCargo() {
 }
 
 function renderInteractionMirror(dt) {
-  if(!seated)return;
+  if(!seated||!shadersWarm)return;
   mirrorDelay-=dt;
   if(mirrorDelay>0)return;
   mirrorDelay=.22;
@@ -15310,9 +15310,87 @@ function fogCornerDistance(camera) {
   const halfHeight = Math.tan(camera.fov * Math.PI / 360);
   return Nt.fog.far * Math.hypot(1, halfHeight, halfHeight * camera.aspect);
 }
+// The Harvest Moon rig used to stay lit everywhere; it now takes part in the same
+// range test and light pool as every other site.
+localLightGroups.push({position:new P(64585,0,-74), range:90, lights:[harvestSignLight,harvestCyanLight,harvestLampLight]});
+
+// ---- Fixed light pool ---------------------------------------------------------
+// Three bakes the NUMBER of visible lights into the shader of every lit material.
+// Switching a site's lights on and off as the player approaches therefore changed
+// that number, and the first time each new count appeared the renderer froze for
+// seconds while hundreds of materials recompiled. The real site, coupe and saucer
+// lights now stay hidden forever. A fixed pool of always-visible lights borrows the
+// values of the nearest active ones every frame, so the light count -- and every
+// compiled shader -- never changes. Unused slots idle at zero intensity.
+const LIGHT_POOL_POINTS = 12, LIGHT_POOL_SPOTS = 2;
+const lightPoolPoints = [], lightPoolSpots = [];
+for (let i = 0; i < LIGHT_POOL_POINTS; i++) {
+  const light = new Pn(0xffffff, 0, 1, 2);
+  light.name = 'pooled point light';
+  Nt.add(light);
+  lightPoolPoints.push(light);
+}
+for (let i = 0; i < LIGHT_POOL_SPOTS; i++) {
+  // Same unshadowed spotlight construction the coupe headlights use.
+  const light = new ts(0xffffff, 0);
+  light.type = "SpotLight";
+  light.isSpotLight = true;
+  light.distance = 72;
+  light.decay = 2;
+  light.angle = .34;
+  light.penumbra = .62;
+  light.shadow = {matrix:new $e()};
+  light.target = new xt();
+  light.name = 'pooled spot light';
+  Nt.add(light, light.target);
+  lightPoolSpots.push(light);
+}
+let shadersWarm = false;
+const poolPointCandidates = [], poolSpotCandidates = [];
+function poolByDistance(a, b) { return a.poolDistance - b.poolDistance; }
+function fillLightPool(candidates, pool) {
+  const cam = Nn.position;
+  if (candidates.length > pool.length) {
+    for (const light of candidates) {
+      const m = light.matrixWorld.elements;
+      light.poolDistance = (m[12] - cam.x) ** 2 + (m[13] - cam.y) ** 2 + (m[14] - cam.z) ** 2;
+    }
+    candidates.sort(poolByDistance);
+  }
+  for (let i = 0; i < pool.length; i++) {
+    const slot = pool[i], source = candidates[i];
+    if (!source) { slot.intensity = 0; continue; }
+    slot.color.copy(source.color);
+    slot.intensity = source.intensity;
+    slot.distance = source.distance;
+    slot.decay = source.decay;
+    slot.position.setFromMatrixPosition(source.matrixWorld);
+    if (source.isSpotLight) {
+      slot.angle = source.angle;
+      slot.penumbra = source.penumbra;
+      slot.target.position.setFromMatrixPosition(source.target.matrixWorld);
+      slot.target.updateMatrixWorld(true);
+    }
+    slot.updateMatrixWorld(true);
+  }
+}
+function updateLightPool() {
+  // Runs inside the scene's onBeforeRender, after world matrices are final, so the
+  // pooled lights follow the moving coupe without a frame of lag.
+  poolPointCandidates.length = poolSpotCandidates.length = 0;
+  for (const g of localLightGroups) {
+    if (!g.nearby) continue;
+    for (const light of g.lights) {
+      if (light.intensity <= .001) continue;
+      (light.isSpotLight ? poolSpotCandidates : poolPointCandidates).push(light);
+    }
+  }
+  fillLightPool(poolPointCandidates, lightPoolPoints);
+  fillLightPool(poolSpotCandidates, lightPoolSpots);
+}
 function updateLocalLightVisibility() {
-  // Three compiles every visible light into each lit material. Keep the full light
-  // rig of each site until its influence cannot reach either view inside the fog.
+  // Decide which sites can still reach either view inside the fog. The lights
+  // themselves never change visibility (see the pool above).
   const viewRange = Math.max(fogCornerDistance(Nn), seated ? fogCornerDistance(mirrorCamera) : 0) + 12;
   for (const g of localLightGroups) {
     const {position, range, lights} = g;
@@ -15320,7 +15398,8 @@ function updateLocalLightVisibility() {
     if (g.cull) nearby = Nn.position.distanceToSquared(position) < g.cull ** 2;
     if (g.space === 'only') nearby = nearby && ufoSpace;
     else if (ufoSpace && g.space !== 'both') nearby = false;
-    for (const light of lights) light.visible = nearby && (!light.isSpotLight || light.intensity > 0);
+    g.nearby = nearby;
+    for (const light of lights) light.visible = false;
   }
 }
 
@@ -15349,6 +15428,7 @@ Nt.onBeforeRender = (renderer, scene, camera) => {
   // World transforms are ready here. Reuse the shadow map between changes, and
   // let the rearview mirror use the last completed main-view map.
   if (camera !== Nn) return;
+  updateLightPool();
   const center = Qt.target.position;
   const distanceMoved = center.distanceToSquared(lastShadowCenter);
   if (distanceMoved < 144 && eg.elapsedTime - lastShadowTime < 1 / 35) return;
@@ -15974,7 +16054,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
     gasSign.userData.tubeCenter+seed.h+strike*.15+.08*Math.sin(angle*17.3),
     .52+Math.sin(angle)*radius*.5+.10*Math.sin(angle*11.7));
   gasSign.localToWorld(gasMothPoint).toArray(mothPos,mi*3);
-}mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);ufoLateAudio();renderWithInspection()}document.getElementById("app")._game = {
+}mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);ufoLateAudio();shadersWarm&&renderWithInspection()}document.getElementById("app")._game = {
   ufo, ufoShip, spGroup, SP, ufoLamp, ufoWarp, ufoToggleLights, UFO_DOME, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt,
   Nt, Nn, coupe, os, nwRoadZ, nwRoadSlopeZ, nwRoadY, nwSFromX, nwXFromS, carSurfaceAt,
   ROUTE_CATALOG, throughTurnout, sitInCar, leaveCar, setRoadMapOpen, driveCar, groundCoupe, recenterDesert,
@@ -16076,7 +16156,34 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   get virtualSteerInput() { return virtualSteerInput; },
   set virtualSteerInput(v) { virtualSteerInput = v; },
   updateCarHud
-};Cc();addEventListener("resize",resizeGame);})();
+};
+// Compile every shader before the first frame is drawn. Hidden objects (rain, mist, steam,
+// the saucer, the asteroid outpost) used to compile the first time they appeared, which
+// froze the game for seconds mid-play. The pool above keeps the light count constant, so
+// these programs stay valid for the whole session.
+function warmShaders() {
+  const finish = () => {
+    // One throwaway frame also compiles the shadow-depth and output-pass programs.
+    try { ls.render(); } catch (error) { console.warn("Warm-up frame skipped:", error); }
+    shadersWarm = true;
+  };
+  const previousTarget = mn.getRenderTarget();
+  try {
+    try { spBuild(); } catch (error) { console.warn("Outpost pre-build skipped:", error); }
+    updateLocalLightVisibility();
+    // The main view renders into the composer target, which selects different shader variants than the canvas.
+    mn.setRenderTarget(ls.readBuffer);
+    const compiled = mn.compileAsync(Nt, Nn);
+    mn.setRenderTarget(previousTarget);
+    Promise.race([compiled, new Promise(resolve => setTimeout(resolve, 45000))]).then(finish, finish);
+  } catch (error) {
+    mn.setRenderTarget(previousTarget);
+    console.warn("Shader warm-up skipped:", error);
+    finish();
+  }
+}
+warmShaders();
+Cc();addEventListener("resize",resizeGame);})();
 /*! Bundled license information:
 
 three/build/three.module.js:
