@@ -4,6 +4,8 @@ Copy the block below into the implementation agent's chat. It overhauls **the Dr
 
 Background: the owner's 2026-11-08 review said the outpost is "really boring and really doesn't transmit any vibe". It should be "rich, colourful, quirky, with good quality models, and maybe some life". The saucer, cabin, drone, chart and fast travel (milestones S0–S6 of the earlier prompt) are done and out of scope.
 
+**Update (2026-11-08m):** milestones O0–O7 below were implemented, and the owner then rejected the resulting layout (flat disc, runway, scattered buildings). The outpost was rebuilt as a terraced hill town; read SPACE_MOOD.md "The outpost: Drift Outpost (the hill town)" for the current layout and the terrain authoring rules, and use `scripts/test_hill_town.js` to verify. Any future change to the outpost must keep the rule "nothing is placed on open flat ground" and re-run that script. The coordinates and warp ids in the code facts below describe the pre-rebuild build.
+
 This is a launch prompt, not an authorization to widen scope. The ground game, the Plains, the Pacific Northwest, the coupe and the saucer cabin are out of scope except where a shared hook must not regress.
 
 ````text

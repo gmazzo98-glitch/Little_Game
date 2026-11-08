@@ -2,7 +2,7 @@
 
 This file is the mood card for the space layer of Neon Gas, the way [MOOD.md](MOOD.md) is for the highway regions. It sits under MOOD.md's shared grammar and next to [AESTHETIC.md](AESTHETIC.md) (light and palette) and [AMBIENCE.md](AMBIENCE.md) (sound). [ROADMAP.md](ROADMAP.md) holds status and validation. Everything here is a design proposal until a roadmap entry says otherwise.
 
-**Status (2026-11-08):** S1 saucer polish, S4 space sky and S6 reachability are implemented and verified in index.html (see the 2026-11-08d record in [ROADMAP.md](ROADMAP.md)). Drift Outpost overhaul: **Milestones O0–O7 (all visual, structural, life, audio, texture memory & performance budgets) implemented and verified** (see 2026-11-08f/g/h/i/j/k/l records). Locked budgets: spGroup ≤ 140,000 triangles (123,452), hero ≤ 12,000 triangles, draw calls ≤ 450 (449), lights strictly constant (12 point, 2 spot), texture memory ≤ 24 MB (19.42 MB). Milestone O8 final verification and handoff. The saucer, cabin, sound drone, chart and fast travel stay as built.
+**Status (2026-11-08):** S1 saucer polish, S4 space sky and S6 reachability are implemented and verified in index.html (see the 2026-11-08d record in [ROADMAP.md](ROADMAP.md)). The Drift Outpost overhaul O0–O7 (strip, heroes, new buildings, life, sound, fluidity) is implemented (2026-11-08f–l). **On 2026-11-08 the owner reviewed the result and found the layout nonsensical** (a huge flat disc, buildings placed at random, a pointless runway, no purpose or exploration). The outpost was rebuilt as a terraced **hill town** (2026-11-08m record): see "The outpost" below. Budgets were re-locked for that rebuild (see Performance). The saucer, cabin, sound drone, chart and fast travel stay as built.
 
 The space layer is a **user-requested exception** (see AGENTS.md): a hidden saucer in the desert, a climb out of the atmosphere, and an asteroid outpost. The ground game is untouched. This file keeps the exception coherent with the rest of the game instead of becoming a second, louder game, with one deliberate change: **the outpost is now allowed to be loud, colourful, inhabited and funny.** Everything else in space stays calm.
 
@@ -64,32 +64,42 @@ Brief from the user, 2026-11-08: the seats clipped through the glass; the model 
 - Ship lights are active only near the player (75 m parked, always while flying).
 - **The scene's light count must stay constant** (the light pool from the 2026-11-08c freeze fix). Never add or remove a light at runtime; a changed light count recompiles every material and freezes the game for seconds.
 
-## The outpost: Drift Outpost
+## The outpost: Drift Outpost (the hill town)
 
-A 520 m asteroid cut flat to a 236 m deck, beside the planet. Existing anchors that must keep working (warp targets, fuel, collision, audio, chart): runway 07/25 with its edge lights, the taxiway and the ship parking ring, the Orbit Gas pumps (refuelling), the Drift Inn bell, the mast, the crystal rim, the walkable plateau (colliders inside 200 m of the deck centre).
+### What was wrong, and the rule that fixes it
 
-### Concept: the strip
+The first two builds laid a 472 m flat disc on top of the rock, put three (later a dozen) buildings on it with no street between them, ran a 320 m runway and a taxiway across the middle for no reason, and had nothing to do beyond the strip. The disc read as a cookie cutter, the horizon was a flat line, and the buildings were specks.
 
-The first build put three buildings 60 m apart on an empty disc. The overhaul turns the middle of the deck into **a strip with a main street**: eleven to thirteen places within about 140 m, close enough that every vantage shows four or five of them layered in depth, with the runway and the dark beyond as the "edge of town".
+**Rule: nothing is placed on open flat ground.** Every place sits on a street, a terrace or a ledge with a wall, a rail or a rock face behind it; every level has a reason to be climbed to; and there is no runway. Ships land on a compact dock.
 
-Design pillars, in priority order:
+### The layout (built; outpost-local metres, x east, z south, y up from the old deck level)
 
-1. **A place, not a set of objects.** Streets, kerbs, crossings, lamp posts, planters, bins, bollards, painted bays, kerb-side signs. The ground tells you where to walk.
-2. **Every building has a silhouette, a hue and a joke.** From 150 m, in silhouette, you can name it; from 30 m it makes you smile; from 3 m it has texture and a story.
-3. **Life you can watch.** Things move, small and sparse. The player is a visitor, never a target.
-4. **Colour by zone, hierarchy by rule.** See Colour.
-5. **Quality over count.** Fewer, better models, finished to the standard below.
+The asteroid keeps its 520 m lumpy body, squashed under the town so it reads as a dome. On top stands a **layered rock mesa** (strata shader, jagged flanks) carrying the town on levels connected by stairs:
 
-### Site plan (zones, not coordinates; the agent places within these)
+| Level | Height | What is there | Reached by |
+| --- | --- | --- | --- |
+| **The Dock** | 0 | A round 22 m landing apron with painted rings, a control-tower booth (spinning dish), approach lights, crates, a map board | Where the saucer parks; fast travel *The Dock* |
+| **Main Street** | 0 | A 170 m street with kerbs, zebra crossings, a sidewalk on the north and a plank **boardwalk on the cliff edge** on the south (rails, benches, lamp posts, coin telescopes, the Earth in the glass). North row facing the view: Orbit Gas, Nova Nosh, Madame Zoltara, Spin Cycle, [plaza], Zorp's rockets, bus stop, Gus's Garage, Drift Inn at the end of the road | Straight along from the dock |
+| **The Plaza** | 0 | A round tiled square with an orrery painted in the floor and a real orrery fountain, Planet Pop behind, benches, bollards | Mid-street |
+| **Promontories** | 0 | The Event Horizon dome bar and Gertrude's Greenhouse hang out over the drop on their own stone decks | Off the boardwalk |
+| **Ridge Walk and the Garden Terrace** | +9 | A long stair ledge climbs the cliff behind the shops (pink rails, lamps) to a garden terrace with the PAR SEC mini golf, a Wishing Pond with a ripple shader, benches, and the **VISIT EARTH** billboard looking down over the street | Stair A from the dock end of the street |
+| **The Crest** | +18 | A stair across a gap to a stone terrace with the Observatory dome (it turns slowly), the "See Your House" telescope, a crystal garden and a view of the whole town and the planet | Stair B from the terrace |
+| **Wreck Cove** | −14 | A sunken cove below the dock with a half-buried derelict saucer (rust, cracked canopy, a lantern left on), moss, a handwritten SALVAGE sign and a field of amethyst crystals | Stair D along the dock's west cliff |
+| **The Power Yard** | +8 | Behind the Inn: fuel and water tanks, a transformer and generator, hazard stripes, the radio mast, and the poles whose wires run along the cliff foot to every shop | Stair C from the Inn end |
+| **East Pier** | 0 | A 30 m plank pier past the Inn ending in a circle, END OF THE ROAD sign, benches, lamps, and a coin telescope pointed into the dark | Past the Inn |
 
-| Zone | What lives there | Job |
-| --- | --- | --- |
-| **The Gate** (arrival end of the runway) | A starburst arch reading DRIFT OUTPOST · POP. 6 (the count changes), two sputnik lamp posts, a "WELCOME, DRIVE SLOWLY" sign for ships | First colour; the first joke; tells you where the strip starts |
-| **Pump Court** | ORBIT GAS (existing hero), parking ring, air-and-water post, PUMPKIN the pump robot | The safe first stop; refuelling; hero light |
-| **Main Street** | NOVA NOSH, SPIN CYCLE, THE EVENT HORIZON, ZORP'S USED ROCKETS | The busy middle; warm windows; overlapping glow |
-| **The Plaza** | PLANET POP gumball machine, benches, a fountain of glowing liquid, hop-hop hangout | The landmark and the place to stand and watch |
-| **The Quiet Side** | DRIFT INN with its beacon, towel line, bell, lobby window; the greenhouse dome | The tall silhouette; the tender end of the strip |
-| **Back Lot and Rim** | Telescope deck, mini golf, mast, crystal garden, cable runs, a stacked pile of empty fuel drums, a rusted old sign | Reward for wandering; the "behind the scenes" |
+### Purpose and exploration
+
+- **Useful.** Refuel at Orbit Gas, eat at Nova Nosh, ring the Inn's bell, look through coin telescopes (each shows something different), sit on benches to watch the sky (E), read the town map at the dock, and follow signposts at the junctions.
+- **Explorable.** Five destinations off the street, at different heights and in different directions, each with a view, a joke and a story: the town below from the Crest, the wreck, the power chain, the pier, the pond.
+- **Readable.** Everything the player can reach is signed or visible from the street, and the stair strips are painted with pink rails so they read from afar.
+
+### Authoring rules for the terrain
+
+- **One table drives everything.** `SPP` (flat platforms), `SPR` (stair ramps) and `SPV` (paving zones) define the height field, the paving shader, the walk mask, the rails, the map board and the star chart. Change the town there, not in five places.
+- **The ground is a shader, not a texture.** Strata rock, asphalt, kerbs, planks, tiles, cobble, moss, hazard stripes, stairs and the orrery are procedural; neon pools and contact shadows come from two small baked canvases (no extra lights, no 2048 painted deck).
+- **Walking uses the same height field.** Slopes steeper than about 40° and everything outside the mesa are not walkable; the walker slides along edges instead of stopping dead.
+- **Props check for room.** Street furniture is placed by code against the collider table, so nothing overlaps a building.
 
 ### Building roster
 
@@ -183,11 +193,11 @@ The brief asks for "good quality models". The bar for tier A:
 - **Surface richness without lights.** Vertex-colour gradients and baked ambient occlusion at contact edges; canvas trim sheets (panel lines, rivets, stripes, grime, stickers, tape); emissive maps for windows with variation (some off, some with curtains or silhouettes); decals for stickers and re-lettering. Textured or vertex-coloured parts use the standard material; the game's own stripped Lambert ignores maps and vertex colours.
 - **A story at 3 m.** At least fifteen distinct small parts per hero (vents, hose reels, hinges, rivets, hand-lettered tags, tape, dents, a forgotten cup).
 - **Share and merge.** Reuse materials; merge static parts per building per material into one mesh so draw calls drop. Instance anything repeated.
-- Calibrated ceilings from O0 baseline (84,752 base tris, 384 draw calls): hero ≤ 12,000 triangles, supporting ≤ 4,000, prop instance ≤ 600, total spGroup ≤ 140,000 triangles, total draw calls ≤ 450. Texture memory ≤ 24 MB. Lights strictly constant (12 point, 2 spot).
+- Ceilings: hero ≤ 12,000 triangles, supporting ≤ 4,000, prop instance ≤ 600. **Re-locked for the hill-town rebuild (2026-11-08m):** total spGroup ≤ 230,000 triangles (213,306 measured: the terrain mesh alone is about 42,000), static meshes merged by material signature so the group stays ≤ 300 meshes (269 measured, from 711 before merging), texture memory ≤ 24 MB (14.66 MB measured: the 2048 deck texture was removed), lights strictly constant (the rebuild adds none). Terrain is generated at load; build time on an Intel Iris Xe laptop was 0.75–1.5 s inside the existing shader warm-up, before the first frame.
 
-### The deck surface
+### The ground and the rock
 
-The deck is currently a flat grey disc with hex pavers and a glowing rim. It becomes the strip's ground: a painted street with kerbs, crossings and bay markings; a tiled plaza; patches of cracked tarmac, oil stains, chalk hopscotch and a mended crack; coloured light pools under signs; a lit rim with railings. Keep it a **texture plus a few meshes** rather than more geometry. Hex pavers stay subdued from grazing angles.
+See "Authoring rules for the terrain". The old flat grey disc with hex pavers is gone. The south edge of the boardwalk drops a sheer 100 m past a lit rail; the north side climbs in tiers to the crest.
 
 ## No rain, no weather
 
@@ -215,9 +225,9 @@ Sounds are procedural, soft, with nothing above about 3 kHz outside the cabin. *
 
 The outpost must not be hard to reach. These are built and stay as they are.
 
-- **Star chart.** **R** while flying (and on the deck) toggles a plain chart: Earth as a disc, the asteroid with its runway to scale, the saucer's position and heading, bearing and distance to the outpost, the altitude band where the sky turns black. Ink on dark paper, no glow.
+- **Star chart.** **R** while flying (and on the deck) toggles a plain chart: Earth as a disc, the asteroid with the hill town's platforms to scale, the saucer's position and heading, bearing and distance to the outpost, the altitude band where the sky turns black. Ink on dark paper, no glow.
 - **Waypoint.** A small unobtrusive marker toward the outpost, with distance in km, fading inside 400 m.
-- **Fast travel.** The flight computer card (**Y** or **`** while flying or on the deck): *Little saucer (desert)*, *Low above the desert*, *Orbit above the outpost*, *Runway 07 threshold*, *Orbit Gas pumps*. The overhaul should add **Main Street** and **The Plaza** as rows, and keep all existing targets valid. Fast travel is free and never moves the world clock.
+- **Fast travel.** The flight computer card (**Y** or **`** while flying or on the deck): *Little saucer (desert)*, *Low above the desert*, *Orbit above the outpost*, *The Dock*, *Orbit Gas*, *Main Street*, *The Plaza*, *The Observatory*, *Wreck Cove*, *End of the Road* and *The Power Yard* (the `runway` id is kept as an alias of `dock`). Fast travel is free and never moves the world clock.
 - **From the ground.** The travel card (`` ` `` on foot) offers *Little saucer* and *Drift Outpost deck*; on the deck it offers *Little saucer (desert)*.
 - **Fuel.** Fast travel never needs fuel. Fuel only gates cruising speed.
 
@@ -231,7 +241,7 @@ The outpost must feel full and run smoothly. Hard rules:
 - **Distance and frustum culling.** Each building is a group that can be culled; detail groups hide beyond a stated range; critters are removed beyond 150 m.
 - **Merge and instance.** Static geometry merged per building and material; repeated props instanced.
 - **Textures.** Reuse canvas textures; keep each at or below 1024×1024 except the deck; record total texture memory.
-- **Collision.** Axis-aligned box colliders (the existing helper), only for solids above 0.5 m, with gaps of at least 1.2 m between solids, rounded corners where possible. Walking from the runway to the Inn and back must never snag.
+- **Collision.** Axis-aligned box colliders (the existing helper), only for solids above 0.5 m, with gaps of at least 1.2 m between solids, rounded corners where possible. Walking from the dock to the Inn, the crest, the cove and the pier must never snag (checked by `scripts/test_hill_town.js`).
 - **Planet and nebula** stay cheap (planet ≤ 4 octaves, nebula ≤ 3).
 - Do not claim frame-time results from software rendering. Measure on a named laptop at the actual viewport and pixel ratio: median and p95 frame time on the deck in the plaza, on Main Street, at the gate, and in open space with the planet in view. A regression of more than one millisecond at the plaza against the O0 baseline fails the pass.
 
@@ -252,7 +262,7 @@ Checks for the ROADMAP record. The saucer checks 1–4 apply to any cabin change
 11. **Model quality.** Every tier A model has matched captures at 150 m, 30 m and 3 m, and its fifteen small parts are listed in the roadmap record.
 12. **Colour discipline.** At thumbnail size no view looks like a rainbow; the six hue families keep their jobs; Planet Pop is the only candy-coloured place.
 13. **Quiet.** Sit on the strip for two minutes and list what you hear and when. No music, no voice-like sound, creature events within the cap.
-14. **Fluid.** A sixty-second walk from the runway to the Inn and back shows no frame over about 33 ms in a visible window, with no hitch at the 3.2 km threshold, on the deck or on boarding and leaving. If it cannot be measured, record it as pending.
+14. **Fluid.** A sixty-second walk from the dock to the Inn and back shows no frame over about 33 ms in a visible window, with no hitch at the 3.2 km threshold, on the deck or on boarding and leaving. If it cannot be measured, record it as pending.
 15. **Gameplay intact.** Refuelling, bell, warp targets, chart and boarding all still work; nothing is snagged; fast travel from every state leaves ship, player, camera, lights and audio consistent.
 16. **No regressions.** Desert, station, coupe, travel card and glovebox map unchanged. No space-layer lights, sounds or objects in the desert.
 

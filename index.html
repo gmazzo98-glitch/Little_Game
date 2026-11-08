@@ -4418,7 +4418,7 @@ function nwRelief(x, z, s, relZ, zr, dunes) {
   return { h, base };
 }
 function os(x, z, forTerrainMesh = false) {
-  if (ufoSpace && (x - ufoPlateau.x) ** 2 + (z - ufoPlateau.z) ** 2 < ufoPlateau.r2) return ufoPlateau.y;
+  if (ufoSpace) { const sg = spGroundH(x, z); if (sg !== null) return sg; }
   // The widest forecourt / plains pad distance blend saturates at 89 meters.
   let distance = Math.min(89, Math.max(Math.abs(z) - 3.5, 0));
   if (distance > 0) {
@@ -14650,7 +14650,7 @@ Mc.push(ufoCollider);
 function ufoNote(text, secs = 4) { ufo.note = text; ufo.noteUntil = eg.elapsedTime + secs; }
 function ufoNoteText() { return ufo.note && eg.elapsedTime < ufo.noteUntil ? '  ·  ' + ufo.note : ''; }
 function ufoGroundAt(x, z) {
-  if (ufoSpace) return (x - SP.ax) ** 2 + (z - SP.az) ** 2 < 200 * 200 ? SP.py : -Infinity;
+  if (ufoSpace) { const sg = spGroundH(x, z); return sg === null ? -Infinity : sg; }
   return os(x, z);
 }
 function ufoHome() {
@@ -14668,8 +14668,297 @@ const spFollow = new xi(); spGroup.add(spFollow);           // follows the camer
 const spLights = [], spNeonPulse = [], spSpin = [];
 var spPumps = [], spBell = new P(), spBellRingTimer = 0, spNoMat = null, spVacMat = null, spShaderTime = { value: 0 }, spTelescopeTimer = 0, spLife = null;
 let spBuilt = false;
+// ============================================================================
+// DRIFT OUTPOST v2: the hill town. Terrain height field, paving zones, ground
+// shader, light and ambient-occlusion bake, walk mask. Coordinates are outpost-
+// local metres (x east, z south, y above the deck datum SP.py). One set of
+// tables drives the height field, the paving shader, the walk mask and the chart.
+// ============================================================================
+const SPT = {x0: -300, x1: 300, z0: -260, z1: 230, floor: -134, fx0: -152, fx1: 172, fz0: -114, fz1: 64, fine: 2};
+// Flat platforms (t 0 rounded rectangle, t 1 circle). Interiors are exactly flat; flanks fall away at slope fl.
+const SPP = [
+  {id: 'shelf', t: 0, x: 8, z: -8.5, hx: 106, hz: 19, r: 8, y: 0, fl: 3.2},
+  {id: 'dock', t: 1, x: -108, z: 0, r: 22, y: 0, fl: 2.4},
+  {id: 'spur', t: 1, x: 100, z: -6, r: 22, y: 0, fl: 2.4},
+  {id: 'ehp', t: 0, x: -6, z: 21, hx: 15, hz: 12, r: 7, y: 0, fl: 3},
+  {id: 'ghp', t: 0, x: 52, z: 21, hx: 12, hz: 12, r: 7, y: 0, fl: 3},
+  {id: 'pier', t: 0, x: 134, z: 0, hx: 16, hz: 2.6, r: 1, y: 0, fl: 3},
+  {id: 'pierEnd', t: 1, x: 152, z: 0, r: 8.5, y: 0, fl: 3},
+  {id: 'terrB', t: 0, x: -18, z: -46, hx: 56, hz: 15, r: 8, y: 9, fl: 2.2},
+  {id: 'terrC', t: 0, x: 92, z: -46, hx: 26, hz: 13, r: 6, y: 8, fl: 2.2},
+  {id: 'crest', t: 0, x: 14, z: -86, hx: 44, hz: 16, r: 9, y: 18, fl: 2.2},
+  {id: 'cove', t: 0, x: -122, z: 46, hx: 26, hz: 14, r: 9, y: -14, fl: 2.2},
+];
+// Stair ramps (polylines of x, z, y). Width in metres.
+const SPR = [
+  {id: 'A', w: 4.4, p: [[-86, -21, 0], [-66, -27, 2.6], [-44, -30, 6], [-18, -32.5, 9]]},
+  {id: 'B', w: 4.4, p: [[30, -58, 9], [42, -66, 13], [38, -74, 16.5], [30, -80, 18]]},
+  {id: 'C', w: 4.4, p: [[104, -19, 0], [120, -23, 3], [121, -32, 6], [112, -36, 8]]},
+  {id: 'D', w: 4.4, p: [[-122, 12, 0], [-132, 26, -4], [-136, 36, -10], [-128, 42, -14]]},
+];
+// Paving zones for the ground shader (later entries override earlier ones).
+// kinds: 1 apron 2 asphalt 3 sidewalk 4 boardwalk 5 orrery plaza 6 dock deck 7 cobble 8 moss garden 9 sand 10 yard 11 zebra 12 crest stone
+const SPV = [
+  {t: 0, x: 8, z: -8.5, hx: 106, hz: 19, r: 8, k: 1},
+  {t: 0, x: -6, z: 21, hx: 15, hz: 12, r: 7, k: 4},
+  {t: 0, x: 52, z: 21, hx: 12, hz: 12, r: 7, k: 8},
+  {t: 0, x: 134, z: 0, hx: 16, hz: 2.6, r: 1, k: 4},
+  {t: 1, x: 152, z: 0, r: 8.5, k: 4},
+  {t: 0, x: -18, z: -46, hx: 56, hz: 15, r: 8, k: 8},
+  {t: 0, x: 92, z: -46, hx: 26, hz: 13, r: 6, k: 10},
+  {t: 0, x: 14, z: -86, hx: 44, hz: 16, r: 9, k: 12},
+  {t: 0, x: -122, z: 46, hx: 26, hz: 14, r: 9, k: 9},
+  {t: 0, x: -3, z: 0, hx: 83, hz: 5, r: 0, k: 2},
+  {t: 0, x: -3, z: -7.5, hx: 83, hz: 2.5, r: 0, k: 3},
+  {t: 0, x: -3, z: 7.6, hx: 83, hz: 2.4, r: 0, k: 4},
+  {t: 1, x: 22, z: -2, r: 12.5, k: 5},
+  {t: 0, x: -46, z: 0, hx: 1.5, hz: 5, r: 0, k: 11},
+  {t: 0, x: -20, z: 0, hx: 1.5, hz: 5, r: 0, k: 11},
+  {t: 0, x: 48, z: 0, hx: 1.5, hz: 5, r: 0, k: 11},
+  {t: 0, x: 72, z: 0, hx: 1.5, hz: 5, r: 0, k: 11},
+  {t: 1, x: -108, z: 0, r: 22, k: 6},
+  {t: 1, x: 100, z: -6, r: 22, k: 7},
+];
+const spSdfRR = (x, z, c) => {
+  const qx = Math.abs(x - c.x) - c.hx + c.r, qz = Math.abs(z - c.z) - c.hz + c.r;
+  return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - c.r;
+};
+const spSdfC = (x, z, c) => Math.hypot(x - c.x, z - c.z) - c.r;
+const spSdf = (x, z, c) => c.t ? spSdfC(x, z, c) : spSdfRR(x, z, c);
+function spRampPoint(r, x, z) {
+  // Nearest point on a ramp polyline: returns [distance, height].
+  let bd = 1e9, by = 0;
+  for (let i = 0; i < r.p.length - 1; i++) {
+    const a = r.p[i], b = r.p[i + 1], vx = b[0] - a[0], vz = b[1] - a[1], l2 = vx * vx + vz * vz;
+    let t = ((x - a[0]) * vx + (z - a[1]) * vz) / l2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const d = Math.hypot(x - a[0] - vx * t, z - a[1] - vz * t);
+    if (d < bd) { bd = d; by = a[2] + (b[2] - a[2]) * t; }
+  }
+  return [bd, by];
+}
+function spH(x, z) {
+  let h = SPT.floor + (Hm(x * .021 + 3, z * .021 + 9) - .5) * 12;
+  for (let i = 0; i < SPP.length; i++) {
+    const p = SPP[i], d = spSdf(x, z, p);
+    if (d <= 0) continue;
+    const ed = Math.min(1, d / 6);
+    let v = p.y - p.fl * d + ((Hm(x * .06 + i * 7, z * .06) - .5) * 26 + (Hm(x * .21 + 7, z * .21 + i) - .5) * 7) * ed;
+    if (v > h) h = v;
+  }
+  for (let i = 0; i < SPP.length; i++) { const p = SPP[i]; if (spSdf(x, z, p) <= 0) h = p.y; }
+  for (let i = 0; i < SPR.length; i++) {
+    const r = SPR[i], q = spRampPoint(r, x, z), e = q[0] - r.w / 2;
+    if (e < 1.5) { const w = e <= 0 ? 1 : 1 - ufoSmooth(0, 1.5, e); h = h * (1 - w) + q[1] * w; }
+  }
+  return h;
+}
+// Absolute-coordinate helpers used by the rest of the game.
+function spGroundH(x, z) {
+  const lx = x - SP.ax, lz = z - SP.az;
+  if (lx < SPT.x0 || lx > SPT.x1 || lz < SPT.z0 || lz > SPT.z1) return null;
+  return SP.py + spH(lx, lz);
+}
+function spWalkable(lx, lz) {
+  if (lx < SPT.fx0 || lx > SPT.fx1 || lz < SPT.fz0 || lz > SPT.fz1) return false;
+  const h = spH(lx, lz);
+  if (h < -40) return false;
+  const e = .7, gx = (spH(lx + e, lz) - spH(lx - e, lz)) / (2 * e), gz = (spH(lx, lz + e) - spH(lx, lz - e)) / (2 * e);
+  return Math.hypot(gx, gz) < .85;
+}
+const spLast = {x: 0, z: 0, ok: false};
+var spScopes = [], spBenches = [], spSit = null;
+const spGlows = [];   // {x, z, r, c: hex, a}
+function spGlow(x, z, r, c, a = .5) { spGlows.push({x, z, r, c, a}); }
+
+function spAxis(lo, hi, c0, c1, fine, grow, cap) {
+  const a = [c0]; let x = c0;
+  while (x < c1 - 1e-6) { x = Math.min(c1, x + fine); a.push(x); }
+  let s = fine; x = c0;
+  while (x > lo + 1e-6) { s = Math.min(s * grow, cap); x = Math.max(lo, x - s); a.unshift(x); }
+  s = fine; x = c1;
+  while (x < hi - 1e-6) { s = Math.min(s * grow, cap); x = Math.min(hi, x + s); a.push(x); }
+  return a;
+}
+
+// ---- the ground shader: strata rock plus procedural paving, baked glow and AO ----
+const SP_GROUND_VS = `varying vec3 vL; varying vec3 vN; uniform vec3 uOff;
+  void main(){ vL = position - uOff; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`;
+const SP_GROUND_FS = `varying vec3 vL; varying vec3 vN;
+  uniform vec3 uSun; uniform sampler2D uLM; uniform sampler2D uAO; uniform vec4 uLMr; uniform float uTime; uniform float uBody;
+  #define NZ 24
+  #define NS 14
+  uniform vec4 uZa[NZ]; uniform vec4 uZb[NZ]; uniform vec4 uSg[NS]; uniform float uSw[NS];
+  float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+  float vn(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+    return mix(mix(h21(i),h21(i+vec2(1.,0.)),f.x), mix(h21(i+vec2(0.,1.)),h21(i+vec2(1.,1.)),f.x), f.y); }
+  float ang(vec2 v){ return atan(v.y,v.x); }
+  vec3 bodyCol(vec3 p){ float a=vn(p.xz*.018+p.y*.004), b=vn(p.xz*.07+3.), c=vn(p.xz*.4+p.y*.05); vec3 col=mix(vec3(.16,.12,.19), vec3(.30,.22,.26), a); col=mix(col, vec3(.14,.17,.26), smoothstep(.55,.8,b)*.6); return col*(.55+.4*c); }
+  float lnA(float d, float w){ float a=fwidth(d)+1e-4; return 1.-smoothstep(w, w+a, abs(d)); }
+  vec3 rockCol(vec3 p, vec3 n){
+    float warp = vn(p.xz*.045)*9. + vn(p.xz*.17)*1.8 + vn(vec2(p.x+p.z,p.y)*.35)*.8;
+    float s = p.y*.30 + warp;
+    float band = floor(s), f = fract(s);
+    float r1 = h21(vec2(band,3.1)), r2 = h21(vec2(band,9.7));
+    vec3 cA = mix(vec3(.30,.22,.34), vec3(.46,.32,.31), r1);
+    vec3 cB = mix(vec3(.20,.22,.34), vec3(.32,.30,.40), r2);
+    vec3 c = mix(cA, cB, step(.52, h21(vec2(band,1.3))));
+    c *= .78 + .30*smoothstep(0.,.14,f)*(1.-smoothstep(.88,1.,f));
+    float grain = vn(p.xz*1.6 + p.y*.9)*.6 + vn(p.xz*5.3 - p.y*2.)*.4;
+    c *= .74 + .5*grain;
+    float up = smoothstep(.5,.9,n.y);
+    c = mix(c, c*vec3(.92,1.0,.95)*(.9+.3*vn(p.xz*.7)), up*.6);
+    return c;
+  }
+  vec3 paving(int k, vec2 lp, vec4 a, float depth, vec2 wp, inout vec3 em){
+    vec3 c = vec3(.2);
+    if (k==1){ c = vec3(.20,.19,.26)*(.8+.35*vn(wp*.9)); vec2 g=abs(fract(wp/5.)-.5); c*=1.-.35*(lnA(g.x-.5+.02,.0)+lnA(g.y-.5+.02,.0)); c *= .85+.25*vn(wp*.21)*vn(wp*3.1+7.); c = mix(c, c*.55, smoothstep(.55,.8,vn(wp*.33+3.))*.5); }
+    else if (k==2){ c = vec3(.13,.135,.18)*(.85+.4*vn(wp*2.2)) + h21(floor(wp*16.))*.035; float ey=abs(abs(lp.y)-(a.w-.45)); c = mix(c, vec3(.78,.76,.82), lnA(ey,.07)*.85); float dash=step(.5,fract(lp.x/6.)); c = mix(c, vec3(.95,.66,.2), lnA(lp.y,.09)*dash); c *= .88+.18*vn(vec2(lp.x*.35,lp.y*2.)); }
+    else if (k==3){ vec2 g=fract(wp/1.5); float seam=min(min(g.x,1.-g.x),min(g.y,1.-g.y)); vec2 id=floor(wp/1.5); c = mix(vec3(.30,.285,.34),vec3(.40,.37,.42),h21(id))*(.85+.3*vn(wp*4.)); c *= .62+.38*smoothstep(0.,.045,seam); }
+    else if (k==4){ float u=lp.y/.32; float id=floor(u); float jx=floor((lp.x+h21(vec2(id,2.))*3.)/3.2); float r=h21(vec2(id,jx)); c = mix(vec3(.25,.19,.15),vec3(.38,.29,.21),r)*(.85+.3*vn(vec2(lp.x*1.4,u*7.))); float gap=min(fract(u),1.-fract(u)); c *= .45+.55*smoothstep(0.,.07,gap); float jj=fract((lp.x+h21(vec2(id,2.))*3.)/3.2); c *= .5+.5*smoothstep(0.,.012,min(jj,1.-jj)*3.2); }
+    else if (k==5){ float r=length(lp); float ang=atan(lp.y,lp.x); float sec=floor(ang/6.2832*28.+28.); c = mix(vec3(.62,.55,.45), vec3(.28,.50,.50), mod(sec+floor(r/2.5),2.)); c *= .88+.18*vn(wp*3.); c *= .55+.45*smoothstep(0.,.05,min(fract(r/2.5),1.-fract(r/2.5))*2.5);
+      for (int i=0;i<6;i++){ float rr=2.6+float(i)*1.9; float ring=lnA(r-rr,.06); em += vec3(.1,.55,.6)*ring*.55; float ph = uTime*(.22/(1.+float(i)*.6)) + float(i)*1.9; vec2 pp = vec2(cos(ph),sin(ph))*rr; float d=length(lp-pp); vec3 pc = i==2?vec3(.2,.5,1.):(i==4?vec3(1.,.55,.25):vec3(.9,.8,.5)); em += pc*smoothstep(.55,.2,d)*1.1; }
+      em += vec3(1.,.8,.4)*smoothstep(1.2,.3,r)*.9; }
+    else if (k==6){ float r=length(lp); c = vec3(.21,.25,.31)*(.85+.3*vn(wp*1.1)); vec2 g=abs(fract(wp/3.)-.5); c*=1.-.3*(lnA(g.x-.5+.03,.0)+lnA(g.y-.5+.03,.0)); float rim=smoothstep(2.4,.8,depth); float hz=step(.5,fract((lp.x+lp.y)/1.6)); c = mix(c, mix(vec3(.9,.7,.1),vec3(.08,.08,.1),hz), rim*.85);
+      em += vec3(.95,.95,1.)*lnA(r-17.,.14)*.55 + vec3(1.,.3,.7)*lnA(r-15.4,.12)*.6 + vec3(.3,1.,.9)*lnA(r-6.8,.12)*.55 + vec3(1.,.8,.3)*(lnA(lp.x,.16)+lnA(lp.y,.16))*smoothstep(7.,6.5,r)*.4;
+      float tick=step(.9,fract(ang(lp)/6.2832*48.)); em += vec3(.9,.9,1.)*tick*step(17.6,r)*step(r,19.)*.5; }
+    else if (k==7){ vec2 q=wp/1.3; vec2 r2=vec2(1.,1.732); vec2 h=r2*.5; vec2 ga=mod(q,r2)-h, gb=mod(q-h,r2)-h; vec2 gv=dot(ga,ga)<dot(gb,gb)?ga:gb; float hd=max(abs(gv.x)*1.732*.5+abs(gv.y)*.5,abs(gv.y)); vec2 id=floor(q-gv); c = mix(vec3(.28,.22,.34),vec3(.4,.3,.44),h21(id))*(.85+.2*vn(wp*5.)); c *= .55+.45*smoothstep(.0,.06,.5-hd); }
+    else if (k==8){ c = mix(vec3(.08,.22,.17),vec3(.16,.38,.24),vn(wp*1.4)); c += vec3(.02,.06,.05)*h21(floor(wp*9.)); vec2 fc=fract(wp*1.3)-.5; float fid=h21(floor(wp*1.3)); float flw=step(.9,fid)*smoothstep(.16,.08,length(fc)); c = mix(c, mix(vec3(.85,.4,.6),vec3(.9,.8,.35),step(.5,h21(floor(wp*1.3)+3.))), flw*.8); em += vec3(.3,.9,.5)*step(.985,h21(floor(wp*4.)))*.35; }
+    else if (k==9){ c = mix(vec3(.40,.32,.26),vec3(.52,.42,.32),vn(wp*2.))*(.8+.3*h21(floor(wp*14.))); c*= .8+.3*vn(wp*.4); }
+    else if (k==10){ c = vec3(.26,.27,.31)*(.8+.3*vn(wp*1.7)); float oil=smoothstep(.62,.7,vn(wp*.5+4.)); c = mix(c, vec3(.06,.06,.09), oil*.7); vec2 g=abs(fract(wp/4.)-.5); c*=1.-.28*(lnA(g.x-.5+.02,.0)+lnA(g.y-.5+.02,.0)); float edge=smoothstep(1.4,.5,depth); float hz=step(.5,fract((wp.x+wp.y)/1.4)); c = mix(c, mix(vec3(.9,.75,.1),vec3(.08),hz), edge*.8); }
+    else if (k==11){ float stripe=step(.5,fract(lp.x/1.0)); c = mix(vec3(.10,.10,.14), vec3(.82,.8,.86), stripe*.9); }
+    else { vec2 g=fract(wp/3.); float seam=min(min(g.x,1.-g.x),min(g.y,1.-g.y)); vec2 id=floor(wp/3.); c = mix(vec3(.30,.28,.36),vec3(.40,.34,.40),h21(id))*(.85+.3*vn(wp*2.)); c*= .6+.4*smoothstep(0.,.04,seam); float ed=smoothstep(.9,.2,depth); em += vec3(.4,.9,1.)*ed*.18; }
+    return c;
+  }
+  void main(){
+    vec3 N = normalize(vN); vec3 p = vL;
+    vec3 base = uBody > .5 ? bodyCol(p) : rockCol(p, N); vec3 em = vec3(0.);
+    if (uBody < .5) {
+      int kind = 0; vec2 lpk = vec2(0.); vec4 ak = vec4(0.); float dk = 0.;
+      for (int i=0;i<NZ;i++){ vec4 a=uZa[i]; vec4 b=uZb[i]; if (b.x<.5) continue; vec2 lp = p.xz - a.xy; float sd;
+        if (a.w < 0.) sd = length(lp) - a.z; else { vec2 q = abs(lp) - a.zw + b.y; sd = length(max(q,0.)) + min(max(q.x,q.y),0.) - b.y; }
+        if (sd < 0.) { kind = int(b.x+.5); lpk = lp; ak = a; dk = -sd; } }
+      if (kind > 0 && N.y > .72) base = paving(kind, lpk, ak, dk, p.xz, em);
+      for (int i=0;i<NS;i++){ vec4 s=uSg[i]; if (uSw[i]<.1) continue; vec2 v=s.zw-s.xy; float L=length(v); vec2 u=v/L; vec2 d=p.xz-s.xy; float t=dot(d,u); float o=dot(d,vec2(-u.y,u.x));
+        if (t>-.5 && t<L+.5 && abs(o)<uSw[i]*.5+.35 && N.y>.7) {
+          float inside=step(abs(o),uSw[i]*.5); float tr=fract(t/.42); vec3 sc=mix(vec3(.34,.31,.38),vec3(.47,.42,.46),h21(vec2(floor(t/.42),float(i)+1.)))*(.9+.2*vn(p.xz*6.));
+          sc *= .55+.45*smoothstep(0.,.18,tr)*(1.-.35*smoothstep(.8,1.,tr)); float edge=smoothstep(uSw[i]*.5-.35,uSw[i]*.5,abs(o));
+          vec3 sc2 = mix(sc, vec3(.12,.1,.16), edge*.8); em += vec3(.2,.8,.9)*smoothstep(uSw[i]*.5-.12,uSw[i]*.5-.02,abs(o))*inside*.5;
+          base = mix(base, sc2, inside*.96 + (1.-inside)*.4); } }
+    }
+    vec3 amb = mix(vec3(.10,.08,.15), vec3(.17,.15,.27), N.y*.5+.5);
+    float sd = max(dot(N,uSun),0.);
+    vec3 col = base*(amb + vec3(1.,.95,.88)*sd*.5);
+    if (uBody < .5) {
+      vec2 uv = (p.xz-uLMr.xy)*uLMr.zw;
+      if (uv.x>0. && uv.x<1. && uv.y>0. && uv.y<1.) {
+        vec3 L = texture2D(uLM, uv).rgb; L = L/(1.+L*1.7); float ao = texture2D(uAO, uv).r;
+        col *= 1.-.72*ao; col += base*L*.95 + L*.03; em *= 1.-.5*ao;
+      }
+    }
+    col += em;
+    gl_FragColor = vec4(pow(col, vec3(.9)), 1.);
+  }`;
+function spMakeGroundMaterial(body, maps) {
+  const za = new Float32Array(24 * 4), zb = new Float32Array(24 * 4), sg = new Float32Array(14 * 4), sw = new Float32Array(14);
+  SPV.forEach((z, i) => { za.set(z.t ? [z.x, z.z, z.r, -1] : [z.x, z.z, z.hx, z.hz], i * 4); zb.set([z.k, z.r || 0, 0, 0], i * 4); });
+  let si = 0;
+  for (const r of SPR) for (let i = 0; i < r.p.length - 1; i++) { if (si >= 14) break; sg.set([r.p[i][0], r.p[i][1], r.p[i + 1][0], r.p[i + 1][1]], si * 4); sw[si] = r.w; si++; }
+  return new rt({fog: false, extensions: {derivatives: true},
+    uniforms: {uSun: {value: spSun.clone()}, uLM: {value: maps ? maps.lm : null}, uAO: {value: maps ? maps.ao : null},
+      uLMr: {value: maps ? maps.r : [0, 0, 1, 1]}, uTime: spShaderTime, uBody: {value: body ? 1 : 0},
+      uOff: {value: body ? new P(0, SP.cut, 0) : new P(0, 0, 0)}, uZa: {value: za}, uZb: {value: zb}, uSg: {value: sg}, uSw: {value: sw}},
+    vertexShader: SP_GROUND_VS, fragmentShader: SP_GROUND_FS});
+}
+// Bake neon pools and contact shadows into two small canvases (no extra lights).
+function spBakeMaps(boxes) {
+  const W = 1024, H = 576, x0 = SPT.fx0, z0 = SPT.fz0, sx = SPT.fx1 - SPT.fx0, sz = SPT.fz1 - SPT.fz0;
+  const X = x => (x - x0) / sx * W, Z = z => (z - z0) / sz * H, S = W / sx;
+  const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+  const lc = mk(), lx = lc.getContext('2d'); lx.fillStyle = '#000'; lx.fillRect(0, 0, W, H); lx.globalCompositeOperation = 'lighter';
+  for (const g of spGlows) {
+    const cx = X(g.x), cy = Z(g.z), rad = g.r * S, r = (g.c >> 16 & 255), gg = (g.c >> 8 & 255), b = (g.c & 255);
+    const gr = lx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+    gr.addColorStop(0, `rgba(${r},${gg},${b},${g.a})`); gr.addColorStop(.35, `rgba(${r},${gg},${b},${g.a * .38})`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+    lx.fillStyle = gr; lx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
+  }
+  const ac = mk(), ax = ac.getContext('2d'); ax.fillStyle = '#000'; ax.fillRect(0, 0, W, H);
+  const OFF = 6000; ax.shadowColor = '#fff'; ax.shadowBlur = 7; ax.shadowOffsetX = OFF; ax.fillStyle = '#fff';
+  for (const b of boxes) ax.fillRect(X(b.minX) - OFF - .5, Z(b.minZ) - .5, (b.maxX - b.minX) * S + 1, (b.maxZ - b.minZ) * S + 1);
+  const tex = c => { const t = new qt(c); t.flipY = false; t.generateMipmaps = false; t.minFilter = 1006; t.magFilter = 1006; t.needsUpdate = true; return t; };
+  return {lm: tex(lc), ao: tex(ac), r: [x0, z0, 1 / sx, 1 / sz]};
+}
+function spBuildTerrainMesh(mat) {
+  const xs = spAxis(SPT.x0, SPT.x1, SPT.fx0, SPT.fx1, SPT.fine, 1.3, 20), zs = spAxis(SPT.z0, SPT.z1, SPT.fz0, SPT.fz1, SPT.fine, 1.3, 20);
+  const nx = xs.length, nz = zs.length, pos = new Float32Array(nx * nz * 3), idx = new Uint32Array((nx - 1) * (nz - 1) * 6);
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const k = (j * nx + i) * 3; pos[k] = xs[i]; pos[k + 1] = spH(xs[i], zs[j]); pos[k + 2] = zs[j]; }
+  let q = 0;
+  for (let j = 0; j < nz - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
+    idx[q++] = a; idx[q++] = c; idx[q++] = b; idx[q++] = b; idx[q++] = c; idx[q++] = d;
+  }
+  const g = new It(); g.setAttribute('position', new Et(pos, 3)); g.setIndex(new Et(idx, 1)); g.computeVertexNormals();
+  g.computeBoundingSphere();
+  return new dt(g, mat);
+}
+
+
+// Merge static meshes that share a material signature, so the whole outpost draws in a fraction of the calls.
+// Anything that moves (found by sampling every animation hook at several times and player spots) is left alone.
+function spMatKey(m) {
+  if (m.uniforms || m.map === undefined && m.isShaderMaterial) return m.uuid;
+  const h = c => c && c.getHex ? c.getHex() : 0;
+  return [m.type, h(m.color), h(m.emissive), m.emissiveIntensity, m.roughness, m.metalness, m.opacity, m.transparent, m.blending, m.side, m.depthWrite, m.depthTest, m.fog, m.flatShading, m.map && m.map.uuid, m.emissiveMap && m.emissiveMap.uuid, m.vertexColors].join('|');
+}
+function spBatchStatic(O, dynRoots) {
+  const meshes = [];
+  O.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.geometry && o.geometry.attributes.position && o.geometry.index && o.visible && o.material && !Array.isArray(o.material)) meshes.push(o); });
+  const dyn = new Set(dynRoots.filter(Boolean));
+  for (const b of spNeonPulse) dyn.add(b);
+  const protectedMats = new Set([spNoMat, spVacMat].filter(Boolean));
+  const snaps = [], saved = Nn.position.clone();
+  const spots = [[22, -17], [-62, -13], [-32, -9], [98, -12]];
+  for (const sp of spots) for (const t of [.7, 2.2]) {
+    Nn.position.set(SP.ax + sp[0], SP.py + 1.7, SP.az + sp[1]);
+    for (const s of spSpin) { if (s.obj) s.obj.rotation[s.axis || 'y'] = (s.offset || 0) + t * (s.speed || .5); else if (typeof s === 'function') s(t * (1 + sp[0] * .01), .016); }
+    if (spLife && spLife.update) spLife.update(t, .016);
+    for (const b of spNeonPulse) b.scale.setScalar(.85 + .3 * Math.sin(t * 3));
+    O.updateMatrixWorld(true); snaps.push(meshes.map(m => m.matrixWorld.elements.slice()));
+  }
+  Nn.position.copy(saved);
+  const changed = new Uint8Array(meshes.length);
+  for (let k = 1; k < snaps.length; k++) for (let i = 0; i < meshes.length; i++) if (!changed[i]) { const a = snaps[0][i], b = snaps[k][i]; for (let e = 0; e < 16; e++) if (Math.abs(a[e] - b[e]) > 1e-6) { changed[i] = 1; break; } }
+  const isDyn = m => { for (let o = m; o && o !== O; o = o.parent) if (dyn.has(o)) return true; return false; };
+  const groups = new Map();
+  meshes.forEach((m, i) => {
+    if (changed[i] || isDyn(m) || protectedMats.has(m.material)) return;
+    const key = spMatKey(m.material) + '#' + m.renderOrder;
+    let g = groups.get(key); if (!g) groups.set(key, g = []); g.push(m);
+  });
+  O.updateMatrixWorld(true);
+  const inv = O.matrixWorld.clone().invert();
+  let before = 0, after = 0;
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const merged = ufoMerge(list.map(m => ({geo: m.geometry, matrix: m.matrixWorld.clone().premultiply(inv)})));
+    const nm = new dt(merged, list[0].material); nm.renderOrder = list[0].renderOrder; O.add(nm);
+    for (const m of list) { m.parent.remove(m); m.geometry.dispose(); }
+    before += list.length; after++;
+  }
+  return {candidates: meshes.length, merged: before, into: after, dynamic: changed.reduce((a, b) => a + b, 0)};
+}
+function spBuildGround(O, lights, mcStart) {
+  for (const l of lights) spGlow(l.position.x, l.position.z, Math.min(30, Math.max(7, l.distance * .38)), l.color.getHex(), Math.min(.75, l.intensity / 55) / (1 + Math.max(0, l.position.y) * .06));
+  const boxes = Mc.slice(mcStart).filter(b => (b.maxX - b.minX) * (b.maxZ - b.minZ) > 1.2 && b.maxY - b.minY > .8)
+    .map(b => ({minX: b.minX - SP.ax, maxX: b.maxX - SP.ax, minZ: b.minZ - SP.az, maxZ: b.maxZ - SP.az}));
+  const maps = spBakeMaps(boxes);
+  const mesh = spBuildTerrainMesh(spMakeGroundMaterial(false, maps));
+  O.add(mesh);
+  spGroup.userData.ground = mesh;
+}
+
 function spBuild() {
   if (spBuilt) return; spBuilt = true;
+  const spT0 = performance.now();
   const rnd = Vm(5150);
   // Nebula dome.
   const neb = new dt(new lr(100000, 32, 20), new rt({side: 1, depthWrite: false, depthTest: true, fog: false,
@@ -14741,41 +15030,21 @@ function spBuild() {
   atmo.position.copy(earth.position); atmo.renderOrder = 2; spGroup.add(atmo);
   spGroup.userData.earthMat = earthMat; spGroup.userData.atmoMat = atmoMat;
 
-  // ---- the asteroid ----
+  // ---- the asteroid body: lumpy rock under the hill town, shaded by the same strata as the mesa ----
   const A = new xi(); A.position.set(SP.ax, SP.ay, SP.az); spGroup.add(A);
-  const ag = new lr(1, 96, 56), ap = ag.attributes.position, ac = new Float32Array(ap.count * 3);
+  const ag = new lr(1, 72, 44), ap = ag.attributes.position, atop = SP.cut - 70;
   for (let i = 0; i < ap.count; i++) {
     const x = ap.getX(i), y = ap.getY(i), z = ap.getZ(i);
     const bump = Hm(x * 2.3 + z * 1.1 + 5, y * 2.7 + x * .9 + 9) * .6 + Hm(x * 6 + 1, z * 6 + y * 3) * .25 + Hm(x * 14 + y * 5, z * 14) * .15;
-    const rad = SP.aR * (.86 + .3 * bump - .09 * ufoSmooth(.55, .8, Hm(x * 3.5 + 2, y * 3.5 + z * 2)));  // crater dimples
+    const rad = SP.aR * (.86 + .3 * bump - .09 * ufoSmooth(.55, .8, Hm(x * 3.5 + 2, y * 3.5 + z * 2)));
     let px = x * rad, py = y * rad, pz = z * rad;
-    if (py > SP.cut - 4) py = SP.cut - 4;
+    if (py > atop) py = atop + (py - atop) * .3;
     ap.setXYZ(i, px, py, pz);
-    const t = Hm(px * .02 + 3, pz * .02 + py * .015), v = .78 + .3 * t;
-    const low = ufoSmooth(0, -300, py);
-    ac[i * 3] = (.34 + .12 * t + .08 * low) * v; ac[i * 3 + 1] = (.27 + .08 * t) * v; ac[i * 3 + 2] = (.4 + .1 * t + .12 * low) * v;
   }
-  ag.setAttribute('color', new Et(ac, 3)); ag.computeVertexNormals();
-  ufoAdd(A, ag, new ji({vertexColors: true, roughness: 1, metalness: 0, emissive: 0x2a1c3a, emissiveIntensity: .55}));
-  // Deck skirt so the plateau reads as a cut slab, and the tarmac disc itself.
-  const skirt = ufoAdd(A, ufoLatheGeo([[SP.plR - 2, SP.cut - 70], [SP.plR, SP.cut - 60], [SP.plR, SP.cut - 2], [SP.plR + .5, SP.cut]], 72), new Lm({color: 0x4a3f55, emissive: 0x1a1426}), 0, 0, 0);
-  skirt.material.side = 2;
-  const pTex = ufoCanvasTex(2048, 2048, spPaintDeck);
-  const dpos = [], duv = [], didx = [], RR = 24, SS = 72;
-  dpos.push(0, 0, 0); duv.push(.5, .5);
-  for (let r = 1; r <= RR; r++) for (let s = 0; s < SS; s++) {
-    const a = s / SS * Math.PI * 2, rad = SP.plR * r / RR, x = Math.cos(a) * rad, z = Math.sin(a) * rad;
-    dpos.push(x, 0, z); duv.push(x / (2 * SP.plR) + .5, 1 - (z / (2 * SP.plR) + .5));
-  }
-  for (let s = 0; s < SS; s++) didx.push(0, 1 + (s + 1) % SS, 1 + s);
-  for (let r = 1; r < RR; r++) for (let s = 0; s < SS; s++) {
-    const a = 1 + (r - 1) * SS + s, b = 1 + (r - 1) * SS + (s + 1) % SS, c = 1 + r * SS + s, d = 1 + r * SS + (s + 1) % SS;
-    didx.push(a, b, c, b, d, c);
-  }
-  const deck = ufoAdd(A, ufoGeo(dpos, didx, duv), new ji({map: pTex, roughness: 1, metalness: 0, emissive: 0xffffff, emissiveMap: pTex, emissiveIntensity: .32}), 0, SP.cut, 0);
-  deck.geometry.computeVertexNormals();
-  spGroup.userData.deck = deck; spGroup.userData.deckMat = deck.material;
+  ag.computeVertexNormals();
+  const bodyMesh = new dt(ag, spMakeGroundMaterial(true, null)); A.add(bodyMesh);
   spBuildOutpost(spGroup, rnd);
+  spGroup.userData.buildMs = performance.now() - spT0;
   localLightGroups.push(...spLights);
   // Debris drifting around the asteroid.
   const dg = new lr(1, 6, 4), dm = new Lm({color: 0x6a5a72, emissive: 0x1a1426});
@@ -14783,200 +15052,6 @@ function spBuild() {
   const dd = [];
   for (let i = 0; i < 44; i++) dd.push({a: rnd() * 6.28, r: 700 + rnd() * 500, y: (rnd() - .5) * 220, s: 6 + rnd() * 26, w: (rnd() < .5 ? 1 : -1) * (.01 + rnd() * .02), sx: .6 + rnd() * .8, sz: .6 + rnd() * .8});
   spGroup.userData.debris = {mesh: deb, data: dd};
-}
-
-function spPaintDeck(c, W, H) {
-  const R = SP.plR, S = W / (2 * R), X = x => (x + R) * S, Z = z => (z + R) * S;
-  // Base asteroid deck tarmac: rich deep cosmic asphalt
-  const g = c.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, W / 2);
-  g.addColorStop(0, '#261c38'); g.addColorStop(.5, '#1e162e'); g.addColorStop(.8, '#161022'); g.addColorStop(1, '#0e0a16');
-  c.fillStyle = g; c.fillRect(0, 0, W, H);
-  
-  // Stippled star-grit / surface texture
-  const rr = Vm(77);
-  for (let i = 0; i < 9000; i++) {
-    c.fillStyle = 'rgba(' + (rr() < .5 ? '255,255,255' : '10,6,20') + ',' + (rr() * .05).toFixed(3) + ')';
-    c.fillRect(rr() * W, rr() * H, 2 + rr() * 6, 2 + rr() * 6);
-  }
-  const glow = (col, blur) => { c.shadowColor = col; c.shadowBlur = blur; c.strokeStyle = col; c.fillStyle = col; };
-
-  // Helper for painting soft glowing pools under buildings/signs (ZERO added lights needed)
-  const lightPool = (cx, cz, rx, rz, col, alpha = 0.5) => {
-    c.save();
-    const grad = c.createRadialGradient(X(cx), Z(cz), 0, X(cx), Z(cz), Math.max(rx, rz) * S);
-    grad.addColorStop(0, col);
-    grad.addColorStop(0.4, col);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    c.globalAlpha = alpha;
-    c.fillStyle = grad;
-    c.beginPath();
-    c.ellipse(X(cx), Z(cz), rx * S, rz * S, 0, 0, Math.PI * 2);
-    c.fill();
-    c.restore();
-  };
-
-  // 1. RUNWAY 07/25 (z: 85 to 113, x: -200 to 120)
-  c.shadowBlur = 0; c.fillStyle = '#0f0c18'; c.fillRect(X(-200), Z(85), 320 * S, 28 * S);
-  glow('#4df3ff', 14); c.lineWidth = 4; c.strokeRect(X(-200), Z(85), 320 * S, 28 * S);
-  glow('#e9d9ff', 6); c.lineWidth = 5; c.setLineDash([36, 30]); c.beginPath(); c.moveTo(X(-186), Z(99)); c.lineTo(X(106), Z(99)); c.stroke(); c.setLineDash([]);
-  c.shadowBlur = 0; c.fillStyle = '#d8ccf0';
-  for (let k = 0; k < 6; k++) { c.fillRect(X(-196), Z(87 + k * 4.2), 12 * S, 2 * S); c.fillRect(X(104), Z(87 + k * 4.2), 12 * S, 2 * S); }
-  glow('#ff5fb8', 10); c.font = 'bold ' + (9 * S) + 'px Arial Black,Impact,sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.save(); c.translate(X(-168), Z(99)); c.rotate(-Math.PI / 2); c.fillText('07', 0, 0); c.restore();
-  c.save(); c.translate(X(80), Z(99)); c.rotate(Math.PI / 2); c.fillText('25', 0, 0); c.restore();
-
-  // Taxiway from runway (z 86) to Orbit Gas (z 52)
-  c.shadowBlur = 0; c.fillStyle = '#181324'; c.fillRect(X(-46), Z(52), 12 * S, 36 * S);
-  glow('#ffb347', 8); c.lineWidth = 3; c.setLineDash([14, 14]); c.beginPath(); c.moveTo(X(-40), Z(52)); c.lineTo(X(-40), Z(86)); c.stroke(); c.setLineDash([]);
-
-  // Gate approach taxiway (x -132 to -116, z 76 to 92)
-  c.shadowBlur = 0; c.fillStyle = '#1c1628'; c.fillRect(X(-132), Z(76), 16 * S, 16 * S);
-  c.strokeStyle = 'rgba(255,190,80,.4)'; c.lineWidth = 2; c.strokeRect(X(-132), Z(76), 16 * S, 16 * S);
-  c.fillStyle = '#ffd24d'; c.font = 'bold ' + (3 * S) + 'px "Courier New",monospace'; c.textAlign = 'center';
-  c.fillText('SLOW 15', X(-124), Z(84));
-
-  // Ship parking ring at Orbit Gas (x -40, z 77)
-  c.shadowBlur = 0; c.fillStyle = '#1b1630'; c.beginPath(); c.arc(X(-40), Z(77), 6.6 * S, 0, 7); c.fill();
-  glow('#58ffa6', 14); c.lineWidth = 5; c.beginPath(); c.arc(X(-40), Z(77), 6.2 * S, 0, 7); c.stroke();
-  c.font = 'bold ' + (4 * S) + 'px Arial Black,sans-serif'; c.fillText('P', X(-40), Z(77));
-
-  // 2. MAIN STREET ROADWAY (x: -36 to 54, z: 36 to 48)
-  c.shadowBlur = 0; c.fillStyle = '#161220'; c.fillRect(X(-36), Z(36), 90 * S, 12 * S);
-  // Curbs
-  c.strokeStyle = 'rgba(143,240,216,.45)'; c.lineWidth = 2; // North curb (teal)
-  c.beginPath(); c.moveTo(X(-36), Z(36)); c.lineTo(X(54), Z(36)); c.stroke();
-  c.strokeStyle = 'rgba(255,122,58,.45)'; c.lineWidth = 2; // South curb (tangerine)
-  c.beginPath(); c.moveTo(X(-36), Z(48)); c.lineTo(X(54), Z(48)); c.stroke();
-  // Center road dashes (faded warm white)
-  c.strokeStyle = 'rgba(240,226,196,.5)'; c.lineWidth = 2.5; c.setLineDash([12, 10]);
-  c.beginPath(); c.moveTo(X(-34), Z(42)); c.lineTo(X(52), Z(42)); c.stroke(); c.setLineDash([]);
-  
-  // Zebra pedestrian crossings
-  const zebra = (zx) => {
-    c.fillStyle = 'rgba(235,220,250,.65)';
-    for (let k = 0; k < 5; k++) c.fillRect(X(zx - 1.2), Z(37.2 + k * 2.0), 2.4 * S, 1.2 * S);
-  };
-  zebra(-24); // near Spin Cycle
-  zebra(8);   // between Nova Nosh and Event Horizon
-  zebra(34);  // near Zorp's lot and Plaza entrance
-
-  // Parking bays on South curb (slanted white lines)
-  c.strokeStyle = 'rgba(255,255,255,.3)'; c.lineWidth = 1.5;
-  for (let bx = -2; bx < 32; bx += 5.5) {
-    c.beginPath(); c.moveTo(X(bx), Z(48)); c.lineTo(X(bx + 2.5), Z(44.5)); c.stroke();
-  }
-
-  // Asphalt wear, cracks, and mended crack with black tar sealant
-  c.strokeStyle = 'rgba(15,10,22,.9)'; c.lineWidth = 2.5;
-  c.beginPath(); c.moveTo(X(-12), Z(40)); c.lineTo(X(-8), Z(43)); c.lineTo(X(-3), Z(41)); c.lineTo(X(1), Z(45)); c.stroke();
-  c.strokeStyle = 'rgba(60,40,80,.4)'; c.lineWidth = 1;
-  c.beginPath(); c.moveTo(X(18), Z(38)); c.lineTo(X(22), Z(39.5)); c.lineTo(X(20), Z(43)); c.stroke();
-
-  // Chalk hopscotch game near Spin Cycle (x -16, z 33)
-  c.save();
-  c.strokeStyle = 'rgba(255,160,220,.75)'; c.lineWidth = 1.5;
-  for (let i = 0; i < 4; i++) c.strokeRect(X(-17 + i * 1.4), Z(32.5), 1.2 * S, 1.2 * S);
-  c.strokeStyle = 'rgba(100,240,220,.75)';
-  c.strokeRect(X(-17 + 4 * 1.4), Z(31.8), 1.2 * S, 1.2 * S);
-  c.strokeRect(X(-17 + 4 * 1.4), Z(33.2), 1.2 * S, 1.2 * S);
-  c.restore();
-
-  // Oil/fluid stain near Orbit Gas and truck
-  c.fillStyle = 'rgba(8,5,15,.75)';
-  c.beginPath(); c.ellipse(X(-36), Z(45), 2.2 * S, 1.4 * S, .2, 0, Math.PI * 2); c.fill();
-  c.beginPath(); c.ellipse(X(21), Z(41), 1.8 * S, 1.1 * S, -.1, 0, Math.PI * 2); c.fill();
-
-  // Ghost rectangle (retained from S2)
-  c.save();
-  c.fillStyle = 'rgba(16,11,26,.7)'; c.fillRect(X(-31), Z(36), 3.4 * S, 2.0 * S);
-  c.strokeStyle = 'rgba(110,85,140,.35)'; c.lineWidth = 1.5; c.strokeRect(X(-31), Z(36), 3.4 * S, 2.0 * S);
-  c.fillStyle = 'rgba(8,5,14,.9)';
-  for (const [bx, bz] of [[-30.7, 36.3], [-27.9, 36.3], [-30.7, 37.7], [-27.9, 37.7]]) {
-    c.beginPath(); c.arc(X(bx), Z(bz), .24 * S, 0, 7); c.fill();
-  }
-  c.restore();
-
-  // 3. THE PLAZA (x: 2 to 25, z: -2 to 20)
-  c.save();
-  c.fillStyle = 'rgba(42,26,62,.6)';
-  c.beginPath(); c.ellipse(X(13), Z(8), 14 * S, 12 * S, 0, 0, Math.PI * 2); c.fill();
-  // Radial paving pattern
-  c.strokeStyle = 'rgba(138,92,192,.3)'; c.lineWidth = 1.2;
-  for (let r = 3; r <= 13; r += 2.5) {
-    c.beginPath(); c.ellipse(X(13), Z(8), r * S, (r * .85) * S, 0, 0, Math.PI * 2); c.stroke();
-  }
-  for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
-    c.beginPath(); c.moveTo(X(13), Z(8));
-    c.lineTo(X(13 + Math.cos(a) * 13), Z(8 + Math.sin(a) * 11)); c.stroke();
-  }
-  // Fountain basin outline (x 4, z 8)
-  c.fillStyle = 'rgba(30,20,50,.9)'; c.beginPath(); c.arc(X(4), Z(8), 3.5 * S, 0, 7); c.fill();
-  glow('#4df3ff', 10); c.lineWidth = 2.5; c.beginPath(); c.arc(X(4), Z(8), 3.5 * S, 0, 7); c.stroke();
-  c.restore();
-
-  // 4. THE QUIET SIDE (x: 55 to 95, z: -30 to 5)
-  // Flagstone path leading to Drift Inn and Gertrude's Greenhouse
-  c.fillStyle = 'rgba(38,28,54,.55)';
-  c.beginPath();
-  c.moveTo(X(48), Z(36)); c.lineTo(X(58), Z(20)); c.lineTo(X(74), Z(0)); c.lineTo(X(78), Z(-10));
-  c.lineTo(X(72), Z(-10)); c.lineTo(X(68), Z(0)); c.lineTo(X(54), Z(20)); c.lineTo(X(44), Z(36));
-  c.closePath(); c.fill();
-  // Path spur to Greenhouse (x 48, z -20)
-  c.beginPath();
-  c.moveTo(X(56), Z(15)); c.lineTo(X(50), Z(-16)); c.lineTo(X(46), Z(-16)); c.lineTo(X(52), Z(15));
-  c.closePath(); c.fill();
-
-  // Drift Inn plaza spiral (retained and enhanced)
-  c.save(); c.translate(X(80), Z(-14)); c.fillStyle = 'rgba(40,24,70,.9)'; c.beginPath(); c.arc(0, 0, 30 * S, 0, 7); c.fill();
-  glow('#c06bff', 12); c.lineWidth = 3; c.beginPath();
-  for (let a = 0; a < 6 * Math.PI; a += .05) { const r = a / (6 * Math.PI) * 28 * S; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.stroke();
-  c.restore();
-
-  // 5. COLOURED LIGHT POOLS (Cast light onto ground without adding point lights!)
-  // Gate: pink & mustard
-  lightPool(-125, 85, 16, 12, 'rgba(255,79,163,.45)', 0.6);
-  lightPool(-125, 85, 9, 7, 'rgba(255,210,77,.35)', 0.5);
-  // Orbit Gas: cyan hero & pink accent
-  lightPool(-40, 48, 22, 16, 'rgba(77,243,255,.52)', 0.7);
-  lightPool(-34, 50, 14, 11, 'rgba(255,79,216,.40)', 0.6);
-  // Spin Cycle: turquoise & tangerine
-  lightPool(-14, 26, 13, 9, 'rgba(47,224,208,.48)', 0.65);
-  lightPool(-14, 26, 8, 6, 'rgba(255,122,58,.42)', 0.6);
-  // Nova Nosh: warm pink & amber/peach
-  lightPool(23, 42, 14, 10, 'rgba(255,123,208,.50)', 0.65);
-  lightPool(24, 44, 9, 7, 'rgba(255,200,100,.55)', 0.7);
-  // The Event Horizon: violet & mustard
-  lightPool(-5, 62, 16, 13, 'rgba(154,92,255,.52)', 0.7);
-  lightPool(-5, 56, 10, 8, 'rgba(255,200,60,.40)', 0.55);
-  // Planet Pop: candy multi-colour radiance
-  lightPool(14, 6, 18, 16, 'rgba(255,80,180,.48)', 0.65);
-  lightPool(14, 6, 11, 10, 'rgba(88,255,200,.42)', 0.6);
-  lightPool(14, 6, 6, 5, 'rgba(255,225,90,.55)', 0.7);
-  // Zorp's Used Rockets: mustard & mint
-  lightPool(45, 54, 18, 14, 'rgba(240,190,60,.42)', 0.6);
-  lightPool(46, 50, 10, 8, 'rgba(143,240,184,.38)', 0.5);
-  // Gertrude's Greenhouse: living lime & mint
-  lightPool(48, -20, 15, 14, 'rgba(143,240,184,.55)', 0.7);
-  lightPool(48, -20, 9, 8, 'rgba(182,255,90,.48)', 0.65);
-  // Drift Inn: violet & warm amber
-  lightPool(75, -6, 16, 14, 'rgba(192,107,255,.55)', 0.7);
-  lightPool(73, -4, 9, 8, 'rgba(255,210,120,.45)', 0.6);
-  // Par Sec Mini Golf: pink & cyan
-  lightPool(-22, -22, 14, 12, 'rgba(255,95,184,.38)', 0.5);
-  lightPool(-22, -22, 8, 7, 'rgba(77,243,255,.32)', 0.5);
-  // Observation Deck: brass & ivory
-  lightPool(32, -65, 11, 9, 'rgba(255,230,170,.35)', 0.5);
-
-  // 6. GLOWING DECK RIM WITH HAZARD MARKINGS
-  glow('#ff4fd8', 18); c.lineWidth = 6; c.beginPath(); c.arc(W / 2, H / 2, (R - 3) * S, 0, 7); c.stroke();
-  // Perimeter caution hatches
-  c.strokeStyle = 'rgba(255,210,77,.35)'; c.lineWidth = 2.5;
-  for (let a = 0; a < Math.PI * 2; a += Math.PI / 72) {
-    c.beginPath();
-    c.moveTo(W / 2 + Math.cos(a) * (R - 7) * S, H / 2 + Math.sin(a) * (R - 7) * S);
-    c.lineTo(W / 2 + Math.cos(a + .02) * (R - 3) * S, H / 2 + Math.sin(a + .02) * (R - 3) * S);
-    c.stroke();
-  }
 }
 
 function spBuildOutpost(parent, rnd) {
@@ -14992,7 +15067,17 @@ function spBuildOutpost(parent, rnd) {
     wl: new wi({color: 0xffd9a0}),
   };
   const col = (c, i, d, x, y, z) => { const l = new Pn(c, i, d, 2); l.position.set(x, y, z); O.add(l); lights.push(l); return l; };
+  const mcStart = Mc.length;
+  // Each building keeps its own authored coordinates; spMove lifts a finished block (its meshes,
+  // lights, colliders and pump points) to its place on the strip.
+  const spMc0 = () => ({c: O.children.length, m: Mc.length, p: spPumps.length});
+  const spMove = (k, dx, dy, dz) => {
+    for (let i = k.c; i < O.children.length; i++) { const o = O.children[i]; o.position.x += dx; o.position.y += dy; o.position.z += dz; }
+    for (let i = k.m; i < Mc.length; i++) { const b = Mc[i]; b.minX += dx; b.maxX += dx; b.minZ += dz; b.maxZ += dz; b.minY += dy; b.maxY += dy; }
+    for (let i = k.p; i < spPumps.length; i++) { spPumps[i].x += dx; spPumps[i].y += dy; spPumps[i].z += dz; }
+  };
 
+  const _mk_gas = spMc0();
   // ---------- ORBIT GAS: Googie boomerang canopy, vintage pumps, kiosk, pylon sign, air post ----------
   const G = new xi(); G.position.set(-40, 0, 48); O.add(G);
 
@@ -15159,6 +15244,8 @@ function spBuildOutpost(parent, rnd) {
   col(0x4df3ff, 38, 70, -40, 8.5, 46);
   col(0xff4fd8, 20, 55, -34, 14, 50);
 
+  spMove(_mk_gas, -22, 0, -60);
+  const _mk_truck = spMc0();
   // ---------- NOVA NOSH: 1960s streamliner food truck, rotating taco sign, awning, steam, stools ----------
   const T = new xi(); T.position.set(23, 0, 44); T.rotation.y = .12; O.add(T);
 
@@ -15289,6 +15376,8 @@ function spBuildOutpost(parent, rnd) {
   col(0xff4fd8, 30, 40, 23, 4.2, 48); col(0xffc477, 14, 22, 25, 1.4, 50);
   Dt(SP.ax + 23 - 4.2, SP.az + 44 - 2.0, SP.ax + 23 + 5.2, SP.az + 44 + 2.0, SP.py, SP.py + 5.2);
 
+  spMove(_mk_truck, -55, 0, -56);
+  const _mk_inn = spMc0();
   // ---------- DRIFT INN: 9 pastel pods, ladders, rooftop deck, towel line, dynamic vacancy sign ----------
   const M = new xi(); M.position.set(80, 0, -14); O.add(M);
 
@@ -15429,6 +15518,8 @@ function spBuildOutpost(parent, rnd) {
   Dt(SP.ax + 80 - 4.8, SP.az - 14 - 4.8, SP.ax + 80 + 4.8, SP.az - 14 + 4.8, SP.py, SP.py + 28);
   Dt(SP.ax + 80 - 11.4, SP.az - 14 + 2.8, SP.ax + 80 - 3.6, SP.az - 14 + 10.2, SP.py, SP.py + 4.2);
 
+  spMove(_mk_inn, 18, 0, 2);
+  const _mk_gate = spMc0();
   // ---------- THE GATE ARCH & STREET SKELETON PROPS ----------
   const gateG = new xi(); gateG.position.set(-125, 0, 85); O.add(gateG);
   ufoAdd(gateG, ufoLatheGeo([[0, 0], [.55, 0], [.32, 5], [.42, 9.8], [0, 10.2]], 12), sm.mint, 0, 0, -10.5).rotation.z = .06;
@@ -15450,106 +15541,10 @@ function spBuildOutpost(parent, rnd) {
   Dt(SP.ax - 126, SP.az + 73.5, SP.ax - 124, SP.az + 75.5, SP.py, SP.py + 10.5);
   Dt(SP.ax - 126, SP.az + 94.5, SP.ax - 124, SP.az + 96.5, SP.py, SP.py + 10.5);
 
-  // Sputnik lamp posts helper (batched spikes & shafts)
-  const sputnikDarkBatch = ufoBatch();
-  const sputnikMintBatch = ufoBatch();
-  const sputnikBrassBatch = ufoBatch();
-  function addSputnikLamp(lx, lz, lh = 6.2, colHex = 0xffebd0) {
-    const lg = new xi(); lg.position.set(lx, 0, lz); O.add(lg);
-    sputnikDarkBatch.add(ufoLatheGeo([[0, 0], [.32, 0], [.18, .4], [.09, lh - .8], [.16, lh - .7], [.08, lh]], 10), lx, 0, lz);
-    sputnikMintBatch.add(ufoLatheGeo([[0, lh - .8], [.45, lh - .8], [.48, lh - .72], [0, lh - .72]], 12), lx, 0, lz);
-    ufoBall(lg, .38, new wi({color: colHex}), 0, lh + .32, 0);
-    ufoBall(lg, .85, ufoHaloMat(colHex, .18), 0, lh + .32, 0);
-    for (let k = 0; k < 6; k++) {
-      const a = k * Math.PI / 3, ca = Math.cos(a) * .85, sa = Math.sin(a) * .85;
-      sputnikBrassBatch.add(ufoTubeGeo([[0, lh + .32, 0], [ca, lh + .32 + (k % 2 ? .3 : -.2), sa]], .018, 4), lx, 0, lz);
-    }
-    Dt(SP.ax + lx - .35, SP.az + lz - .35, SP.ax + lx + .35, SP.az + lz + .35, SP.py, SP.py + lh);
-  }
-  addSputnikLamp(-130, 74, 6.2, 0xffd24d);
-  addSputnikLamp(-120, 96, 6.2, 0xffd24d);
-  addSputnikLamp(-28, 34, 5.8, 0x6ffcff);
-  addSputnikLamp(-20, 49, 5.8, 0xffa05a);
-  addSputnikLamp(-8, 51, 6.0, 0xc06bff);
-  addSputnikLamp(16, 49, 5.8, 0xffebd0);
-  addSputnikLamp(2, -1, 6.2, 0xff5fb8);
-  addSputnikLamp(24, 16, 6.2, 0x58ffa6);
-  addSputnikLamp(58, -2, 6.0, 0xc06bff);
-  sputnikDarkBatch.build(O, sm.dark);
-  sputnikMintBatch.build(O, sm.mint);
-  sputnikBrassBatch.build(O, ufoM.brass);
+  // (street furniture is rebuilt below, after every building has been placed)
 
-  // Retro atomic park benches helper (batched slats & legs)
-  const benchCreamBatch = ufoBatch();
-  const benchBrassBatch = ufoBatch();
-  function addBench(bx, bz, bry = 0) {
-    const cosB = Math.cos(bry), sinB = Math.sin(bry);
-    for (let s = 0; s < 3; s++) {
-      const lz = -.22 + s * .22, ly = .45 + s * .04;
-      benchCreamBatch.add(new Cn(2.2, .06, .22), bx - lz * sinB, ly, bz + lz * cosB, 0, bry, 0);
-    }
-    benchCreamBatch.add(new Cn(2.2, .38, .05), bx + .28 * sinB, .85, bz - .28 * cosB, -.18, bry, 0);
-    for (const lx of [-.9, .9]) {
-      benchBrassBatch.add(ufoTubeGeo([[lx, 0, -.2], [lx, .45, -.2], [lx, .45, .2], [lx, 0, .2]], .022, 4), bx, 0, bz, 0, bry, 0);
-      benchBrassBatch.add(ufoTubeGeo([[lx, .45, -.2], [lx, .9, -.3]], .022, 4), bx, 0, bz, 0, bry, 0);
-    }
-    Dt(SP.ax + bx - 1.15, SP.az + bz - .45, SP.ax + bx + 1.15, SP.az + bz + .45, SP.py, SP.py + 1.2);
-  }
-  addBench(7, 3, .3);
-  addBench(14, 15, -Math.PI / 2);
-  addBench(28, 49, Math.PI);
-  addBench(36, -63, .8);
-  benchCreamBatch.build(O, sm.cream);
-  benchBrassBatch.build(O, ufoM.brass);
-
-  // Planters with alien flora (batched)
-  const planterCreamBatch = ufoBatch();
-  const planterMintBatch = ufoBatch();
-  const planterBulbBatch = ufoBatch();
-  function addPlanter(px, pz) {
-    planterCreamBatch.add(ufoLatheGeo([[0, 0], [.82, 0], [.95, .45], [.88, .62], [.72, .62], [0, .45]], 8), px, 0, pz);
-    for (let k = 0; k < 5; k++) {
-      const a = k * Math.PI * .4, r0 = .32;
-      planterMintBatch.add(ufoLatheGeo([[0, 0], [.18, 0], [.24, .4], [0, .75]], 6), px + Math.cos(a) * r0, .48, pz + Math.sin(a) * r0, (Math.random() - .5) * .3, a, (Math.random() - .5) * .3);
-    }
-    planterBulbBatch.add(new lr(.2, 8, 6), px, .9, pz);
-    Dt(SP.ax + px - .8, SP.az + pz - .8, SP.ax + px + .8, SP.az + pz + .8, SP.py, SP.py + 1.2);
-  }
-  addPlanter(-30, 36);
-  addPlanter(10, 49);
-  addPlanter(22, 18);
-  addPlanter(60, -6);
-  planterCreamBatch.build(O, sm.cream);
-  planterMintBatch.build(O, sm.mint);
-  planterBulbBatch.build(O, new wi({color: 0xb6ff5a}));
-
-  // Retro domed waste bins helper (batched)
-  const binTealBatch = ufoBatch();
-  const binPlumBatch = ufoBatch();
-  const binDarkBatch = ufoBatch();
-  function addBin(bx, bz) {
-    binTealBatch.add(ufoLatheGeo([[0, 0], [.34, 0], [.34, .75], [.38, .85], [0, .85]], 12), bx, 0, bz);
-    binPlumBatch.add(ufoLatheGeo([[0, .85], [.38, .85], [.32, 1.15], [0, 1.2]], 12), bx, 0, bz);
-    binDarkBatch.add(new Cn(.28, .16, .02), bx, .95, bz + .32);
-    Dt(SP.ax + bx - .35, SP.az + bz - .35, SP.ax + bx + .35, SP.az + bz + .35, SP.py, SP.py + 1.2);
-  }
-  addBin(-26, 35);
-  addBin(20, 49);
-  addBin(8, 2);
-  binTealBatch.build(O, sm.teal);
-  binPlumBatch.build(O, sm.plum);
-  binDarkBatch.build(O, sm.dark);
-
-  // Street bollards (batched dark posts)
-  const bollardBatch = ufoBatch();
-  for (const [bx, bz] of [[-34, 49], [-28, 49], [-2, 49], [4, 49], [32, 49], [38, 49]]) {
-    bollardBatch.add(ufoLatheGeo([[0, 0], [.15, 0], [.12, .68], [.16, .72], [0, .75]], 8), bx, 0, bz);
-    const bg = new xi(); bg.position.set(bx, 0, bz); O.add(bg);
-    ufoNeon(bg, ufoCircle(0, .68, 0, .17, 'y', 10), 0x4df3ff, .03, true);
-    Dt(SP.ax + bx - .2, SP.az + bz - .2, SP.ax + bx + .2, SP.az + bz + .2, SP.py, SP.py + .8);
-  }
-  bollardBatch.build(O, sm.dark);
-
+  spMove(_mk_gate, 41, 0, -85);
+  const _mk_bus = spMc0();
   // Bus stop
   const busG = new xi(); busG.position.set(30, 0, 49); busG.rotation.y = Math.PI; O.add(busG);
   ufoBox(busG, 4.2, .14, 2.4, sm.mint, 0, 2.9, 0).rotation.x = .06;
@@ -15582,6 +15577,8 @@ function spBuildOutpost(parent, rnd) {
   sm.yellow = new ji({color: 0xf5db7a, roughness: .5, emissive: 0x453c15, emissiveIntensity: .7});
   sm.pink = new ji({color: 0xff4fa3, roughness: .45, emissive: 0x5a1035, emissiveIntensity: .85});
 
+  spMove(_mk_bus, 40, 0, -56);
+  const _mk_spin = spMc0();
   // ---------- 1. SPIN CYCLE: laundromat with tumbling porthole shader, giant neon sock ----------
   const SC = new xi(); SC.position.set(-14, 0, 24); O.add(SC);
   ufoBox(SC, 11.2, 3.8, 6.8, sm.cream, 0, 1.9, 0);
@@ -15666,6 +15663,8 @@ function spBuildOutpost(parent, rnd) {
   ufoBox(SC, .9, .45, .6, sm.orange, -2.4, 1.38, 1.6);
   Dt(SP.ax - 14 - 5.8, SP.az + 24 - 3.6, SP.ax - 14 + 5.8, SP.az + 24 + 3.6, SP.py, SP.py + 5.2);
 
+  spMove(_mk_spin, 8, 0, -37);
+  const _mk_eh = spMc0();
   // ---------- 2. THE EVENT HORIZON: dome lounge, black-hole swirl shader, martini neon ----------
   const EH = new xi(); EH.position.set(-5, 0, 62); O.add(EH);
   ufoAdd(EH, ufoLatheGeo([[0, 0], [5.4, 0], [5.4, .6], [5.0, .6], [0, .6]], 24), sm.dark);
@@ -15736,6 +15735,8 @@ function spBuildOutpost(parent, rnd) {
   spSpin.push((t) => { candleFlame.scale.setScalar(.8 + .4 * Math.sin(t * 18.0 + Math.cos(t * 7.0))); });
   Dt(SP.ax - 5 - 5.6, SP.az + 62 - 5.6, SP.ax - 5 + 5.6, SP.az + 62 + 5.6, SP.py, SP.py + 5.8);
 
+  spMove(_mk_eh, -1, 0, -44);
+  const _mk_pp = spMc0();
   // ---------- 3. PLANET POP: monumental gumball machine with bobbing mini-planets ----------
   const PP = new xi(); PP.position.set(14, 0, 6); O.add(PP);
   const ppRedBatch = ufoBatch();
@@ -15801,7 +15802,7 @@ function spBuildOutpost(parent, rnd) {
   ringBatch.build(planetsGroup, ufoM.brass);
   spSpin.push((t) => {
     const p = Nn.position;
-    if (Math.hypot(p.x - (SP.ax + 14), p.z - (SP.az + 6)) < 40) {
+    if (Math.hypot(p.x - (SP.ax + 22), p.z - (SP.az - 17)) < 40) {
       planetsGroup.position.y = Math.sin(t * 1.8) * .12;
       planetsGroup.rotation.y = t * .15;
     }
@@ -15812,6 +15813,8 @@ function spBuildOutpost(parent, rnd) {
   ufoSign(PP, 'PLANET POP', 5.2, 1.8, '#4df3ff', 0, 8.9, 0, Math.PI, 'GENUINE WORLDS · 25¢');
   Dt(SP.ax + 14 - 2.8, SP.az + 6 - 2.8, SP.ax + 14 + 2.8, SP.az + 6 + 2.8, SP.py, SP.py + 10.5);
 
+  spMove(_mk_pp, 8, 0, -23);
+  const _mk_zorp = spMc0();
   // ---------- 4. ZORP'S USED ROCKETS: rockets on stilts, trailer office, tube-dancer ----------
   const ZR = new xi(); ZR.position.set(45, 0, 54); O.add(ZR);
   const trG = new xi(); trG.position.set(-4.5, 0, -3.5); trG.rotation.y = .2; ZR.add(trG);
@@ -15918,6 +15921,8 @@ function spBuildOutpost(parent, rnd) {
   Dt(SP.ax + 45 - 7.5, SP.az + 54 - 5.5, SP.ax + 45 - 1.5, SP.az + 54 - 1.5, SP.py, SP.py + 3.5);
   Dt(SP.ax + 45 - 2.0, SP.az + 54 + .5, SP.ax + 45 + 7.5, SP.az + 54 + 6.5, SP.py, SP.py + 7.0);
 
+  spMove(_mk_zorp, 9, 0, -69);
+  const _mk_gh = spMc0();
   // ---------- 5. GERTRUDE'S GREENHOUSE: geodesic dome, glowing plants, spores ----------
   const GH = new xi(); GH.position.set(48, 0, -20); O.add(GH);
   ufoAdd(GH, ufoLatheGeo([[0, 0], [5.8, 0], [5.8, .5], [5.4, .5], [0, .5]], 16), sm.dark);
@@ -15988,6 +15993,8 @@ function spBuildOutpost(parent, rnd) {
   });
   Dt(SP.ax + 48 - 5.6, SP.az - 20 - 5.6, SP.ax + 48 + 5.6, SP.az - 20 + 5.6, SP.py, SP.py + 6.2);
 
+  spMove(_mk_gh, 4, 0, 40);
+  const _mk_golf = spMc0();
   // ---------- 6. PAR SEC MINI GOLF: 3-hole course with ringed-planet windmill ----------
   const MG = new xi(); MG.position.set(-22, 0, -22); O.add(MG);
   const turfBatch = ufoBatch();
@@ -16038,6 +16045,8 @@ function spBuildOutpost(parent, rnd) {
   ufoSign(MG, 'PAR SEC', 4.4, 1.6, '#ff4fa3', 0, 2.8, 6.4, 0, 'MINI GOLF · 18 HOLES IN 3');
   Dt(SP.ax - 22 - 1.8, SP.az - 22 - 1.8, SP.ax - 22 + 1.8, SP.az - 22 + 1.8, SP.py, SP.py + 5.5);
 
+  spMove(_mk_golf, -14, 9, -24);
+  const _mk_od = spMc0();
   // ---------- 7. SEE YOUR HOUSE OBSERVATION DECK: raised terrace, brass telescope ----------
   const OD = new xi(); OD.position.set(32, 0, -65); O.add(OD);
   ufoAdd(OD, ufoLatheGeo([[0, 0], [4.2, 0], [4.2, .55], [0, .55]], 18, [-Math.PI / 2, Math.PI]), sm.dark);
@@ -16071,47 +16080,488 @@ function spBuildOutpost(parent, rnd) {
   Dt(SP.ax + 32 - .6, SP.az - 67 - .6, SP.ax + 32 + .6, SP.az - 67 + .6, SP.py, SP.py + 2.2);
   Dt(SP.ax + 32 - 4.3, SP.az - 69.5, SP.ax + 32 + 4.3, SP.az - 68.5, SP.py, SP.py + 1.8);
 
-  // ---------- runway lights and the radio mast ----------
-  const bulbGeo = new lr(.28, 8, 6), n = 34;
-  const mq = new xi();
-  const rl = new ar(bulbGeo, new wi({color: 0xff5fb8}), n); rl.frustumCulled = false; O.add(rl);
-  const rl2 = new ar(bulbGeo, new wi({color: 0x4df3ff}), n); rl2.frustumCulled = false; O.add(rl2);
-  for (let k = 0; k < n; k++) {
-    mq.position.set(-200 + k * 320 / (n - 1), .3, 85); mq.updateMatrix(); rl.setMatrixAt(k, mq.matrix);
-    mq.position.set(-200 + k * 320 / (n - 1), .3, 113); mq.updateMatrix(); rl2.setMatrixAt(k, mq.matrix);
-  }
-  rl.instanceMatrix.needsUpdate = true; rl2.instanceMatrix.needsUpdate = true;
-  // mast: one lime accent ring
-  ufoBox(O, .5, 38, .5, sm.dark, 130, 19, 60);
-  const mastBulb = ufoBall(O, .6, new wi({color: 0xff4d4d}), 130, 38.5, 60); spNeonPulse.push(mastBulb);
-  ufoNeon(O, ufoCircle(130, 30, 60, 2.4, 'y', 24), 0x58ffa6, .08, true);
-  col(0x58ffa6, 14, 40, 130, 31, 60);
-  // Faceted hexagonal crystal columns around the rim (amethyst and pale cyan mineral quartz, batched)
-  const cryCols = [0x9d72d6, 0x6edbf5, 0xba88ea, 0xb8d9ea];
-  const cryBatches = [ufoBatch(), ufoBatch(), ufoBatch(), ufoBatch()];
-  const haloBatches = [ufoBatch(), ufoBatch(), ufoBatch(), ufoBatch()];
-  for (let k = 0; k < 22; k++) {
-    const a = rnd() * Math.PI * 2, rad = 188 + rnd() * 30, x = Math.cos(a) * rad, z = Math.sin(a) * rad;
-    if (z > 70 && z < 130 && x < 130) continue;
-    const bIdx = k % 4;
-    const colr = cryCols[bIdx];
-    for (let j = 0; j < 5; j++) {
-      const h = 5 + rnd() * 11, w = .8 + rnd() * 1.5;
-      const ox = (rnd() - .5) * 4, oz = (rnd() - .5) * 4;
-      cryBatches[bIdx].add(ufoLatheGeo([[0, 0], [w, 0], [w, h * .75], [0, h]], 6), x + ox, 0, z + oz, (rnd() - .5) * .4, rnd() * 3, (rnd() - .5) * .4);
+  spMove(_mk_od, -18, 18, -25);
+  // bus stop faces the street
+  busG.rotation.y = 0;
+  spBell.x += 18; spBell.z += 2;
+  // ==================== v2 DRESSING: street, rails, signs, dock, billboard, rocks ====================
+  const ST = {};
+  const stb = k => ST[k] || (ST[k] = ufoBatch());
+  const stMats = {dark: sm.dark, mint: sm.mint, teal: sm.teal, plum: sm.plum, cream: sm.cream, red: sm.red, brass: ufoM.brass, trim: ufoM.trim, lime: sm.lime, orange: sm.orange,
+    yellow: sm.yellow, pink: sm.pink, rock: new Lm({color: 0x5b4a6c, emissive: 0x140d1c}), rockLt: new Lm({color: 0x7a6890, emissive: 0x1a1226}),
+    railC: new wi({color: 0x4df3ff}), railP: new wi({color: 0xff4fd8}), railA: new wi({color: 0xffd24d}), bulbW: new wi({color: 0xffe9c0}), bulbO: new wi({color: 0xffa24a})};
+  const stMat = k => stMats[k] || (k.startsWith('bulb') ? new wi({color: +k.slice(4)}) : k.startsWith('halo') ? ufoHaloMat(+k.slice(4), .18) : sm.dark);
+  const spFree = (x, z, m = 1.2) => {
+    const y = spH(x, z);
+    for (let i = mcStart; i < Mc.length; i++) {
+      const b = Mc[i];
+      if (b.maxY - b.minY < .3 || Math.abs(b.minY - SP.py - y) > 6) continue;
+      if (x > b.minX - SP.ax - m && x < b.maxX - SP.ax + m && z > b.minZ - SP.az - m && z < b.maxZ - SP.az + m) return false;
     }
-    haloBatches[bIdx].add(new lr(4.5, 8, 6), x, 5, z);
-    if (k % 4 === 0) col(colr, 9, 36, x, 5, z);
+    return true;
+  };
+  const box = (x, z, hx, hz, h = 1.2, y = spH(x, z)) => Dt(SP.ax + x - hx, SP.az + z - hz, SP.ax + x + hx, SP.az + z + hz, SP.py + y, SP.py + y + h);
+  const lampCols = [0xffd24d, 0xff5fb8, 0x6ffcff, 0xffebd0, 0xc06bff];
+  let lampN = 0;
+  function lamp(x, z, c, lh = 5.8) {
+    if (!spFree(x, z, .7)) return;
+    const y = spH(x, z), cc = c || lampCols[lampN++ % lampCols.length];
+    stb('dark').add(ufoLatheGeo([[0, 0], [.32, 0], [.18, .4], [.09, lh - .8], [.16, lh - .7], [.08, lh]], 10), x, y, z);
+    stb('mint').add(ufoLatheGeo([[0, lh - .8], [.45, lh - .8], [.48, lh - .72], [0, lh - .72]], 12), x, y, z);
+    stb('bulb' + cc).add(new lr(.38, 10, 7), x, y + lh + .32, z);
+    stb('halo' + cc).add(new lr(.85, 8, 6), x, y + lh + .32, z);
+    for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; stb('brass').add(ufoTubeGeo([[0, lh + .32, 0], [Math.cos(a) * .85, lh + .32 + (k % 2 ? .3 : -.2), Math.sin(a) * .85]], .018, 4), x, y, z); }
+    spGlow(x, z, 9, cc, .5); box(x, z, .35, .35, lh, y);
   }
-  for (let bIdx = 0; bIdx < 4; bIdx++) {
-    haloBatches[bIdx].build(O, ufoHaloMat(cryCols[bIdx], .10));
+  function bench(bx, bz, bry = 0) {
+    if (!spFree(bx, bz, .5)) return;
+    const y = spH(bx, bz), cB = Math.cos(bry), sB = Math.sin(bry);
+    for (let s = 0; s < 3; s++) { const lz = -.22 + s * .22; stb('cream').add(new Cn(2.2, .06, .22), bx + lz * sB, y + .45 + s * .04, bz + lz * cB, 0, bry, 0); }
+    stb('cream').add(new Cn(2.2, .38, .05), bx - .28 * sB, y + .85, bz - .28 * cB, -.18, bry, 0);
+    for (const lx of [-.9, .9]) {
+      stb('brass').add(ufoTubeGeo([[lx, 0, -.2], [lx, .45, -.2], [lx, .45, .2], [lx, 0, .2]], .022, 4), bx, y, bz, 0, bry, 0);
+      stb('brass').add(ufoTubeGeo([[lx, .45, -.2], [lx, .9, -.3]], .022, 4), bx, y, bz, 0, bry, 0);
+    }
+    const hx = Math.abs(cB) * 1.15 + Math.abs(sB) * .45, hz = Math.abs(sB) * 1.15 + Math.abs(cB) * .45;
+    box(bx, bz, hx, hz, 1.2, y);
   }
-  for (let bIdx = 0; bIdx < 4; bIdx++) {
-    cryBatches[bIdx].build(O, new wi({color: cryCols[bIdx]}));
+  function planter(px, pz) {
+    if (!spFree(px, pz, .8)) return;
+    const y = spH(px, pz);
+    stb('cream').add(ufoLatheGeo([[0, 0], [.82, 0], [.95, .45], [.88, .62], [.72, .62], [0, .45]], 8), px, y, pz);
+    for (let k = 0; k < 5; k++) { const a = k * Math.PI * .4; stb('mint').add(ufoLatheGeo([[0, 0], [.18, 0], [.24, .4], [0, .75 + (k % 2) * .25]], 6), px + Math.cos(a) * .32, y + .48, pz + Math.sin(a) * .32, (rnd() - .5) * .3, a, (rnd() - .5) * .3); }
+    stb('bulb' + 0xb6ff5a).add(new lr(.2, 8, 6), px, y + .95, pz); box(px, pz, .8, .8, 1.2, y);
   }
+  function bin(bx, bz) {
+    if (!spFree(bx, bz, .5)) return;
+    const y = spH(bx, bz);
+    stb('teal').add(ufoLatheGeo([[0, 0], [.34, 0], [.34, .75], [.38, .85], [0, .85]], 12), bx, y, bz);
+    stb('plum').add(ufoLatheGeo([[0, .85], [.38, .85], [.32, 1.15], [0, 1.2]], 12), bx, y, bz);
+    box(bx, bz, .35, .35, 1.2, y);
+  }
+  function bollard(bx, bz, c = 0x4df3ff) {
+    if (!spFree(bx, bz, .4)) return;
+    const y = spH(bx, bz);
+    stb('dark').add(ufoLatheGeo([[0, 0], [.15, 0], [.12, .68], [.16, .72], [0, .75]], 8), bx, y, bz);
+    stb('bulb' + c).add(new lr(.11, 6, 4), bx, y + .8, bz); box(bx, bz, .2, .2, .8, y);
+  }
+  function meter(mx, mz, ry = 0) {
+    if (!spFree(mx, mz, .5)) return;
+    const y = spH(mx, mz);
+    stb('dark').add(ufoLatheGeo([[0, 0], [.1, 0], [.07, 1.15], [0, 1.15]], 6), mx, y, mz);
+    stb('teal').add(ufoLatheGeo([[0, 1.1], [.34, 1.18], [.2, 1.36], [0, 1.4]], 10), mx, y, mz);
+    stb('bulb' + 0xff5fb8).add(new lr(.07, 6, 4), mx, y + 1.45, mz); box(mx, mz, .2, .2, 1.5, y);
+  }
+  function hydrant(hx, hz) {
+    if (!spFree(hx, hz, .5)) return;
+    const y = spH(hx, hz);
+    stb('red').add(ufoLatheGeo([[0, 0], [.26, 0], [.2, .1], [.18, .62], [.24, .7], [.12, .85], [0, .9]], 10), hx, y, hz);
+    stb('brass').add(new Cn(.5, .1, .1), hx, y + .5, hz); stb('bulb' + 0x6ffcff).add(new lr(.05, 5, 4), hx, y + .92, hz);
+    box(hx, hz, .3, .3, 1, y);
+  }
+  function crate(cx, cz, ry = 0, n = 2) {
+    if (!spFree(cx, cz, 1)) return;
+    const y = spH(cx, cz);
+    for (let i = 0; i < n; i++) stb(i % 2 ? 'orange' : 'teal').add(new Cn(1.1 - i * .12, .8, 1.1 - i * .12), cx + i * .14, y + .4 + i * .8, cz - i * .08, 0, ry + i * .3, 0);
+    box(cx, cz, .75, .75, .8 * n, y);
+  }
+  function barrel(bx, bz, c = 'plum') {
+    if (!spFree(bx, bz, .6)) return;
+    const y = spH(bx, bz);
+    stb(c).add(ufoLatheGeo([[0, 0], [.4, 0], [.46, .3], [.46, .75], [.4, 1.0], [0, 1.0]], 10), bx, y, bz);
+    stb('trim').add(ufoTubeGeo(ufoCircle(0, .5, 0, .47, 'y', 12), .02, 4, true), bx, y, bz);
+    box(bx, bz, .5, .5, 1, y);
+  }
+  // ---- stair and edge rails, generated from the platform table ----
+  const railPts = (p) => {
+    const loop = [];
+    if (p.t) { const n = Math.max(16, Math.round(2 * Math.PI * p.r / 1.6)); for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; loop.push([p.x + Math.cos(a) * p.r, p.z + Math.sin(a) * p.r]); } }
+    else {
+      const cr = p.r, ax = p.hx - cr, az = p.hz - cr;
+      const arc = (cx, cz, a0) => { const n = Math.max(2, Math.round(cr * Math.PI / 2 / 1.4)); for (let i = 0; i <= n; i++) { const a = a0 + i / n * Math.PI / 2; loop.push([cx + Math.cos(a) * cr, cz + Math.sin(a) * cr]); } };
+      arc(p.x + ax, p.z + az, 0); arc(p.x - ax, p.z + az, Math.PI / 2); arc(p.x - ax, p.z - az, Math.PI); arc(p.x + ax, p.z - az, Math.PI * 1.5);
+    }
+    const out = [];
+    for (let i = 0; i < loop.length; i++) {
+      const a = loop[i], b = loop[(i + 1) % loop.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(l / 1.6));
+      for (let k = 0; k < n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]);
+    }
+    return out;
+  };
+  const railBits = [];   // {pts:[[x,y,z]], c}
+  for (const p of SPP) {
+    const pts = railPts(p), keep = [];
+    for (const [x0, z0] of pts) {
+      const e = .25, gx = spSdf(x0 + e, z0, p) - spSdf(x0 - e, z0, p), gz = spSdf(x0, z0 + e, p) - spSdf(x0, z0 - e, p), gl = Math.hypot(gx, gz) || 1, nx = gx / gl, nz = gz / gl;
+      const x = x0 - nx * .38, z = z0 - nz * .38;
+      let ok = spH(x0 + nx * 2.2, z0 + nz * 2.2) < p.y - 1.4;
+      if (ok) for (const q of SPP) if (q !== p && Math.abs(q.y - p.y) < .5 && spSdf(x0, z0, q) < .6) ok = false;
+      if (ok) for (const r of SPR) if (spRampPoint(r, x, z)[0] < r.w / 2 + 1.1) ok = false;
+      keep.push(ok ? [x, z] : null);
+    }
+    // runs (cyclic)
+    const n = keep.length, start = keep.findIndex(k => !k);
+    let cur = [];
+    const flush = () => { if (cur.length > 2) railBits.push({pts: cur.map(([x, z]) => [x, p.y + 1.05, z]), c: p.id === 'dock' || p.id === 'pierEnd' ? 'railA' : 'railC'}); cur = []; };
+    if (start < 0) railBits.push({pts: keep.map(([x, z]) => [x, p.y + 1.05, z]), c: 'railC', closed: true});
+    else for (let k = 1; k <= n; k++) { const q = keep[(start + k) % n]; if (q) cur.push(q); else flush(); }
+    flush();
+  }
+  for (const r of SPR) for (const side of [-1, 1]) {
+    const pts = [];
+    for (let i = 0; i < r.p.length - 1; i++) {
+      const a = r.p[i], b = r.p[i + 1], vx = b[0] - a[0], vz = b[1] - a[1], l = Math.hypot(vx, vz), n = Math.max(1, Math.round(l / 1.6));
+      for (let k = 0; k < n; k++) { const t = k / n; pts.push([a[0] + vx * t - vz / l * side * (r.w / 2 + .1), a[2] + (b[2] - a[2]) * t + 1.0, a[1] + vz * t + vx / l * side * (r.w / 2 + .1)]); }
+    }
+    const e = r.p[r.p.length - 1]; pts.push([e[0] - 0, e[2] + 1.0, e[1]]);
+    railBits.push({pts, c: 'railP'});
+  }
+  for (const rb of railBits) {
+    const pts = rb.pts;
+    stb(rb.c).add(ufoTubeGeo(pts, .03, 4, !!rb.closed));
+    stb('dark').add(ufoTubeGeo(pts.map(p => [p[0], p[1] - .45, p[2]]), .02, 4, !!rb.closed));
+    for (let i = 0; i < pts.length; i += 2) { const q = pts[i]; stb('dark').add(new Cn(.08, 1.1, .08), q[0], q[1] - .52, q[2]); }
+  }
+  // ---- placement: the street ----
+  const zebraX = [-46, -20, 48, 72];
+  for (let x = -80, k = 0; x < 80; x += 13.5, k++) {
+    if (zebraX.some(z => Math.abs(x - z) < 3.2) || Math.hypot(x - 22, -6) < 14.5) continue;
+    lamp(x, -5.4);
+  }
+  for (let x = -74, k = 0; x < 80; x += 13.5, k++) {
+    if (zebraX.some(z => Math.abs(x - z) < 3.2) || Math.hypot(x - 22, 9) < 14.5) continue;
+    lamp(x, 8.7);
+  }
+  for (const x of [-66, -34, 3, 30, 62, 74]) bench(x, 8.15, 0);
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + .5, R = 9.4, bx = 22 + Math.cos(a) * R, bz = -2 + Math.sin(a) * R; if (bz < 7) bench(bx, bz, Math.atan2(-Math.cos(a), -Math.sin(a))); }
+  for (const [x, z] of [[-70, -6.4], [-56, -6.4], [-40, -6.4], [-27, -6.4], [-12, -6.4], [4, -6.4], [38, -6.4], [52, -6.4], [76, -6.4], [10, 8.3], [40, 8.3], [-50, 8.3], [-26, 8.3]]) planter(x, z);
+  for (const [x, z] of [[-30, -6.2], [-10, -6.2], [40, -6.2], [60, -6.2], [-60, 8.3], [-14, 8.3], [66, 8.3]]) bin(x, z);
+  for (let a = 0; a < Math.PI * 2; a += .26) { const bx = 22 + Math.cos(a) * 13.9, bz = -2 + Math.sin(a) * 13.9; if (Math.abs(Math.sin(a)) < .42 && true) continue; if (bz > 9 || bz < -9.4) continue; bollard(bx, bz, a < Math.PI ? 0xff5fb8 : 0x4df3ff); }
+  for (const [x, z] of [[-83, -6.6], [-80, -6.6], [-77, -6.6], [-74, -6.6], [-83, 8.4], [-80, 8.4], [-77, 8.4]]) meter(x, z);
+  for (const [x, z] of [[-72, -6.6], [24, -6.6], [64, 8.3]]) hydrant(x, z);
+  // string lights across the street on dedicated lamp pairs
+  for (const sx of [-36, 12, 62]) {
+    lamp(sx, -5.4, 0xffd24d, 6.4); lamp(sx, 8.7, 0xffd24d, 6.4);
+    const pts = [];
+    for (let i = 0; i <= 28; i++) { const t = i / 28; pts.push([sx, 6.4 + .3 - 1.5 * 4 * t * (1 - t), -5.4 + t * 14.1]); }
+    stb('dark').add(ufoTubeGeo(pts, .014, 3));
+    for (let i = 1; i < 28; i += 2) stb(i % 4 === 1 ? 'bulbW' : 'bulbO').add(new lr(.1, 6, 4), pts[i][0], pts[i][1] - .08, pts[i][2]);
+    spGlow(sx, 1.5, 11, 0xffb46a, .35);
+  }
+  // ---- the dock: tower booth, approach lights, hazard rim, cargo ----
+  const DOCK = {x: -108, z: 0};
+  const tw = new xi(); tw.position.set(DOCK.x, 0, -15.5); O.add(tw);
+  ufoAdd(tw, ufoLatheGeo([[0, 0], [2.7, 0], [2.7, .35], [2.4, .35], [2.4, 3.1], [2.55, 3.15], [2.55, 3.3], [0, 3.3]], 16), sm.cream);
+  ufoAdd(tw, ufoLatheGeo([[2.5, 3.3], [2.9, 3.3], [3.3, 4.3], [2.5, 4.3]], 16), new wi({color: 0xffd9a0, transparent: true, opacity: .82}));
+  ufoAdd(tw, ufoLatheGeo([[0, 4.3], [3.7, 4.3], [3.7, 4.55], [2.4, 4.9], [0, 5.0]], 16), sm.teal);
+  ufoAdd(tw, ufoTubeGeo(ufoCircle(0, 4.62, 0, 3.7, 'y', 28), .07, 5, true), new wi({color: 0xff4fd8}));
+  ufoAdd(tw, ufoTubeGeo([[0, 5.0, 0], [0, 7.2, 0]], .06, 5), sm.dark);
+  const dishG = new xi(); dishG.position.set(0, 6.9, 0); tw.add(dishG);
+  ufoAdd(dishG, ufoLatheGeo([[0, 0], [1.3, .35], [1.2, .4], [0, .08]], 14), sm.cream, 0, 0, 0).rotation.x = -.6;
+  ufoAdd(dishG, ufoTubeGeo([[0, .0, 0], [0, .1, .8]], .03, 4), sm.dark);
+  spSpin.push({obj: dishG, axis: 'y', speed: .5});
+  ufoBall(tw, .22, new wi({color: 0xff3a3a}), 0, 7.3, 0); spNeonPulse.push(tw.children[tw.children.length - 1]);
+  ufoBox(tw, 1.1, 2.0, .14, new wi({color: 0xffd9a0}), 0, 1.1, 2.62);
+  ufoSign(tw, 'ARRIVALS', 3.6, 1.25, '#4df3ff', 0, 5.7, 3.4, Math.PI / 2, 'DOCK 1 · PLEASE PARK ON THE LINES');
+  ufoSign(tw, 'ARRIVALS', 3.6, 1.25, '#4df3ff', 0, 5.7, 3.4, 0, '');
+  box(DOCK.x, -15.5, 2.9, 2.9, 5, 0); spGlow(DOCK.x, -15.5, 12, 0xffd9a0, .45);
+  for (let i = 0; i < 28; i++) {
+    const a = i / 28 * Math.PI * 2, x = DOCK.x + Math.cos(a) * 19.8, z = Math.sin(a) * 19.8;
+    if (spH(x, z) < -1 || x > -88) continue;
+    stb('bulb' + (i % 2 ? 0xff5fb8 : 0x4df3ff)).add(new lr(.2, 6, 4), x, .22, z);
+  }
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + .2; if (DOCK.x + Math.cos(a) * 19.8 < -90) spGlow(DOCK.x + Math.cos(a) * 19.8, Math.sin(a) * 19.8, 9, i % 2 ? 0xff5fb8 : 0x4df3ff, .38); }
+  crate(-124, -12, .3, 3); crate(-121.5, -13.5, .9, 2); barrel(-119.8, -10.5); barrel(-118.6, -12.2, 'teal'); crate(-122, 13, .2, 2); barrel(-120, 14.5);
+  // fuel-hose reel and a bucket by the tower
+  ufoAdd(tw, ufoLatheGeo([[0, 0], [.55, 0], [.55, .22], [.18, .22], [.18, .5], [.55, .5], [.55, .72], [0, .72]], 12), sm.orange, 3.9, 0, -1.2);
+  // ---- signposts and the town map ----
+  function signpost(sx, sz, ry, lines) {
+    const y = spH(sx, sz), g = new xi(); g.position.set(sx, y, sz); g.rotation.y = ry; O.add(g);
+    ufoAdd(g, ufoLatheGeo([[0, 0], [.14, 0], [.09, 2.6], [.13, 2.7], [0, 2.9]], 8), sm.dark);
+    const H = 70 * lines.length + 20, tex = ufoCanvasTex(320, H, (c, w, h) => {
+      c.fillStyle = '#10121c'; c.fillRect(0, 0, w, h); c.strokeStyle = '#ffd24d'; c.lineWidth = 4; c.strokeRect(5, 5, w - 10, h - 10);
+      lines.forEach((l, i) => { c.fillStyle = l[2] || '#ffe9c0'; c.font = 'bold 30px "Arial Black",sans-serif'; c.textAlign = 'left'; c.fillText(l[0], 62, 56 + i * 70); c.font = '18px "Courier New",monospace'; c.fillStyle = '#9ac'; c.fillText(l[1], 62, 78 + i * 70);
+        c.save(); c.translate(32, 44 + i * 70); c.rotate(l[3] || 0); c.fillStyle = l[2] || '#ffe9c0'; c.beginPath(); c.moveTo(18, 0); c.lineTo(-6, -14); c.lineTo(-6, -5); c.lineTo(-18, -5); c.lineTo(-18, 5); c.lineTo(-6, 5); c.lineTo(-6, 14); c.closePath(); c.fill(); c.restore(); });
+    });
+    const sh = 2.4 * H / 320, m = new dt(new ba(2.4, sh), new wi({map: tex, side: 2, fog: false})); m.position.set(0, 2.15 + sh / 2 - .25, .1); g.add(m);
+    box(sx, sz, .3, .3, 2.9, y);
+  }
+  signpost(-76.5, -8.4, Math.PI / 2, [['MAIN STREET', 'orbit gas · eats · plaza', '#4df3ff', 0], ['RIDGE WALK', 'stairs up · observatory', '#ff7bd0', -Math.PI / 2 * .6], ['WRECK COVE', 'steps down · mind the drop', '#b6ff5a', Math.PI / 2 * 1.2]]);
+  signpost(40.5, -11.4, 0, [['PLAZA', 'planet pop · fountain', '#ff7bd0', Math.PI], ['THE INN', 'vacancy (sometimes)', '#c06bff', 0], ['OBSERVATORY', 'ridge walk, then the bridge', '#4df3ff', -Math.PI / 2 * .5]]);
+  signpost(112, -16, -Math.PI / 2 * .7, [['END OF THE ROAD', 'east pier · 40 m', '#ffd24d', 0], ['POWER YARD', 'authorised staff, ish', '#ffa24a', -Math.PI / 2 * .8], ['MAIN STREET', 'back the way you came', '#4df3ff', Math.PI]]);
+  // town map board (drawn from the same tables as the terrain)
+  {
+    const mapTex = ufoCanvasTex(768, 460, (c, w, h) => {
+      c.fillStyle = '#0d1020'; c.fillRect(0, 0, w, h); c.strokeStyle = '#ffd24d'; c.lineWidth = 6; c.strokeRect(6, 6, w - 12, h - 12);
+      const X = x => 40 + (x + 160) / 330 * (w - 80), Z = z => 74 + (z + 112) / 178 * (h - 130);
+      const sc = (w - 80) / 330;
+      c.fillStyle = '#ffd24d'; c.font = 'bold 30px "Arial Black",sans-serif'; c.textAlign = 'left'; c.fillText('DRIFT OUTPOST', 26, 52);
+      c.font = '15px "Courier New",monospace'; c.fillStyle = '#9ab'; c.textAlign = 'right'; c.fillText('POP. 6 · EST. WHENEVER', w - 26, 48);
+      for (const p of SPP) { c.fillStyle = p.y > 4 ? '#34455e' : p.y < -4 ? '#2e3a3a' : '#3b3f62'; c.strokeStyle = '#6a7aa8'; c.lineWidth = 1.5; c.beginPath(); if (p.t) c.arc(X(p.x), Z(p.z), p.r * sc, 0, 7); else c.roundRect(X(p.x - p.hx), Z(p.z - p.hz), p.hx * 2 * sc, p.hz * 2 * sc, p.r * sc); c.fill(); c.stroke(); }
+      c.fillStyle = '#23263c'; c.fillRect(X(-86), Z(-5), 166 * sc, 10 * sc);
+      c.strokeStyle = '#ff7bd0'; c.lineWidth = 3; for (const r of SPR) { c.beginPath(); r.p.forEach((q, i) => i ? c.lineTo(X(q[0]), Z(q[1])) : c.moveTo(X(q[0]), Z(q[1]))); c.stroke(); }
+      c.font = 'bold 13px "Courier New",monospace'; c.fillStyle = '#ffe9c0'; c.textAlign = 'center';
+      for (const [t, x, z] of [['DOCK', -108, 3], ['ORBIT GAS', -62, -20], ['NOVA NOSH', -32, -20], ['SPIN CYCLE', -6, -20], ['PLANET POP', 22, -24], ['ZORP\'S', 54, -22], ['DRIFT INN', 98, -19], ['EVENT HORIZON', -6, 36], ['GREENHOUSE', 52, 36], ['GOLF', -36, -52], ['OBSERVATORY', 14, -96], ['POWER YARD', 92, -52], ['WRECK COVE', -122, 66], ['PIER', 142, -9]]) c.fillText(t, X(x), Z(z));
+      c.fillStyle = '#ff4fa3'; c.beginPath(); c.arc(X(-80), Z(-8), 6, 0, 7); c.fill(); c.fillStyle = '#fff'; c.font = 'bold 14px "Courier New",monospace'; c.textAlign = 'left'; c.fillText('YOU ARE HERE', X(-80) + 10, Z(-8) - 8);
+      c.fillStyle = '#7ad'; c.font = 'italic 13px sans-serif'; c.textAlign = 'center'; c.fillText('Stairs are pink. The cliff is not a shortcut.', w / 2, h - 18);
+    });
+    const mg = new xi(); mg.position.set(-79, spH(-79, -9.6), -9.6); mg.rotation.y = -Math.PI / 2; O.add(mg);
+    for (const sx of [-1.7, 1.7]) ufoAdd(mg, ufoLatheGeo([[0, 0], [.14, 0], [.1, 2.5], [0, 2.55]], 8), sm.dark, sx, 0, 0);
+    ufoBox(mg, 4.2, 2.7, .12, sm.dark, 0, 2.15, 0); const mp = new dt(new ba(3.9, 2.35), new wi({map: mapTex, side: 2, fog: false})); mp.position.set(0, 2.15, .07); mg.add(mp);
+    const mp2 = mp.clone(); mp2.rotation.y = Math.PI; mp2.position.z = -.07; mg.add(mp2);
+    ufoNeon(mg, [[-2.15, 3.55, 0], [2.15, 3.55, 0]], 0xffd24d, .05); spGlow(-79, -9.6, 6, 0xffd9a0, .3);
+    box(-79, -9.6, .4, 2.2, 3, spH(-79, -9.6));
+  }
+  // ---- the VISIT EARTH billboard on the terrace above the strip ----
+  {
+    const bTex = ufoCanvasTex(1024, 448, (c, w, h) => {
+      const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#16213f'); g.addColorStop(1, '#2b1a42'); c.fillStyle = g; c.fillRect(0, 0, w, h);
+      for (let i = 0; i < 90; i++) { c.fillStyle = 'rgba(255,255,255,' + (.2 + rnd() * .6) + ')'; c.fillRect(rnd() * w, rnd() * h, 2, 2); }
+      const eg = c.createRadialGradient(250, 230, 20, 250, 240, 190); eg.addColorStop(0, '#6cc2ff'); eg.addColorStop(.7, '#1f6fd0'); eg.addColorStop(1, '#0b2a6a');
+      c.fillStyle = eg; c.beginPath(); c.arc(250, 235, 185, 0, 7); c.fill();
+      c.save(); c.beginPath(); c.arc(250, 235, 185, 0, 7); c.clip();
+      c.fillStyle = '#3ea85a'; for (const [x, y, r] of [[200, 170, 70], [330, 260, 60], [190, 320, 50], [300, 150, 36]]) { c.beginPath(); c.ellipse(x, y, r, r * .7, .4, 0, 7); c.fill(); }
+      c.fillStyle = 'rgba(255,255,255,.65)'; for (const [x, y, r] of [[160, 260, 60], [320, 190, 50], [260, 330, 55]]) { c.beginPath(); c.ellipse(x, y, r, r * .26, .2, 0, 7); c.fill(); }
+      c.restore();
+      c.fillStyle = '#ffd24d'; c.textAlign = 'left'; c.font = 'bold 112px "Arial Black",Impact,sans-serif'; c.fillText('VISIT', 480, 170); c.fillStyle = '#4df3ff'; c.fillText('EARTH!', 480, 280);
+      c.fillStyle = '#ffe9c0'; c.font = 'italic 34px Georgia,serif'; c.fillText('Wish you were here.', 484, 336);
+      c.font = 'bold 22px "Courier New",monospace'; c.fillStyle = '#ff7bd0'; c.fillText('1 MOON · 8 BILLION RESIDENTS · AMPLE PARKING', 484, 392);
+      c.strokeStyle = '#ffd24d'; c.lineWidth = 8; c.strokeRect(10, 10, w - 20, h - 20);
+    });
+    const bg = new xi(); bg.position.set(-22, 9, -33.5); O.add(bg);
+    for (const sx of [-6.5, 6.5]) ufoAdd(bg, ufoLatheGeo([[0, 0], [.3, 0], [.2, 6.4], [0, 6.6]], 8), sm.dark, sx, 0, -.2);
+    ufoBox(bg, 15.6, 6.4, .35, sm.dark, 0, 7.2, -.1);
+    const bp = new dt(new ba(15, 5.9), new wi({map: bTex, side: 2, fog: false})); bp.position.set(0, 7.2, .1); bg.add(bp);
+    ufoNeon(bg, [[-7.6, 10.3, 0], [7.6, 10.3, 0], [7.6, 4.1, 0], [-7.6, 4.1, 0]], 0xff4fd8, .09, true);
+    for (const sx of [-5, 0, 5]) { ufoBox(bg, .5, .3, .5, sm.dark, sx, 10.7, .9); ufoBall(bg, .2, new wi({color: 0xfff0b8}), sx, 10.6, .95); }
+    spGlow(-22, -32, 14, 0xffe0b0, .5); box(-22, -33.5, 7.5, .5, 11, 9);
+  }
+  // ---- boulders at cliff feet, crystals on ledges and in gardens ----
+  const rockGeo = (rr) => {
+    const g = new lr(1, 7, 5), pp = g.attributes.position;
+    for (let i = 0; i < pp.count; i++) { const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i), n = .78 + .45 * rr(); pp.setXYZ(i, x * n, y * n * .72, z * n); }
+    g.computeVertexNormals(); return g;
+  };
+  const boulderSpots = [];
+  for (let i = 0; i < 70; i++) {
+    const x = -140 + rnd() * 290, z = -108 + rnd() * 170, h0 = spH(x, z);
+    const nb = spH(x + 3, z) - spH(x - 3, z), nz = spH(x, z + 3) - spH(x, z - 3);
+    if (SPP.some(p => spSdf(x, z, p) < 1.5) || h0 < -60 || Math.abs(nb) + Math.abs(nz) < 1.5 || Math.abs(nb) + Math.abs(nz) > 12 || h0 > 22) continue;
+    boulderSpots.push([x, z]);
+  }
+  const rg = [rockGeo(rnd), rockGeo(rnd), rockGeo(rnd)];
+  for (const [x, z] of boulderSpots) { const s = 1.1 + rnd() * 2.6; stb(rnd() < .3 ? 'rockLt' : 'rock').add(rg[(rnd() * 3) | 0], x, spH(x, z) + s * .12, z, rnd() * .4, rnd() * 6.3, rnd() * .4, s * 1.3, s, s * 1.1); }
+  const cryCols = [0x9d72d6, 0x6edbf5, 0xba88ea, 0xb8d9ea];
+  const cryAt = (cx, cz, n, spread = 3, hMul = 1) => {
+    const c = cryCols[(rnd() * 4) | 0];
+    for (let j = 0; j < n; j++) {
+      const x = cx + (rnd() - .5) * spread * 2, z = cz + (rnd() - .5) * spread * 2, h = (3 + rnd() * 8) * hMul, w = .5 + rnd() * 1.0;
+      stb('bulb' + c).add(ufoLatheGeo([[0, 0], [w, 0], [w, h * .75], [0, h]], 6), x, spH(x, z) - .3, z, (rnd() - .5) * .35, rnd() * 3, (rnd() - .5) * .35);
+    }
+    stb('halo' + c).add(new lr(3.4 * hMul + spread * .4, 8, 6), cx, spH(cx, cz) + 3.2 * hMul, cz); spGlow(cx, cz, 10 + spread, c, .4);
+  };
+  for (const [x, z, n, s] of [[-18, -96, 5, 4], [2, -100, 4, 3], [52, -100, 5, 3], [-26, -50, 3, 2], [26, -45, 3, 2], [-140, 44, 6, 4], [-104, 56, 5, 3], [-128, 56, 4, 3], [112, -52, 3, 2], [-136, 4, 3, 2], [140, -8, 2, 1.4], [-2, 29, 2, 2], [60, 30, 2, 2]]) cryAt(x, z, n, s, 1);
+  // ---- the radio mast and its Power Yard ----
+  {
+    const mx = 80, mz = -54, my = spH(mx, mz);
+    ufoAdd(O, ufoTubeGeo([[mx, my, mz], [mx, my + 40, mz]], .22, 6), sm.dark);
+    for (let k = 0; k < 6; k++) { const y1 = my + 4 + k * 6.2; ufoAdd(O, ufoTubeGeo([[mx - 1.1, y1, mz], [mx + 1.1, y1 + 3, mz]], .05, 4), sm.dark); ufoAdd(O, ufoTubeGeo([[mx + 1.1, y1, mz], [mx - 1.1, y1 + 3, mz]], .05, 4), sm.dark); }
+    const mastBulb = ufoBall(O, .6, new wi({color: 0xff4d4d}), mx, my + 40.5, mz); spNeonPulse.push(mastBulb);
+    ufoNeon(O, ufoCircle(mx, my + 31, mz, 2.4, 'y', 24), 0x58ffa6, .08, true);
+    col(0x58ffa6, 14, 40, mx, my + 32, mz); box(mx, mz, .6, .6, 40, my);
+  }
+  // ==================== v2 DESTINATIONS: cove, power yard, dome, pier, fountain, shops ====================
+  const spScope = (x, z, ry, msg, big = false) => {
+    if (!spFree(x, z, .6)) return;
+    const y = spH(x, z), g = new xi(); g.position.set(x, y, z); g.rotation.y = ry; O.add(g);
+    ufoAdd(g, ufoLatheGeo([[0, 0], [.42, 0], [.32, .18], [.14, 1.0], [.22, 1.12], [0, 1.12]], 12), sm.dark);
+    const bg = new xi(); bg.position.set(0, 1.22, 0); bg.rotation.x = .3; g.add(bg);
+    ufoAdd(bg, ufoLatheGeo([[0, -.5], [.1, -.5], [.08, .5], [.13, .68], [0, .68]], 10), ufoM.brass);
+    ufoBox(g, .16, .22, .16, ufoM.brass, 0, .95, 0); ufoBall(g, .05, new wi({color: 0xffd24d}), .12, 1.02, .02);
+    spScopes.push({x, z, msg});
+    box(x, z, .45, .45, 1.4, y);
+  };
+  const spSeat = (x, z, ry) => { spBenches.push({x, z, ry, y: spH(x, z)}); };
+  // seats for the benches placed above
+  for (const x of [-66, -34, 3, 30, 62, 74]) spSeat(x, 8.15, 0);
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + .5, bx = 22 + Math.cos(a) * 9.4, bz = -2 + Math.sin(a) * 9.4; if (bz < 7) spSeat(bx, bz, Math.atan2(-Math.cos(a), -Math.sin(a))); }
+  spScope(-56, 8.7, 0, 'Through the coin telescope: Earth, half in shadow, with a thin line of cities along the dark side.');
+  spScope(12, 8.7, 0, 'Through the coin telescope: the Moon, very small, very far, and somehow still the nearest thing to home.');
+  spScope(58, 8.7, 0, 'Through the coin telescope: a dust cloud lit from inside, slow as breathing.');
+  spScopes.push({x: 14, z: -92, msg: '"See Your House: No refunds on clouds." Through the eyepiece, Earth gleams in blue and white.'});
+  // ---- plaza fountain: a little orrery in a basin ----
+  {
+    const FN = new xi(); FN.position.set(22, 0, -2); O.add(FN);
+    ufoAdd(FN, ufoLatheGeo([[0, 0], [4.3, 0], [4.5, .2], [4.5, .8], [4.1, .85], [4.0, .4], [0, .4]], 28), sm.cream);
+    ufoAdd(FN, ufoLatheGeo([[0, .62], [4.02, .62]], 24), new wi({color: 0x2fe0d0, transparent: true, opacity: .78}));
+    ufoAdd(FN, ufoTubeGeo(ufoCircle(0, .86, 0, 4.3, 'y', 28), .05, 5, true), new wi({color: 0x4df3ff}));
+    ufoAdd(FN, ufoLatheGeo([[0, .4], [.7, .4], [.34, 1.5], [.22, 3.4], [0, 3.6]], 12), sm.mint);
+    ufoBall(FN, .72, new wi({color: 0xffc233}), 0, 4.2, 0); ufoBall(FN, 1.6, ufoHaloMat(0xffc233, .16), 0, 4.2, 0);
+    [[1.7, 0x6ffcff, .5], [2.8, 0xff7bd0, .32], [3.8, 0xb6ff5a, .21]].forEach(([r, c, sp], i) => {
+      const arm = new xi(); arm.position.set(0, 2.2 + i * .5, 0); FN.add(arm);
+      ufoAdd(arm, ufoTubeGeo([[0, 0, 0], [r, 0, 0]], .03, 4), ufoM.brass); ufoBall(arm, .26 + i * .05, new wi({color: c}), r, 0, 0);
+      spSpin.push({obj: arm, axis: 'y', speed: sp, offset: i * 2});
+    });
+    box(22, -2, 4.6, 4.6, 1.2, 0); spGlow(22, -2, 13, 0x4df3ff, .45); spGlow(22, -2, 8, 0xffc233, .35);
+  }
+  // ---- cliff-foot alcoves behind the shops: little lit hatches in the rock ----
+  for (const [x, c] of [[-72, 0xffa24d], [-58, 0x6ffcff], [-40, 0xff7bd0], [-24, 0xffd24d], [-4, 0x9a5cff], [14, 0xffa24d], [34, 0x6ffcff], [52, 0xff7bd0], [66, 0xffd24d], [88, 0x9a5cff]]) {
+    if (SPR.some(r => spRampPoint(r, x, -29)[0] < r.w / 2 + 2.5)) continue;
+    let z = -27.2; while (spH(x, z) < 2.4 && z > -42) z -= .2;
+    const y0 = spH(x, z + .5);
+    stb('dark').add(new Cn(3.0, 3.8, 1.2), x, y0 + 1.6, z - .15);
+    stb('bulb' + c).add(new ba(1.7, 2.6), x, y0 + 1.35, z + .46);
+    stb('bulb' + c).add(new Cn(2.2, .08, .08), x, y0 + 3.0, z + .5);
+    stb('dark').add(new Cn(.12, 2.6, .06), x, y0 + 1.35, z + .48);
+    spGlow(x, z + 3, 7, c, .32);
+  }
+  // ---- MADAME ZOLTARA: fortune tent between the truck and the laundromat ----
+  {
+    const Z = new xi(); Z.position.set(-18.5, 0, -12.5); O.add(Z);
+    ufoAdd(Z, ufoLatheGeo([[0, 0], [3.9, 0], [3.9, .25], [3.5, 2.3], [2.4, 3.6], [.9, 4.7], [0, 5.3]], 16), new ji({color: 0x6a3fa8, roughness: .7, emissive: 0x2a1250, emissiveIntensity: .9}));
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; ufoAdd(Z, ufoTubeGeo([[Math.cos(a) * .15, 5.2, Math.sin(a) * .15], [Math.cos(a) * 3.7, .2, Math.sin(a) * 3.7]], .045, 4), ufoM.brass); }
+    ufoAdd(Z, ufoLatheGeo([[0, 5.2], [.2, 5.2], [.12, 6.3], [0, 6.5]], 6), ufoM.brass); ufoBall(Z, .22, new wi({color: 0xffd24d}), 0, 6.7, 0);
+    ufoBox(Z, 1.6, 2.4, .1, sm.dark, 0, 1.2, 3.55);
+    for (let k = -3; k <= 3; k++) { ufoAdd(Z, ufoTubeGeo([[k * .22, 2.4, 3.65], [k * .22, .15, 3.65]], .012, 3), sm.dark); for (let j = 0; j < 4; j++) ufoBall(Z, .045, new wi({color: [0xff7bd0, 0x6ffcff, 0xb6ff5a, 0xffd24d][(k + j + 9) % 4]}), k * .22, .5 + j * .5, 3.68); }
+    ufoBall(Z, .48, new wi({color: 0xc9a6ff}), 2.7, 1.55, 2.6); ufoBall(Z, 1.1, ufoHaloMat(0xc9a6ff, .18), 2.7, 1.55, 2.6);
+    ufoAdd(Z, ufoLatheGeo([[0, 0], [.4, 0], [.2, 1.0], [0, 1.05]], 8), sm.dark, 2.7, 0, 2.6);
+    const eye = []; for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; eye.push([Math.cos(a) * 1.3, 5.3 + Math.sin(a) * .62, 4.0]); }
+    ufoNeon(Z, eye, 0xff4fd8, .07, true); ufoNeon(Z, ufoCircle(0, 5.3, 4.0, .46, 'z', 16), 0x6ffcff, .07, true); ufoBall(Z, .2, new wi({color: 0xfff0b8}), 0, 5.3, 4.02);
+    ufoSign(Z, 'ZOLTARA', 3.4, 1.15, '#c06bff', -.2, 3.3, 4.1, 0, 'FORTUNES · PALMS · LOST SOCKS');
+    col(0xc06bff, 26, 30, -18.5, 3, -9); spGlow(-18.5, -9, 8, 0xc06bff, .45);
+    Dt(SP.ax - 18.5 - 3.5, SP.az - 12.5 - 3.5, SP.ax - 18.5 + 3.5, SP.az - 12.5 + 3.5, SP.py, SP.py + 5);
+  }
+  // ---- GUS'S GARAGE: we fix what flies ----
+  {
+    const G2 = new xi(); G2.position.set(79, 0, -17); O.add(G2);
+    ufoBox(G2, 8.4, 4.0, 5.6, sm.teal, 0, 2.0, 0); ufoBox(G2, 9.2, .32, 6.6, sm.orange, 0, 4.15, .1).rotation.x = -.09;
+    ufoBox(G2, 5.2, 3.0, .12, new wi({color: 0xffc27a}), -.8, 1.55, 2.82);
+    for (let k = 0; k < 7; k++) ufoBox(G2, 5.2, .09, .16, sm.dark, -.8, .3 + k * .4, 2.9);
+    ufoBox(G2, 1.8, 2.3, .12, sm.cream, 2.9, 1.2, 2.84);
+    ufoSign(G2, "GUS'S GARAGE", 5.4, 1.7, '#ffa24d', 0, 5.4, 2.1, 0, 'WE FIX WHAT FLIES');
+    ufoAdd(G2, ufoLatheGeo([[0, 0], [.7, 0], [.5, 2.2], [.2, 3.6], [0, 4.2]], 12), sm.red, -1.2, 0, 5.2);
+    for (let k = 0; k < 3; k++) { const a = k * 2.1; ufoAdd(G2, ufoTubeGeo([[-1.2, 1.2, 5.2], [-1.2 + Math.cos(a) * 1.3, 0, 5.2 + Math.sin(a) * 1.3]], .06, 4), sm.dark); }
+    ufoAdd(G2, ufoTubeGeo([[3.2, 4.4, 3.2], [3.2, 3.0, 3.2]], .04, 4), ufoM.trim); ufoBall(G2, .4, sm.dark, 3.2, 2.7, 3.2, 1, 1.2, 1);
+    for (let k = 0; k < 4; k++) ufoAdd(G2, ufoLatheGeo([[.35, 0], [.62, .12], [.62, .3], [.35, .42], [.35, .1]], 12), sm.dark, -4.8, k * .36, 3.6);
+    col(0xffc27a, 22, 24, 79, 3, -13); spGlow(79, -13, 8, 0xffc27a, .5);
+    Dt(SP.ax + 79 - 4.4, SP.az - 17 - 3, SP.ax + 79 + 4.4, SP.az - 17 + 3, SP.py, SP.py + 4.4);
+    Dt(SP.ax + 79 - 2.0, SP.az - 17 + 4.4, SP.ax + 79 - .4, SP.az - 17 + 6, SP.py, SP.py + 4);
+  }
+  // ---- Observatory dome on the crest ----
+  {
+    const OB = new xi(); OB.position.set(38, 18, -93); O.add(OB);
+    ufoAdd(OB, ufoLatheGeo([[0, 0], [6.2, 0], [6.2, .4], [5.6, .4], [5.6, 3.6], [6.0, 3.8], [0, 3.8]], 24), sm.cream);
+    ufoAdd(OB, ufoTubeGeo(ufoCircle(0, 1.6, 0, 5.62, 'y', 24), .06, 5, true), new wi({color: 0x4df3ff}));
+    const dg = new xi(); dg.position.set(0, 3.8, 0); OB.add(dg);
+    ufoAdd(dg, ufoLatheGeo([[6.0, 0], [5.7, 1.8], [4.2, 3.8], [2.2, 5.1], [0, 5.5]], 24, .3, Math.PI * 2 - .3), new ji({color: 0xc9d3dc, roughness: .45, metalness: .35, emissive: 0x1a222c, emissiveIntensity: .7, side: 2}));
+    ufoAdd(dg, ufoTubeGeo([[5.9, .2, .3], [5.5, 2.4, .2], [3.2, 4.7, .1], [0, 5.55, 0]], .07, 5), new wi({color: 0x10131c}));
+    ufoAdd(dg, ufoTubeGeo([[5.7, 2.0, 0], [8.2, 3.4, 0]], .16, 8), ufoM.brass);
+    spSpin.push({obj: dg, axis: 'y', speed: .045, offset: 3.4});
+    ufoBox(OB, 1.5, 2.3, .14, new wi({color: 0xffd9a0}), 0, 1.2, 5.6);
+    ufoSign(OB, 'OBSERVATORY', 4.6, 1.5, '#4df3ff', 0, 5.2, 7.6, 0, 'OPEN TONIGHT · ALWAYS');
+    ufoBall(OB, .35, new wi({color: 0xff4d4d}), 0, 9.6, 0); spNeonPulse.push(OB.children[OB.children.length - 1]);
+    col(0x4df3ff, 30, 40, 38, 24, -86); spGlow(38, -86, 14, 0x4df3ff, .4);
+    Dt(SP.ax + 38 - 6.2, SP.az - 93 - 6.2, SP.ax + 38 + 6.2, SP.az - 93 + 6.2, SP.py + 18, SP.py + 28);
+    bench(26, -80, Math.PI); spSeat(26, -80, Math.PI); bench(2, -100, 0); spSeat(2, -100, 0);
+  }
+  // ---- Wishing Pond on the garden terrace ----
+  {
+    const PG = new xi(); PG.position.set(-2, 9, -50); O.add(PG);
+    const pondMat = new rt({transparent: true, fog: false, uniforms: {uTime: spShaderTime},
+      vertexShader: 'varying vec2 vP; void main(){ vP = position.xz; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+      fragmentShader: 'varying vec2 vP; uniform float uTime; void main(){ float r=length(vP); float w=.5+.5*sin(r*3.-uTime*1.3); float rim=smoothstep(5.2,4.6,r); vec3 c=mix(vec3(.02,.16,.24),vec3(.12,.55,.6),w*.3+.2); gl_FragColor=vec4(c+vec3(.35,1.,.9)*pow(w,8.)*.15,.92*rim); }'});
+    ufoAdd(PG, ufoLatheGeo([[0, .12], [5.3, .12]], 28), pondMat);
+    ufoAdd(PG, ufoLatheGeo([[5.0, 0], [5.0, .6], [5.55, .6], [5.55, .45], [5.4, 0]], 32), sm.cream);
+    ufoAdd(PG, ufoTubeGeo(ufoCircle(0, .62, 0, 5.28, 'y', 32), .05, 4, true), new wi({color: 0x4df3ff}));
+    for (let k = 0; k < 7; k++) { const a = k * 2.3, r = 1.4 + (k % 3) * 1.2; ufoAdd(PG, ufoLatheGeo([[0, 0], [.55, 0], [.58, .03], [0, .05]], 10), sm.lime, Math.cos(a) * r, .16, Math.sin(a) * r); }
+    ufoBall(PG, .22, new wi({color: 0xff7bd0}), .6, .3, 1.3); ufoBall(PG, .22, new wi({color: 0xffd24d}), -2.2, .3, -.8);
+    ufoSign(PG, 'WISHING POND', 3.0, 1.0, '#6ffcff', 0, 1.9, 5.8, 0, '1 CREDIT · NO REFUNDS ON WISHES');
+    ufoAdd(PG, ufoTubeGeo([[-1.2, 0, 5.8], [-1.2, 1.5, 5.8]], .05, 4), sm.dark); ufoAdd(PG, ufoTubeGeo([[1.2, 0, 5.8], [1.2, 1.5, 5.8]], .05, 4), sm.dark);
+    spGlow(-2, -50, 9, 0x4df3ff, .38); box(-2, -50, 5.5, 5.5, .45, 9);
+    spSeat(-2, -42.5, Math.PI); bench(-2, -42.5, Math.PI); bench(-9, -50, Math.PI / 2); spSeat(-9, -50, Math.PI / 2);
+  }
+  // ---- Wreck Cove: a derelict saucer, half buried and grown over ----
+  {
+    const wx = -120, wz = 46, wy = spH(wx, wz), Wk = new xi(); Wk.position.set(wx, wy + 1.4, wz); Wk.rotation.set(.1, .5, .22); O.add(Wk);
+    const rust = new ji({color: 0x8a5a44, roughness: .85, metalness: .3, emissive: 0x1a0d08, emissiveIntensity: .55});
+    const rust2 = new ji({color: 0x5d6b66, roughness: .8, metalness: .35, emissive: 0x0c1210, emissiveIntensity: .55});
+    ufoAdd(Wk, ufoLatheGeo([[0, -1.7], [2.6, -1.5], [5.0, -.5], [5.7, .1], [5.2, .55], [3.4, .9], [0, 1.05]], 28), rust);
+    ufoAdd(Wk, ufoLatheGeo([[0, 1.05], [3.4, .9], [4.4, 1.1], [3.2, 1.9], [0, 2.3]], 28), rust2);
+    ufoAdd(Wk, ufoLatheGeo([[2.4, 1.2], [2.2, 2.2], [1.2, 3.1], [0, 3.4]], 14, 0, Math.PI * 1.45), new wi({color: 0x9af7ff, transparent: true, opacity: .2, side: 2, depthWrite: false}));
+    for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5; ufoAdd(Wk, ufoTubeGeo([[Math.cos(a) * 2.3, 1.15, Math.sin(a) * 2.3], [Math.cos(a) * 5.3, .25, Math.sin(a) * 5.3]], .05, 4), sm.dark); }
+    ufoAdd(Wk, ufoTubeGeo(ufoCircle(0, .15, 0, 5.68, 'y', 32), .1, 5, true), ufoM.brass);
+    ufoAdd(Wk, ufoLatheGeo([[0, 0], [.7, 0], [.7, 1.6], [0, 1.7]], 10), rust2, 5.4, -.4, 1.2).rotation.z = 1.3;
+    for (const [a, l] of [[.3, 2.4], [2.2, 3.1], [4.1, 2.0]]) ufoAdd(Wk, ufoTubeGeo([[Math.cos(a) * 4.4, .6, Math.sin(a) * 4.4], [Math.cos(a) * 4.9, -.6, Math.sin(a) * 4.9], [Math.cos(a) * (4.9 + l * .3), -1.6, Math.sin(a) * (4.9 + l * .3)]], .05, 4), sm.dark);
+    ufoBall(Wk, .55, new wi({color: 0xffc27a}), 0, 1.9, 0); ufoBall(Wk, 1.6, ufoHaloMat(0xffc27a, .2), 0, 1.9, 0);
+    for (let k = 0; k < 9; k++) { const a = rnd() * 6.3, r = 1.5 + rnd() * 3.6; ufoAdd(Wk, ufoLatheGeo([[0, 0], [.2, 0], [.26, .5], [0, .9 + rnd() * .5]], 5), sm.lime, Math.cos(a) * r, .95, Math.sin(a) * r); }
+    ufoSign(O, 'SALVAGE', 3.2, 1.0, '#ffa24d', wx + 7.5, wy + 2.4, wz - 5.5, -.4, 'NOT YOURS · PROBABLY');
+    ufoAdd(O, ufoTubeGeo([[wx + 7.5, wy, wz - 5.5], [wx + 7.5, wy + 2.0, wz - 5.5]], .06, 4), sm.dark);
+    col(0xffc27a, 20, 34, wx, wy + 5, wz); spGlow(wx, wz, 16, 0xffc27a, .5);
+    Dt(SP.ax + wx - 5.4, SP.az + wz - 5.4, SP.ax + wx + 5.4, SP.az + wz + 5.4, SP.py + wy - 2, SP.py + wy + 3.5);
+    for (const [lx, lz] of [[-132, 36], [-110, 38], [-106, 52], [-134, 55]]) { const ly = spH(lx, lz); ufoAdd(O, ufoTubeGeo([[lx, ly, lz], [lx, ly + 2.2, lz]], .05, 4), sm.dark); ufoBall(O, .22, new wi({color: 0xffc27a}), lx, ly + 2.3, lz); ufoBall(O, .6, ufoHaloMat(0xffc27a, .2), lx, ly + 2.3, lz); spGlow(lx, lz, 7, 0xffc27a, .38); }
+  }
+  // ---- the Power Yard: tanks, transformer, generator, and the poles that feed the strip ----
+  {
+    const py = 8, tn = new xi(); tn.position.set(100, py, -52); O.add(tn);
+    const steel = new ji({color: 0xa4b0bc, roughness: .55, metalness: .12, emissive: 0x1c2430, emissiveIntensity: .9});
+    [[-4, 0, 3.0, 8], [3, -1, 3.4, 9], [0, 5.5, 2.6, 6.5]].forEach(([x, z, r, h], i) => {
+      ufoAdd(tn, ufoLatheGeo([[0, 0], [r, 0], [r, h], [r * .7, h + .9], [0, h + 1.2]], 18), steel, x, 0, z);
+      ufoAdd(tn, ufoTubeGeo(ufoCircle(0, h * .5, 0, r + .02, 'y', 18), .08, 4, true), sm.orange, x, 0, z);
+      ufoAdd(tn, ufoTubeGeo([[r + .1, 0, 0], [r + .1, h, 0]], .04, 4), sm.dark, x, 0, z);
+      ufoSign(tn, ['FUEL A', 'FUEL B', 'WATER'][i], 1.8, .7, ['#ffa24d', '#ffa24d', '#4df3ff'][i], x, h * .6, z + r + .05, 0, '');
+      Dt(SP.ax + 100 + x - r, SP.az - 52 + z - r, SP.ax + 100 + x + r, SP.az - 52 + z + r, SP.py + py, SP.py + py + h);
+    });
+    ufoAdd(tn, ufoTubeGeo([[-4, 1, 3.2], [-4, 1, 6], [0, 1, 6], [0, 1, 4.6]], .12, 5), sm.dark); ufoAdd(tn, ufoTubeGeo([[3, 1, 2.4], [0, 1, 3], [0, 1, 3.6]], .12, 5), sm.dark);
+    const gen = new xi(); gen.position.set(112, py, -42); O.add(gen);
+    ufoBox(gen, 6, 3, 4, sm.dark, 0, 1.5, 0); ufoBox(gen, 6.2, .2, 4.2, sm.orange, 0, 3.1, 0);
+    for (let k = 0; k < 6; k++) ufoBox(gen, .9, .08, .1, sm.cream, -2.2 + k * .88, 2.2, 2.03);
+    ufoAdd(gen, ufoTubeGeo([[1.6, 3.2, 1], [1.6, 5.2, 1]], .25, 8), sm.dark); ufoBox(gen, .9, .12, .9, sm.dark, 1.6, 5.3, 1);
+    ufoSign(gen, 'DANGER', 2.2, .8, '#ff3a3a', -1.8, 2.8, 2.06, 0, '');
+    ufoBox(gen, .22, .8, .22, sm.red, 3.1, 1.4, 2.2); ufoBall(gen, .14, new wi({color: 0x58ffa6}), 3.1, 2.0, 2.3);
+    col(0xffa24d, 14, 30, 112, 12, -39);
+    Dt(SP.ax + 109, SP.az - 44, SP.ax + 115, SP.az - 40, SP.py + py, SP.py + py + 3.2);
+    const tr = new xi(); tr.position.set(88, py, -38); O.add(tr);
+    ufoBox(tr, 3.2, 2.4, 2.2, sm.teal, 0, 1.2, 0);
+    for (let k = -1; k <= 1; k++) { ufoAdd(tr, ufoLatheGeo([[0, 0], [.18, 0], [.12, .5], [.16, .9], [.08, 1.1], [0, 1.2]], 8), sm.cream, k * .9, 2.4, 0); ufoBall(tr, .1, new wi({color: 0x6ffcff}), k * .9, 3.7, 0); }
+    ufoSign(tr, 'T-6', 1.2, .6, '#ffd24d', 0, 1.3, 1.12, 0, '');
+    spGlow(88, -38, 9, 0x6ffcff, .35); Dt(SP.ax + 86.4, SP.az - 39.1, SP.ax + 89.6, SP.az - 36.9, SP.py + py, SP.py + py + 2.4);
+    crate(106, -36, .3, 3); barrel(95, -34, 'orange'); barrel(96.2, -35.2, 'orange'); crate(70, -50, .8, 2); barrel(72, -40, 'plum');
+    ufoSign(O, 'AUTHORISED STAFF', 3.0, 1.0, '#ffd24d', 114, spH(114, -34) + 1.8, -33.6, Math.PI * .75, '(OR ROUGHLY)');
+    // the poles: along the foot of the northern cliff, wires hop from one to the next
+    const poleXs = []; for (let x = 108; x > -80; x -= 17) poleXs.push(x);
+    const pl = poleXs.map(x => {
+      const z = x > 96 ? -22 : -25.2, y = spH(x, z);
+      stb('dark').add(ufoLatheGeo([[0, 0], [.2, 0], [.14, 8], [0, 8.4]], 8), x, y, z);
+      stb('dark').add(new Cn(3.0, .16, .16), x, y + 7.6, z); stb('dark').add(new Cn(.16, .16, 1.6), x, y + 7.0, z);
+      for (const o of [-1.2, 0, 1.2]) stb('cream').add(ufoLatheGeo([[0, 0], [.1, 0], [.08, .3], [0, .4]], 6), x + o, y + 7.7, z);
+      if (spFree(x, z, .6)) Dt(SP.ax + x - .3, SP.az + z - .3, SP.ax + x + .3, SP.az + z + .3, SP.py + y, SP.py + y + 8);
+      return [x, y + 7.8, z];
+    });
+    for (let i = 0; i < pl.length - 1; i++) for (const o of [-1.2, 0, 1.2]) {
+      const a = pl[i], b = pl[i + 1], pts = [];
+      for (let k = 0; k <= 8; k++) { const t = k / 8; pts.push([a[0] + o + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t - 1.3 * 4 * t * (1 - t), a[2] + (b[2] - a[2]) * t]); }
+      stb('dark').add(ufoTubeGeo(pts, .018, 3));
+    }
+    // heavy cable from the yard down to the first pole
+    const f = pl[0], cp = []; for (let k = 0; k <= 10; k++) { const t = k / 10; cp.push([88 + (f[0] - 88) * t, py + 2.4 + (f[1] - py - 2.4) * t - .8 * 4 * t * (1 - t), -38 + (f[2] + 38) * t]); }
+    stb('dark').add(ufoTubeGeo(cp, .05, 4));
+  }
+  // ---- East pier: the end of the road ----
+  {
+    const ex = 152;
+    ufoSign(O, 'END OF THE ROAD', 3.8, 1.2, '#ffd24d', 144, 2.3, -2.2, Math.PI * .5 + Math.PI, 'NEXT STOP: EVERYTHING');
+    ufoAdd(O, ufoTubeGeo([[144, 0, -2.2], [144, 2.0, -2.2]], .06, 4), sm.dark);
+    spScope(ex + 3.5, 0, Math.PI / 2, 'Through the coin telescope: the long dark ahead, with one very patient star looking back.');
+    bench(ex - 1.2, -4.8, Math.PI / 2); spSeat(ex - 1.2, -4.8, Math.PI / 2); bench(ex - 1.2, 4.8, Math.PI / 2); spSeat(ex - 1.2, 4.8, Math.PI / 2);
+    for (const z of [-4.6, 4.6]) lamp(ex - 6, z, 0xffd24d, 5.2);
+    const by = 0; ufoAdd(O, ufoLatheGeo([[.5, 0], [.9, .12], [.9, .3], [.5, .42], [.5, .3]], 14), sm.red, ex + 6, 1.1, 5.4).rotation.x = Math.PI / 2 * .0;
+    spGlow(ex, 0, 11, 0xffd24d, .4);
+  }
+  // @@DRESSING3@@
+  for (const k in ST) ST[k].build(O, stMat(k));
   // ==================== LIFE: RESIDENTS & AMBIENT CREATURES (O4) ====================
   // 1. PUMPKIN: Pump Court robot with pumpkin head and squeegee (x = -40, z = 48)
-  const pumpBotG = new xi(); pumpBotG.position.set(-40, 0, 47); O.add(pumpBotG);
+  const pumpBotG = new xi(); pumpBotG.position.set(-62, 0, -13); O.add(pumpBotG);
   const botDarkBatch = ufoBatch();
   botDarkBatch.add(ufoLatheGeo([[0, -.06], [.26, -.06], [.26, .06], [0, .06]], 12), 0, .26, 0, 0, 0, Math.PI / 2);
   botDarkBatch.add(new Cn(.32, .24, .05), 0, 1.0, .23);
@@ -16128,7 +16578,7 @@ function spBuildOutpost(parent, rnd) {
   ufoBox(squeegeeArm, .38, .04, .04, sm.dark, .2, .1, .55);
 
   // 2. THE COOK: Nova Nosh window (x = 23, y = 1.8, z = 44)
-  const cookG = new xi(); cookG.position.set(23 - .4, 1.8, 44 + 1.25); O.add(cookG);
+  const cookG = new xi(); cookG.position.set(-32 - .4, 1.8, -12 + 1.25); O.add(cookG);
   // Round plump alien body with salmon skin
   ufoBall(cookG, .42, new ji({color: 0xffa080, roughness: .65, emissive: 0x3a1510, emissiveIntensity: .4}), 0, .35, 0, 1, 1.15, 1);
   // Paper chef hat tilted askew
@@ -16152,7 +16602,7 @@ function spBuildOutpost(parent, rnd) {
   const burgerPatty = ufoBox(cookG, .16, .04, .16, new ji({color: 0x5a2a18, roughness: .9}), .05, .02, .55);
 
   // 3. THE CLERK: Drift Inn lobby desk (x = 80 - 7.5 = 72.5, y = 0.7, z = -14 + 8.8 = -5.2)
-  const clerkG = new xi(); clerkG.position.set(72.5, .72, -5.2); O.add(clerkG);
+  const clerkG = new xi(); clerkG.position.set(90.5, .72, -3.2); O.add(clerkG);
   // Moth creature body resting on desk
   ufoBall(clerkG, .32, sm.plum, 0, .22, 0, 1.2, .8, 1);
   // Folded moth wings (batched)
@@ -16175,7 +16625,7 @@ function spBuildOutpost(parent, rnd) {
 
   // 4. THE LIZARD: Drift Inn rooftop sunbathing deck (on top pod chaise lounge)
   const topP = podPositions[8];
-  const lizardG = new xi(); lizardG.position.set(80 + topP.x, topP.y + 1.22, -14 + topP.z); O.add(lizardG);
+  const lizardG = new xi(); lizardG.position.set(98 + topP.x, topP.y + 1.22, -12 + topP.z); O.add(lizardG);
   lizardG.rotation.y = .3;
   // Slender turquoise body
   ufoBall(lizardG, .16, sm.mint, 0, .08, 0, 1.4, .6, .8);
@@ -16188,25 +16638,20 @@ function spBuildOutpost(parent, rnd) {
 
   // 5. HOP-HOPS: 12 small fuzzy critters around Plaza & Patio
   const hopHopData = [
-    {x: 12, z: 8, col: 0x8be3c3, scale: .22},
-    {x: 16, z: 12, col: 0xc4b0dc, scale: .24},
-    {x: 10, z: 14, col: 0xf5db7a, scale: .20},
-    {x: 15, z: 4, col: 0x8be3c3, scale: .21},
-    {x: 18, z: 9, col: 0xffa080, scale: .23},
-    {x: 8, z: 10, col: 0xc4b0dc, scale: .22},
-    {x: -6, z: 58, col: 0x8be3c3, scale: .22},
-    {x: -3, z: 65, col: 0xf5db7a, scale: .20},
-    {x: -7, z: 64, col: 0xc4b0dc, scale: .23},
-    {x: -2, z: 59, col: 0xffa080, scale: .21},
-    {x: 24, z: 50, col: 0x8be3c3, scale: .22},
-    {x: 26, z: 47, col: 0xf5db7a, scale: .20}
+    {x: 18, z: -4, col: 0x8be3c3, scale: .22}, {x: 26, z: 2, col: 0xc4b0dc, scale: .24}, {x: 22, z: 4, col: 0xf5db7a, scale: .20},
+    {x: 14, z: -8, col: 0x8be3c3, scale: .21}, {x: 28, z: -6, col: 0xffa080, scale: .23}, {x: 20, z: -9, col: 0xc4b0dc, scale: .22},
+    {x: -8, z: 14, col: 0x8be3c3, scale: .22}, {x: -2, z: 22, col: 0xf5db7a, scale: .20}, {x: -10, z: 24, col: 0xc4b0dc, scale: .23},
+    {x: 2, z: 16, col: 0xffa080, scale: .21}, {x: 54, z: 14, col: 0x8be3c3, scale: .22}, {x: 50, z: 24, col: 0xf5db7a, scale: .20},
+    {x: -116, z: 50, col: 0x8be3c3, scale: .22}, {x: -128, z: 40, col: 0xffa080, scale: .21}, {x: -108, z: 44, col: 0xc4b0dc, scale: .23}, {x: -124, z: 54, col: 0xf5db7a, scale: .2},
+    {x: 20, z: -88, col: 0xf5db7a, scale: .21}, {x: 8, z: -84, col: 0x8be3c3, scale: .22}, {x: -6, z: -46, col: 0xc4b0dc, scale: .22}, {x: 4, z: -53, col: 0xffa080, scale: .2},
+    {x: 148, z: 2, col: 0x8be3c3, scale: .22}, {x: -108, z: -6, col: 0xf5db7a, scale: .21}
   ];
   const hopHopCritters = [];
   const hhEyeWhiteGeo = new lr(1, 6, 4);
   const hhPupilGeo = new lr(1, 4, 3);
   for (let i = 0; i < hopHopData.length; i++) {
     const d = hopHopData[i];
-    const hg = new xi(); hg.position.set(d.x, 0, d.z); O.add(hg);
+    const hg = new xi(); d.y0 = spH(d.x, d.z); hg.position.set(d.x, d.y0, d.z); O.add(hg);
     const bodyM = new dt(new lr(d.scale, 8, 6), new ji({color: d.col, roughness: .85}));
     bodyM.position.y = d.scale; hg.add(bodyM);
     const eyeBatch = ufoBatch();
@@ -16217,6 +16662,7 @@ function spBuildOutpost(parent, rnd) {
       group: hg,
       baseX: d.x,
       baseZ: d.z,
+      y0: d.y0,
       x: d.x,
       z: d.z,
       hopPhase: i * .6,
@@ -16227,14 +16673,10 @@ function spBuildOutpost(parent, rnd) {
 
   // 6. SKY JELLIES: 8 translucent glowing hovering jellyfish (y = 18 to 32m)
   const skyJellyData = [
-    {x: -20, y: 22, z: 45, col: 0xb6ff5a, size: 1.2, speed: .35},
-    {x: 5, y: 28, z: 35, col: 0xffa080, size: 1.4, speed: .28},
-    {x: 25, y: 19, z: 52, col: 0x6ffcff, size: 1.1, speed: .38},
-    {x: 48, y: 26, z: 42, col: 0xb6ff5a, size: 1.3, speed: .32},
-    {x: 12, y: 31, z: 12, col: 0xff7bd0, size: 1.5, speed: .25},
-    {x: 65, y: 23, z: 0, col: 0xb6ff5a, size: 1.2, speed: .34},
-    {x: -8, y: 20, z: 20, col: 0x8be3c3, size: 1.0, speed: .42},
-    {x: 35, y: 25, z: -15, col: 0xffa080, size: 1.3, speed: .30}
+    {x: -50, y: 20, z: -2, col: 0xb6ff5a, size: 1.2, speed: .35}, {x: -10, y: 26, z: 4, col: 0xffa080, size: 1.4, speed: .28},
+    {x: 22, y: 22, z: -6, col: 0x6ffcff, size: 1.1, speed: .38}, {x: 60, y: 24, z: 2, col: 0xb6ff5a, size: 1.3, speed: .32},
+    {x: 22, y: 34, z: -30, col: 0xff7bd0, size: 1.5, speed: .25}, {x: 96, y: 26, z: -14, col: 0xb6ff5a, size: 1.2, speed: .34},
+    {x: -84, y: 18, z: 10, col: 0x8be3c3, size: 1.0, speed: .42}, {x: 10, y: 30, z: 26, col: 0xffa080, size: 1.3, speed: .30}
   ];
   const skyJellies = [];
   for (let i = 0; i < skyJellyData.length; i++) {
@@ -16264,10 +16706,10 @@ function spBuildOutpost(parent, rnd) {
   const mothGeo = new It();
   const mothPos = new Float32Array(mothCount * 3);
   const mothCenters = [
-    {x: -25, y: 17.5, z: 46},  // Orbit Gas pylon
-    {x: -8.8, y: 3.8, z: 57.8}, // Event Horizon martini
-    {x: 72.5, y: 6.0, z: -4.2}, // Drift Inn vacancy
-    {x: -14, y: 6.0, z: 24.3}   // Spin Cycle sock
+    {x: -47, y: 17.5, z: -14},
+    {x: -9.8, y: 3.8, z: 13.8},
+    {x: 90.5, y: 6.0, z: -2.2},
+    {x: -6, y: 6.0, z: -12.7}
   ];
   for (let i = 0; i < mothCount; i++) {
     const c = mothCenters[i % 4];
@@ -16285,21 +16727,21 @@ function spBuildOutpost(parent, rnd) {
     update(t, dt) {
       const p = Nn.position;
       // Pumpkin robot: rolls beat, faces player when near
-      const pumpDist = Math.hypot(p.x - (SP.ax - 40), p.z - (SP.az + 47));
+      const pumpDist = Math.hypot(p.x - (SP.ax - 62), p.z - (SP.az - 13));
       if (pumpDist < 9.0) {
-        pumpBotG.rotation.y = Math.atan2(p.x - (SP.ax - 40), p.z - (SP.az + 47));
+        pumpBotG.rotation.y = Math.atan2(p.x - (SP.ax - 62), p.z - (SP.az - 13));
         squeegeeArm.rotation.z = Math.sin(t * 5.0) * .35;
       } else {
         const beat = Math.sin(t * .8) * 1.4;
-        pumpBotG.position.x = -40 + beat;
+        pumpBotG.position.x = -62 + beat;
         pumpBotG.rotation.y = beat > 0 ? Math.PI / 2 : -Math.PI / 2;
         squeegeeArm.rotation.z = Math.sin(t * 1.5) * .1;
       }
 
       // The Cook: burger flip, looks at player when at window
-      const cookDist = Math.hypot(p.x - (SP.ax + 23), p.z - (SP.az + 47));
+      const cookDist = Math.hypot(p.x - (SP.ax - 32), p.z - (SP.az - 9));
       if (cookDist < 5.5) {
-        cookG.rotation.y = Math.atan2(p.x - (SP.ax + 23), p.z - (SP.az + 47));
+        cookG.rotation.y = Math.atan2(p.x - (SP.ax - 32), p.z - (SP.az - 9));
       } else {
         cookG.rotation.y = Math.sin(t * 1.2) * .15;
       }
@@ -16325,18 +16767,18 @@ function spBuildOutpost(parent, rnd) {
       for (let i = 0; i < hopHopCritters.length; i++) {
         const h = hopHopCritters[i];
         const distToPlayer = Math.hypot(p.x - (SP.ax + h.x), p.z - (SP.az + h.z));
-        if (distToPlayer < 5.0) {
+        if (distToPlayer < 5.0 && Math.abs(p.y - (SP.py + h.y0)) < 4) {
           // Soft avoidance: drift away from player
           const awayX = (SP.ax + h.x) - p.x, awayZ = (SP.az + h.z) - p.z;
           const len = Math.hypot(awayX, awayZ) || 1;
-          h.x += (awayX / len) * dt * 1.2;
-          h.z += (awayZ / len) * dt * 1.2;
-          h.group.position.set(h.x, Math.abs(Math.sin(t * 8.0 + h.hopPhase)) * .24, h.z);
+          const nx = h.x + (awayX / len) * dt * 1.2, nz = h.z + (awayZ / len) * dt * 1.2;
+          if (Math.abs(spH(nx, nz) - h.y0) < .6) { h.x = nx; h.z = nz; }
+          h.group.position.set(h.x, h.y0 + Math.abs(Math.sin(t * 8.0 + h.hopPhase)) * .24, h.z);
           h.group.rotation.y = Math.atan2(awayX, awayZ);
         } else {
           // Gentle idle hopping near home
           const hop = Math.max(0, Math.sin(t * h.hopSpeed + h.hopPhase));
-          h.group.position.y = hop * .12;
+          h.group.position.y = h.y0 + hop * .12;
           h.group.rotation.y = Math.sin(t * .6 + i) * .4;
         }
       }
@@ -16365,6 +16807,8 @@ function spBuildOutpost(parent, rnd) {
     }
   };
 
+  spGroup.userData.batch = spBatchStatic(O, [pumpBotG, cookG, clerkG, lizardG, mothPoints, ...hopHopCritters.map(h => h.group), ...skyJellies.map(j => j.group)]);
+  spBuildGround(O, lights, mcStart);
   spLights.push({position: new P(SP.ax, SP.py, SP.az), range: 520, cull: 1100, lights, space: 'only'});
 }
 const ufoLightGroup = {position: ufoShip.position, range: 60, cull: 75, lights: collectLocalLights(ufoShip), space: 'both'};
@@ -16389,7 +16833,7 @@ function ufoExit() {
   if (!ufo.landed) { ufoNote('Land first, then step out'); return; }
   const yaw = ufoShip.rotation.y, ox = Math.cos(yaw) * 3.1, oz = -Math.sin(yaw) * 3.1;
   const x = ufoShip.position.x + ox, z = ufoShip.position.z + oz;
-  ufo.flying = false; br = 0; oo = true;
+  ufo.flying = false; br = 0; oo = true; spLast.ok = false;
   Nn.position.set(x, ufoGroundAt(x, z) + jm, z);
   Nn.fov = 65; Nn.updateProjectionMatrix();
   Nn.lookAt(ufoShip.position.x, Nn.position.y - .3, ufoShip.position.z);
@@ -16418,15 +16862,16 @@ function ufoInteraction() {
         spBellRingTimer = 6.0;
         ufoNote('"No vacancy in this dimension. Try the next." — DRIFT INN', 6);
       }};
-    const tx = SP.ax + 23, tz = SP.az + 44;
+    const tx = SP.ax - 32, tz = SP.az - 12;
     if (Math.hypot(p.x - tx, p.z - (tz + 3.2)) < 6)
       return {label: 'Order a cosmic taco', action: () => { playInteractionSound('bell'); ufoNote('One toasted-stardust taco. It hums a little. Tastes like a warm evening.', 7); }};
-    const telX = SP.ax + 32, telZ = SP.az - 65;
-    if (Math.hypot(p.x - telX, p.z - telZ) < 4.5)
-      return {label: 'Look through telescope (25¢)', action: () => {
-        playInteractionSound('bell');
-        spTelescopeTimer = 5.0;
-        ufoNote('"See Your House: No refunds on clouds." Through the eyepiece, Earth gleams in blue and white.', 6);
+    for (const sc of spScopes) if (Math.hypot(p.x - (SP.ax + sc.x), p.z - (SP.az + sc.z)) < 3.4)
+      return {label: 'Look through the telescope (25¢)', action: () => { playInteractionSound('bell'); spTelescopeTimer = 5.0; ufoNote(sc.msg, 7); }};
+    for (const bn of spBenches) if (Math.hypot(p.x - (SP.ax + bn.x), p.z - (SP.az + bn.z)) < 1.9 && Math.abs(p.y - (SP.py + bn.y + jm)) < 2.5)
+      return {label: spSit ? 'Stand up' : 'Sit and watch the sky', action: () => {
+        if (spSit) { spSit = null; return; }
+        spSit = {x: SP.ax + bn.x, z: SP.az + bn.z, y: SP.py + bn.y + 1.2};
+        Nn.position.set(spSit.x, spSit.y, spSit.z); Nn.lookAt(spSit.x + Math.sin(bn.ry) * 10, spSit.y + .7, spSit.z + Math.cos(bn.ry) * 10);
       }};
   }
   return null;
@@ -16605,27 +17050,28 @@ function ufoLateAudio() {
     const active = (!audio.muted && !document.hidden && !ufo.flying);
 
     // 1. Orbit Gas transformer hum
-    const dOrbit = Math.hypot(px - (SP.ax - 40), pz - (SP.az + 48));
-    const humGain = active ? 0.042 * Math.max(0, 1 - Math.min(1, Math.max(0, dOrbit - 10) / 38)) : 0;
+    const dOrbit = Math.hypot(px - (SP.ax - 62), pz - (SP.az - 12));
+    const hf = d => Math.max(0, 1 - Math.min(1, Math.max(0, d - 10) / 38));
+    const humGain = active ? 0.042 * Math.max(hf(dOrbit), hf(Math.hypot(px - (SP.ax + 100), pz - (SP.az - 48)))) : 0;
     spAud.gHum.gain.setTargetAtTime(humGain, t, 0.2);
 
     // 2. Spin Cycle laundromat drum tumble
-    const dWash = Math.hypot(px - (SP.ax - 14), pz - (SP.az + 24));
+    const dWash = Math.hypot(px - (SP.ax - 6), pz - (SP.az - 13));
     const washGain = active ? 0.034 * Math.max(0, 1 - Math.min(1, Math.max(0, dWash - 5) / 22)) : 0;
     spAud.gWash.gain.setTargetAtTime(washGain, t, 0.2);
 
     // 3. Nova Nosh kitchen fan & sizzle
-    const dCook = Math.hypot(px - (SP.ax + 23), pz - (SP.az + 44));
+    const dCook = Math.hypot(px - (SP.ax - 32), pz - (SP.az - 12));
     const cookGain = active ? 0.028 * Math.max(0, 1 - Math.min(1, Math.max(0, dCook - 4) / 20)) : 0;
     spAud.gCook.gain.setTargetAtTime(cookGain, t, 0.2);
 
     // 4. Gertrude's Greenhouse bubbling
-    const dGreen = Math.hypot(px - (SP.ax + 48), pz - (SP.az - 20));
+    const dGreen = Math.hypot(px - (SP.ax + 52), pz - (SP.az + 20));
     const greenGain = active ? 0.032 * Math.max(0, 1 - Math.min(1, Math.max(0, dGreen - 6) / 24)) : 0;
     spAud.gGreen.gain.setTargetAtTime(greenGain, t, 0.2);
 
     // 5. Event Horizon neon ballast buzz
-    const dNeon = Math.hypot(px - (SP.ax - 5), pz - (SP.az + 62));
+    const dNeon = Math.hypot(px - (SP.ax - 6), pz - (SP.az + 18));
     const neonGain = active ? 0.022 * Math.max(0, 1 - Math.min(1, Math.max(0, dNeon - 5) / 20)) : 0;
     spAud.gNeon.gain.setTargetAtTime(neonGain, t, 0.2);
 
@@ -16647,7 +17093,7 @@ function ufoLateAudio() {
     }
 
     // b. Creature pips & soft clinks near Plaza/Patio/Inn (average 25s, min 18s, max range 40m)
-    const dPlaza = Math.hypot(px - (SP.ax + 14), pz - (SP.az + 10));
+    const dPlaza = Math.hypot(px - (SP.ax + 22), pz - (SP.az - 2));
     if (dPlaza < 40 && active) {
       if (spNextPip === 0) spNextPip = t + 15 + Math.random() * 15;
       if (t >= spNextPip) {
@@ -16805,10 +17251,11 @@ function ufoDrawChart(t) {
   c.strokeStyle = '#d9b46a'; c.beginPath(); c.arc(X(hx), Z(hz), 5, 0, 7); c.stroke(); c.fillStyle = '#d9b46a'; c.fillText('SAUCER HOME', X(hx) + 8, Z(hz) + 18);
   // asteroid, deck, runway
   c.fillStyle = 'rgba(120,100,140,.35)'; c.strokeStyle = '#a58ac4'; c.lineWidth = 1.5; c.beginPath(); c.arc(X(SP.ax), Z(SP.az), SP.aR * s, 0, 7); c.fill(); c.stroke();
-  c.strokeStyle = '#7fd6c9'; c.beginPath(); c.arc(X(SP.ax), Z(SP.az), SP.plR * s, 0, 7); c.stroke();
-  c.lineWidth = Math.max(2, 14 * s); c.strokeStyle = '#7fd6c9'; c.beginPath(); c.moveTo(X(SP.ax - 200), Z(SP.az + 99)); c.lineTo(X(SP.ax + 120), Z(SP.az + 99)); c.stroke();
+  c.save(); c.fillStyle = 'rgba(127,214,201,.35)'; c.strokeStyle = '#7fd6c9'; c.lineWidth = 1;
+  for (const pl of SPP) { c.beginPath(); if (pl.t) c.arc(X(SP.ax + pl.x), Z(SP.az + pl.z), pl.r * s, 0, 7); else c.rect(X(SP.ax + pl.x - pl.hx), Z(SP.az + pl.z - pl.hz), pl.hx * 2 * s, pl.hz * 2 * s); c.fill(); c.stroke(); }
+  c.restore();
   c.fillStyle = '#7fd6c9'; c.font = 'bold 12px "Courier New",monospace'; c.fillText('DRIFT OUTPOST', X(SP.ax) + SP.aR * s + 6, Z(SP.az) - 4);
-  c.font = '11px "Courier New",monospace'; c.fillText('RWY 07/25', X(SP.ax) + SP.aR * s + 6, Z(SP.az) + 10);
+  c.font = '11px "Courier New",monospace'; c.fillText('HILL TOWN · DOCK 1', X(SP.ax) + SP.aR * s + 6, Z(SP.az) + 10);
   // ship, heading and line to the outpost
   Nn.getWorldDirection(ufoD);
   c.strokeStyle = 'rgba(255,215,160,.6)'; c.lineWidth = 1; c.setLineDash([4, 5]); c.beginPath(); c.moveTo(X(p.x), Z(p.z)); c.lineTo(X(SP.ax), Z(SP.az)); c.stroke(); c.setLineDash([]);
@@ -16854,14 +17301,21 @@ function ufoMarkerUpdate() {
 }
 
 // ---- fast travel -----------------------------------------------------------------
+// Deck landing spots (outpost-local x, z, yaw). The player steps out 3.1 m to the ship's side.
+const UFO_DECK = {dock: [-104, 0, -Math.PI / 2], pumps: [-62, 3, Math.PI], main: [-10, 0, -Math.PI / 2], plaza: [22, 7.5, 0],
+  crest: [22, -83, -Math.PI / 2], cove: [-124, 46, -Math.PI / 2], pier: [136, 0, 0], power: [88, -44, 0]};
 const UFO_WARPS = [
   {special: 'home', name: 'THE LITTLE SAUCER', route: 'SIDE ROAD', mile: 'desert'},
   {special: 'sky', name: 'ABOVE THE DESERT', route: 'FLIGHT', mile: '1.5 km up'},
   {special: 'orbit', name: 'DRIFT OUTPOST · ORBIT VIEW', route: 'FLIGHT', mile: 'above the deck'},
-  {special: 'runway', name: 'DRIFT OUTPOST · RUNWAY 07', route: 'DECK', mile: 'threshold'},
-  {special: 'pumps', name: 'DRIFT OUTPOST · ORBIT GAS', route: 'DECK', mile: 'parking ring'},
-  {special: 'main', name: 'DRIFT OUTPOST · MAIN STREET', route: 'DECK', mile: 'mid-strip'},
+  {special: 'dock', name: 'DRIFT OUTPOST · THE DOCK', route: 'DECK', mile: 'arrivals'},
+  {special: 'pumps', name: 'DRIFT OUTPOST · ORBIT GAS', route: 'DECK', mile: 'the pumps'},
+  {special: 'main', name: 'DRIFT OUTPOST · MAIN STREET', route: 'DECK', mile: 'the strip'},
   {special: 'plaza', name: 'DRIFT OUTPOST · THE PLAZA', route: 'DECK', mile: 'Planet Pop'},
+  {special: 'crest', name: 'DRIFT OUTPOST · THE OBSERVATORY', route: 'DECK', mile: 'the crest'},
+  {special: 'cove', name: 'DRIFT OUTPOST · WRECK COVE', route: 'DECK', mile: 'below the dock'},
+  {special: 'pier', name: 'DRIFT OUTPOST · END OF THE ROAD', route: 'DECK', mile: 'east pier'},
+  {special: 'power', name: 'DRIFT OUTPOST · THE POWER YARD', route: 'DECK', mile: 'behind the Inn'},
 ];
 function ufoWarpList() { return UFO_WARPS.map(w => Object.assign({}, w)); }
 function ufoWarp(id) {
@@ -16871,11 +17325,11 @@ function ufoWarp(id) {
   if (id === 'home') { x = UFO_HOME.x; z = UFO_HOME.z; y = os(x, z) + .97; yaw = Math.PI / 2; }
   else if (id === 'sky') { x = UFO_HOME.x; z = UFO_HOME.z; y = 1500; yaw = Math.PI / 2; land = false; }
   else if (id === 'orbit') { x = S.ax - 420; z = S.az + 520; y = S.py + 240; yaw = Math.atan2(-(S.ax - x), -(S.az - z)); land = false; }
-  else if (id === 'runway') { x = S.ax - 192; z = S.az + 99; y = S.py + .97; yaw = -Math.PI / 2; }
-  else if (id === 'pumps') { x = S.ax - 40; z = S.az + 77; y = S.py + .97; yaw = 0; }
-  else if (id === 'main') { x = S.ax + 15; z = S.az + 42; y = S.py + .97; yaw = -Math.PI / 2; }
-  else if (id === 'plaza') { x = S.ax + 12; z = S.az + 5; y = S.py + .97; yaw = 0; }
-  else { x = S.ax - 40; z = S.az + 77; y = S.py + .97; yaw = 0; }
+  else if (UFO_DECK[id === 'runway' ? 'dock' : id]) {
+    const d = UFO_DECK[id === 'runway' ? 'dock' : id];
+    x = S.ax + d[0]; z = S.az + d[1]; y = S.py + spH(d[0], d[1]) + .97; yaw = d[2]; spLast.ok = false;
+  }
+  else { const d = UFO_DECK.dock; x = S.ax + d[0]; z = S.az + d[1]; y = S.py + .97; yaw = d[2]; spLast.ok = false; }
   if (y > 3200) { spBuild(); ufoSetSpace(true); } else { ufoSetSpace(false); recenterDesert(x, z, Infinity); }
   ufoShip.position.set(x, y, z); ufoShip.rotation.set(0, yaw, 0); ufoHull.rotation.set(0, 0, 0);
   ufo.vel.set(0, 0, 0); ufo.speed = 0; ufo.landed = land;
@@ -16961,7 +17415,7 @@ function ufoFrame(dt, t) {
     Qt.color.setRGB(1, .96, .9); Qt.intensity = 2.5;
     Qt.target.position.set(Nn.position.x, Nn.position.y, Nn.position.z);
     Qt.position.copy(Qt.target.position).addScaledVector(spSun, 60);
-    hhem.color.setRGB(.25, .22, .45); hhem.groundColor.setRGB(.12, .08, .2); hhem.intensity = .5;
+    hhem.color.setRGB(.36, .31, .56); hhem.groundColor.setRGB(.16, .11, .26); hhem.intensity = .72;
     const fadeIn = ufoSmooth(3300, 5200, camY);
     spGroup.userData.earthMat.uniforms.uA.value = fadeIn; spGroup.userData.earthMat.transparent = fadeIn < .99; spGroup.userData.atmoMat.uniforms.uA.value = fadeIn;
     spGroup.userData.earthMat.visible = fadeIn > .01;
@@ -17023,10 +17477,21 @@ function ufoFrame(dt, t) {
     ufoCollider.minX = p.x - hx; ufoCollider.maxX = p.x + hx; ufoCollider.minZ = p.z - hz; ufoCollider.maxZ = p.z + hz;
     ufoCollider.minY = p.y - 1; ufoCollider.maxY = p.y + 2;
   }
+  if (fl || !ufoSpace) spSit = null;
   // Keep a walker on the asteroid deck.
   if (ufoSpace && !fl) {
-    const dx = Nn.position.x - SP.ax, dz = Nn.position.z - SP.az, d = Math.hypot(dx, dz);
-    if (d > 196 && Nn.position.y < SP.py + 6) { Nn.position.x = SP.ax + dx / d * 196; Nn.position.z = SP.az + dz / d * 196; }
+    if (spSit) { if (fn.KeyW || fn.KeyA || fn.KeyS || fn.KeyD || fn.ArrowUp || fn.ArrowDown || fn.ArrowLeft || fn.ArrowRight || fn.Space) spSit = null; else Nn.position.set(spSit.x, spSit.y, spSit.z); }
+    const lx = Nn.position.x - SP.ax, lz = Nn.position.z - SP.az;
+    if (!spLast.ok || spWalkable(lx, lz)) { spLast.x = lx; spLast.z = lz; spLast.ok = true; }
+    else {
+      // Cliff, rail line or void: slide along the edge instead of stopping dead.
+      let nx = spLast.x, nz = spLast.z;
+      if (spWalkable(lx, spLast.z)) nx = lx; else if (spWalkable(spLast.x, lz)) nz = lz;
+      Nn.position.x = SP.ax + nx; Nn.position.z = SP.az + nz;
+      const gy = SP.py + spH(nx, nz) + jm;
+      if (Nn.position.y < gy + .05) { Nn.position.y = gy; br = 0; oo = true; }
+      spLast.x = nx; spLast.z = nz;
+    }
   }
   ufoApplyLights(dt);
   ufoDrawDash(t);
@@ -17787,7 +18252,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
   gasSign.localToWorld(gasMothPoint).toArray(mothPos,mi*3);
 }mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);ufoLateAudio();shadersWarm&&renderWithInspection()}document.getElementById("app")._game = {
   ufo, ufoShip, spGroup, SP, ufoLamp, ufoWarp, ufoToggleLights, UFO_DOME, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt, ufoInteraction,
-  UFO_WARPS, ufoWarpList, Mc, Dt,
+  UFO_WARPS, ufoWarpList, Mc, Dt, spH, get renderInfo() { return mn.info; }, ufoInteraction, ufoDrawChart, ufoToggleChart, ufoChart, spLast, spWalkable, SPP, SPR, SPT, spScopes, spBenches,
   get spPumps() { return spPumps; }, get spBell() { return spBell; }, get spBellRingTimer() { return spBellRingTimer; },
   Nt, Nn, coupe, os, nwRoadZ, nwRoadSlopeZ, nwRoadY, nwSFromX, nwXFromS, carSurfaceAt,
   ROUTE_CATALOG, throughTurnout, sitInCar, leaveCar, setRoadMapOpen, driveCar, groundCoupe, recenterDesert,
