@@ -23,6 +23,8 @@ The playable branch is [`vibe/neon-gas-voxel-f660eb`](https://github.com/gmazzo9
 
 The user asked for a hidden player-flyable saucer in the desert and, above the atmosphere, an asteroid outpost (landing strip, fuel stop, food truck, motel) lit in neon. This is a deliberate exception to "no other buildings" and the quiet-highway rule. Keep it contained: the ground game stays as written, the outpost exists only in space mode, and the saucer stays a single parked object until boarded. See the 2026-11-06 record in [ROADMAP.md](ROADMAP.md).
 
+On 2026-11-08 the owner found the outpost boring and asked for a rich, colourful, quirky, better-modelled outpost "with some life". For the **outpost only**, this overrides the quiet-highway rules above: it may be a busy Googie strip with many buildings, a few non-human residents and ambient creatures, and budgeted motion. Still never humans, other ships, music, voices, weather, a quest or a score, and never a changing light count. [SPACE_MOOD.md](SPACE_MOOD.md) is the design authority and [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md) the launch prompt.
+
 ## Choose work from the roadmap
 
 1. Start with the earliest unfinished dependency. G0 selected the painterly direction; finish G1/G2 visual quality and G3 verification. Sky effects, sound, and micro-life wait until the visual foundation passes.
