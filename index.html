@@ -14903,7 +14903,7 @@ function ufoUpdate(dt) {
   s.speed = s.vel.length();
   s.landed = p.y - floorY < .06 && s.speed < 2.5 && iy <= 0;
   if (s.landed && !wishing) s.vel.multiplyScalar(.8);
-  s.fuel = Math.max(0, s.fuel - dt * (s.speed / 9000 * .9 + (wishing ? .015 : 0)));
+  s.fuel = Math.max(0, s.fuel - dt * (s.speed / 9000 * .09 + (wishing ? .0015 : 0)));
   s.throttle += ((wishing ? Math.min(1, s.speed / 9000 + .15) : 0) - s.throttle) * Math.min(1, dt * 4);
   // Keep the hull turned the way you look.
   if (!s.landed || wishing) {
@@ -14931,24 +14931,32 @@ let ufoAud = null;
 function ufoAudioStart() {
   const c = audio.ctx; if (!c || ufoAud) return;
   if (c.state === 'suspended') c.resume();
-  const o1 = c.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 46;
-  const o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = 92;
-  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220; f.Q.value = .8;
+  // An alien drone, low and slow: two detuned voices a non-harmonic interval apart that beat gently, a sub that
+  // swells, a slow vibrato, and a soft filtered breath. Nothing above ~1.4 kHz, nothing sharp.
+  const mk = (type, hz) => { const o = c.createOscillator(); o.type = type; o.frequency.value = hz; return o; };
+  const a = mk('triangle', 78), b = mk('sine', 78 * 1.4142 + 2.6), sub = mk('sine', 39);
+  const lfo = mk('sine', .23), lfo2 = mk('sine', .07);
+  const vib = c.createGain(); vib.gain.value = 3.2; lfo.connect(vib); vib.connect(a.frequency); vib.connect(b.frequency);
+  const swellDepth = c.createGain(); swellDepth.gain.value = .35; lfo2.connect(swellDepth);
+  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 520; f.Q.value = 5;
+  const f2 = c.createBiquadFilter(); f2.type = 'peaking'; f2.frequency.value = 310; f2.gain.value = 7; f2.Q.value = 2.4;
   const g = c.createGain(); g.gain.value = 0;
-  o1.connect(f); o2.connect(f); f.connect(g); g.connect(audio.master);
+  const ga = c.createGain(); ga.gain.value = .55; const gb = c.createGain(); gb.gain.value = .32; const gs = c.createGain(); gs.gain.value = .5;
+  swellDepth.connect(gs.gain);
+  a.connect(ga); b.connect(gb); sub.connect(gs); ga.connect(f); gb.connect(f); gs.connect(f); f.connect(f2); f2.connect(g); g.connect(audio.master);
   const ns = c.createBufferSource(); ns.buffer = audio.noiseBuf; ns.loop = true;
-  const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 400; nf.Q.value = .5;
+  const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 520; nf.Q.value = 2.2;
   const ng = c.createGain(); ng.gain.value = 0;
   ns.connect(nf); nf.connect(ng); ng.connect(audio.master);
-  o1.start(); o2.start(); ns.start();
-  ufoAud = {o1, o2, f, g, ng, nf, ns};
-  g.gain.setTargetAtTime(.07, c.currentTime, .6);
+  [a, b, sub, lfo, lfo2, ns].forEach(n => n.start());
+  ufoAud = {a, b, sub, lfo, lfo2, ns, f, g, ng, nf};
+  g.gain.setTargetAtTime(.075, c.currentTime, .9);
 }
 function ufoAudioStop() {
   if (!ufoAud) return;
-  const c = audio.ctx, a = ufoAud; ufoAud = null;
-  a.g.gain.setTargetAtTime(0, c.currentTime, .3); a.ng.gain.setTargetAtTime(0, c.currentTime, .3);
-  setTimeout(() => { try { a.o1.stop(); a.o2.stop(); a.ns.stop(); } catch (e) {} }, 1500);
+  const c = audio.ctx, u = ufoAud; ufoAud = null;
+  u.g.gain.setTargetAtTime(0, c.currentTime, .4); u.ng.gain.setTargetAtTime(0, c.currentTime, .4);
+  setTimeout(() => { try { [u.a, u.b, u.sub, u.lfo, u.lfo2, u.ns].forEach(n => n.stop()); } catch (e) {} }, 2200);
 }
 // Called last in the frame so it overrides the desert's own wind and insect levels: there is no air up here.
 function ufoLateAudio() {
@@ -14959,11 +14967,14 @@ function ufoLateAudio() {
 }
 function ufoAudioUpdate() {
   if (!ufoAud) return;
-  const c = audio.ctx, t = c.currentTime, f = Math.min(1, ufo.speed / 2500);
-  ufoAud.o1.frequency.setTargetAtTime(46 + 90 * f, t, .2); ufoAud.o2.frequency.setTargetAtTime(92 + 150 * f, t, .2);
-  ufoAud.f.frequency.setTargetAtTime(220 + 900 * f, t, .3);
-  ufoAud.g.gain.setTargetAtTime(.06 + .07 * f, t, .3);
-  ufoAud.ng.gain.setTargetAtTime(Math.min(.09, .004 + .1 * f), t, .3); ufoAud.nf.frequency.setTargetAtTime(300 + 1800 * f, t, .3);
+  const c = audio.ctx, t = c.currentTime, v = Math.min(1, Math.log10(1 + ufo.speed) / Math.log10(2501));
+  const base = 66 + 54 * v;   // 66 Hz idle to 120 Hz at warp: the pitch leans, it never screams
+  ufoAud.a.frequency.setTargetAtTime(base, t, .5); ufoAud.b.frequency.setTargetAtTime(base * 1.4142 + 2.6 + 1.8 * v, t, .5);
+  ufoAud.sub.frequency.setTargetAtTime(base / 2, t, .6);
+  ufoAud.lfo.frequency.setTargetAtTime(.23 + .5 * v, t, .8);
+  ufoAud.f.frequency.setTargetAtTime(480 + 620 * v, t, .6);
+  ufoAud.g.gain.setTargetAtTime(.07 + .045 * v, t, .6);
+  ufoAud.ng.gain.setTargetAtTime(.004 + .03 * v, t, .6); ufoAud.nf.frequency.setTargetAtTime(420 + 500 * v, t, .6);
 }
 
 // ---- stars-and-dust field that sells speed -----------------------------------------
@@ -15047,65 +15058,6 @@ function ufoDrawDash(t) {
   c.fillText('DRIFT OUTPOST', cx, 168); c.fillStyle = '#e8d6b0'; c.font = '13px "Courier New",monospace';
   c.fillText((dist > 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m') + (Math.abs(dy) > 5 ? '  ' + (dy > 0 ? 'UP ' : 'DOWN ') + Math.round(Math.abs(dy)) + ' m' : ''), cx, 184);
   ufoDash.nav.tx.needsUpdate = true;
-}
-
-// ---- rain in space -----------------------------------------------------------
-// Canon: it rains up here. Slow thin streaks that bend with the saucer's velocity, denser over the asteroid,
-// dry under the Orbit Gas canopy. No thunder, no flash, no explanation (SPACE_MOOD.md).
-const SP_RAIN_N = 1000;
-const spRainBase = new Float32Array(SP_RAIN_N * 3), spRainPos = new Float32Array(SP_RAIN_N * 6);
-(function () { const r = Vm(6161); for (let i = 0; i < spRainBase.length; i++) spRainBase[i] = r(); })();
-const spRainGeo = new It(); spRainGeo.setAttribute('position', new Et(spRainPos, 3));
-const spRainMat = new wi({color: 0xa8d4e6, transparent: true, opacity: 0, depthWrite: false, fog: false});
-const spRainMesh = new xt();
-spRainMesh.isLine = true; spRainMesh.isLineSegments = true; spRainMesh.type = 'LineSegments';
-spRainMesh.geometry = spRainGeo; spRainMesh.material = spRainMat; spRainMesh.frustumCulled = false; spRainMesh.visible = false;
-spRainMesh.name = 'Space rain';
-Nt.add(spRainMesh);
-const spRain = {level: 0, covered: false, aud: null, force: null};   // force: test hook (0..1) to pin the weather
-function spUnderCover(p) {
-  return p.x > SP.ax - 52 && p.x < SP.ax - 28 && p.z > SP.az + 42 && p.z < SP.az + 54 && p.y < SP.py + 8 && p.y > SP.py - 2;
-}
-function spRainUpdate(t, dt) {
-  const p = Nn.position;
-  const near = Math.hypot(p.x - SP.ax, p.y - SP.ay, p.z - SP.az) < 900;
-  const w = ufoSmooth(.42, .62, Hm(t * .006 + 3.3, 11.7));          // a slow weather field, minutes per change
-  spRain.covered = spUnderCover(p);
-  const target = (spRain.force != null ? spRain.force : w) * (near ? 1 : .45);
-  spRain.level += (target - spRain.level) * Math.min(1, dt * .4);
-  const lvl = spRain.level * (spRain.covered ? 0 : 1);
-  spRainMesh.visible = ufoSpace && lvl > .02;
-  if (spRainMesh.visible) {
-    const L = 46, H = 32, vel = ufo.flying ? ufo.vel : ufoSpDummy.set(0, 0, 0);
-    const rvx = -vel.x, rvy = -9 - vel.y, rvz = -vel.z, rl = Math.hypot(rvx, rvy, rvz) || 1, k = Math.min(.06, 2.4 / rl);
-    for (let i = 0; i < SP_RAIN_N; i++) {
-      const u = spRainBase[i * 3], v = spRainBase[i * 3 + 1], q = spRainBase[i * 3 + 2];
-      const x = p.x + ((((u * L) - p.x) % L) + L) % L - L / 2, z = p.z + ((((q * L) - p.z) % L) + L) % L - L / 2;
-      const y0 = v * H - t * 9, y = p.y + ((((y0) - p.y) % H) + H) % H - H / 2;
-      spRainPos[i * 6] = x; spRainPos[i * 6 + 1] = y; spRainPos[i * 6 + 2] = z;
-      spRainPos[i * 6 + 3] = x - rvx * k; spRainPos[i * 6 + 4] = y - rvy * k; spRainPos[i * 6 + 5] = z - rvz * k;
-    }
-    spRainGeo.attributes.position.needsUpdate = true;
-    spRainGeo.setDrawRange(0, Math.max(2, Math.floor(SP_RAIN_N * Math.min(1, lvl * 1.1)) * 2));
-    spRainMat.opacity = .8 * Math.sqrt(lvl);
-    const pinkNear = Math.max(0, 1 - Math.hypot(p.x - (SP.ax + 80), p.z - (SP.az - 14)) / 160);
-    spRainMat.color.setRGB(.66 + .3 * pinkNear, .83 - .1 * pinkNear, .9 - .0 * pinkNear);
-  }
-  const deck = spGroup.userData.deckMat;
-  if (deck) { deck.roughness = 1 - .55 * spRain.level; deck.emissiveIntensity = .7 + .35 * spRain.level; }
-  // rain bed in filtered noise: quiet in the cabin, loudest on the deck, muffled under cover
-  const ctx = audio.ctx;
-  if (ctx && ufoSpace && !spRain.aud && audio.noiseBuf) {
-    const ns = ctx.createBufferSource(); ns.buffer = audio.noiseBuf; ns.loop = true;
-    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 5200; bp.Q.value = .45;
-    const g = ctx.createGain(); g.gain.value = 0; ns.connect(bp); bp.connect(g); g.connect(audio.master); ns.start();
-    spRain.aud = {g, bp};
-  }
-  if (spRain.aud) {
-    const mul = ufoSpace ? (ufo.flying ? .3 : spRain.covered ? .3 : 1) : 0;
-    spRain.aud.g.gain.setTargetAtTime(.05 * spRain.level * mul, ctx.currentTime, .4);
-    spRain.aud.bp.frequency.setTargetAtTime(spRain.covered || ufo.flying ? 3200 : 5200, ctx.currentTime, .3);
-  }
 }
 
 // ---- star chart and waypoint ---------------------------------------------------
@@ -15347,7 +15299,6 @@ function ufoFrame(dt, t) {
   }
   ufoApplyLights(dt);
   ufoDrawDash(t);
-  spRainUpdate(t, dt);
   ufoDrawChart(t);
   ufoMarkerUpdate();
   ufoUpdateDust();
@@ -16024,7 +15975,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
     .52+Math.sin(angle)*radius*.5+.10*Math.sin(angle*11.7));
   gasSign.localToWorld(gasMothPoint).toArray(mothPos,mi*3);
 }mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);ufoLateAudio();renderWithInspection()}document.getElementById("app")._game = {
-  ufo, ufoShip, spGroup, SP, spRain, ufoLamp, ufoWarp, ufoToggleLights, UFO_DOME, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt,
+  ufo, ufoShip, spGroup, SP, ufoLamp, ufoWarp, ufoToggleLights, UFO_DOME, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt,
   Nt, Nn, coupe, os, nwRoadZ, nwRoadSlopeZ, nwRoadY, nwSFromX, nwXFromS, carSurfaceAt,
   ROUTE_CATALOG, throughTurnout, sitInCar, leaveCar, setRoadMapOpen, driveCar, groundCoupe, recenterDesert,
   updateTelephoneLine, fn, driverDoor, glovebox, roadMap,
