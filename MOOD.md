@@ -33,6 +33,8 @@ Each region gets one card with the same fields. A new region is not ready to bui
 
 Add a card here, with these same fields, before starting any new region.
 
+The space layer (the hidden saucer and the Drift Outpost) has its own card in [SPACE_MOOD.md](SPACE_MOOD.md). It applies the shared grammar above and is a user-requested exception; see AGENTS.md.
+
 ## Desert additions to test
 
 These extend [AMBIENCE.md](AMBIENCE.md); they do not repeat it.

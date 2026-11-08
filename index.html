@@ -11567,7 +11567,7 @@ document.querySelectorAll('.rest-btn[data-step]').forEach(btn => {
 // parked in the lane, still seated. The dev warp skips every cost and also works on foot.
 const TRAVEL_SPEED = 22.4;
 const TRAVEL_FUEL_PER_MILE = 0.009;
-let travelModalActive = false, travelDevMode = false, travelPointerLockedBefore = false, travelSelected = 0, travelBusy = false;
+let travelSpaceMode = false, travelModalActive = false, travelDevMode = false, travelPointerLockedBefore = false, travelSelected = 0, travelBusy = false;
 let travelStops = [];
 function travelStopList(dev) {
   const list = [];
@@ -11585,6 +11585,7 @@ function travelStopList(dev) {
   }
   if (dev) for (const km of [80, 120, 200]) list.push({ name: 'THROUGH ROAD · FAR', route: 'SR 14', s: km * 1000, mile: 'KM ' + km });
   list.sort((a, b) => a.s - b.s);   // east to west, the way the road runs
+  for (const w of UFO_WARPS) list.push(Object.assign({}, w));   // the saucer and the Drift Outpost
   return list;
 }
 function travelClock(hours) {
@@ -11598,6 +11599,7 @@ function travelDayTag(worldHours) {
 }
 function travelCurrentS() { return nwSFromX(coupe.position.x); }
 function travelCost(stop) {
+  if (stop.special) return { meters: 1e9, miles: 0, seconds: 0, worldHours: 0, fuel: 0, special: true };
   const meters = Math.abs(stop.s - travelCurrentS());
   const miles = meters / 1609.344, seconds = meters / TRAVEL_SPEED, worldHours = seconds / 120;
   return { meters, miles, seconds, worldHours, fuel: miles * TRAVEL_FUEL_PER_MILE };
@@ -11620,6 +11622,7 @@ function renderTravelModal() {
     const right = document.createElement('span');
     right.className = 'travel-meta';
     right.textContent = here ? stop.mile
+      : stop.special ? 'free · ' + stop.mile
       : travelDevMode ? stop.mile + ' · warp'
       : short ? 'needs gas'
       : `${cost.miles.toFixed(1)} mi · ${Math.max(1, Math.round(cost.seconds / 60))} min · arrive ${travelClock(worldClockHours + cost.worldHours)}${travelDayTag(cost.worldHours)}`;
@@ -11628,11 +11631,12 @@ function renderTravelModal() {
     listEl.appendChild(row);
   });
   const sub = document.getElementById('travel-sub');
-  if (sub) sub.textContent = travelDevMode
+  if (sub) sub.textContent = travelSpaceMode ? 'FLIGHT COMPUTER  •  FREE  •  NO CLOCK, NO FUEL'
+    : travelDevMode
     ? 'DEV WARP  •  FREE  •  NO CLOCK, NO GAS'
     : `WESTERN MOTOR GUIDE  •  RIDE IT OUT AT 50  •  TANK ${Math.round(fuelLevel * 100)}%`;
   const title = document.getElementById('travel-title');
-  if (title) title.textContent = travelDevMode ? 'WARP TO…' : 'TRIP CARD';
+  if (title) title.textContent = travelSpaceMode ? 'FLIGHT COMPUTER' : travelDevMode ? 'WARP TO…' : 'TRIP CARD';
   const timeRow = document.getElementById('travel-time-row');
   if (timeRow) timeRow.style.display = travelDevMode ? 'flex' : 'none';
   const selected = listEl.children[travelSelected];
@@ -11650,9 +11654,11 @@ function travelMove(delta) {
 }
 function openTravelModal(dev) {
   if (travelModalActive || travelBusy || restModalActive || settingsModalActive) return;
-  if (!dev && !(seated && Math.abs(carSpeed) < 0.25)) return;
-  travelDevMode = !!dev;
-  travelStops = travelStopList(travelDevMode);
+  const spaceCard = ufo.flying || ufoSpace;
+  if (!dev && !spaceCard && !(seated && Math.abs(carSpeed) < 0.25)) return;
+  travelDevMode = !!dev && !spaceCard;
+  travelSpaceMode = spaceCard;
+  travelStops = spaceCard ? ufoWarpList() : travelStopList(travelDevMode);
   travelSelected = 0;
   for (let i = 0; i < travelStops.length; i++) if (travelCost(travelStops[i]).meters >= 150) { travelSelected = i; break; }
   travelModalActive = true;
@@ -11710,6 +11716,7 @@ function confirmTravel() {
   if (!travelModalActive || travelBusy) return;
   const stop = travelStops[travelSelected];
   if (!stop) return;
+  if (stop.special) { ufoWarpWithFade(stop); return; }
   const cost = travelCost(stop);
   if (cost.meters < 150) return;
   if (!travelDevMode && fuelLevel - cost.fuel < 0.06) { playInteractionSound('metal'); return; }
@@ -14212,10 +14219,10 @@ function ufoGeo(pos, idx, uv) {
   g.computeVertexNormals();
   return g;
 }
-function ufoLatheGeo(profile, seg = 28) {
+function ufoLatheGeo(profile, seg = 28, a0 = 0, a1 = Math.PI * 2) {
   const pos = [], idx = [], n = profile.length;
   for (let i = 0; i <= seg; i++) {
-    const phi = i / seg * Math.PI * 2, s = Math.sin(phi), c = Math.cos(phi);
+    const phi = a0 + i / seg * (a1 - a0), s = Math.sin(phi), c = Math.cos(phi);
     for (let j = 0; j < n; j++) pos.push(profile[j][0] * s, profile[j][1], profile[j][0] * c);
   }
   for (let i = 0; i < seg; i++) for (let j = 0; j < n - 1; j++) {
@@ -14298,21 +14305,22 @@ function ufoSign(parent, text, w, h, color, x, y, z, ry = 0, sub = '') {
 }
 
 // ---- materials --------------------------------------------------------------
+// Palette rule (SPACE_MOOD.md): graphite, brushed brass, tan leather, cream, one muted teal. Amber is the only warm light.
 const ufoM = {
-  hull: new ji({color: 0xa9c4bb, roughness: .55, metalness: .15, emissive: 0x26403a, emissiveIntensity: .9}),
-  hullDark: new ji({color: 0x56706a, roughness: .62, metalness: .2, emissive: 0x15221f, emissiveIntensity: .8}),
-  patch: new ji({color: 0xc9783b, roughness: .6, metalness: .3, emissive: 0x2a1408, emissiveIntensity: .5}),
-  trim: new ji({color: 0xd2dad2, roughness: .4, metalness: .25, emissive: 0x2a3030, emissiveIntensity: .6}),
+  hull: new ji({color: 0x93a39f, roughness: .5, metalness: .35, emissive: 0x141b1a, emissiveIntensity: .7}),
+  hullDark: new ji({color: 0x4a5755, roughness: .6, metalness: .3, emissive: 0x0d1211, emissiveIntensity: .7}),
+  patch: new ji({color: 0x8d6b45, roughness: .7, metalness: .2, emissive: 0x1c130b, emissiveIntensity: .5}),
+  trim: new ji({color: 0xc8cdc6, roughness: .35, metalness: .5, emissive: 0x1c2020, emissiveIntensity: .5}),
+  brass: new ji({color: 0xa88650, roughness: .4, metalness: .6, emissive: 0x1a1208, emissiveIntensity: .3}),
   glass: new wi({color: 0xd6fbff, transparent: true, opacity: .022, depthWrite: false, side: 1, fog: false}),
-  floor: new Lm({color: 0x4c3428}),
-  seat: new ji({color: 0xb4552f, roughness: .85, emissive: 0x2a0f06, emissiveIntensity: .5}),
-  seatDark: new ji({color: 0x5b2d1f, roughness: .9}),
-  dash: new ji({color: 0x2c343a, roughness: .5, metalness: .4, emissive: 0x0a0f12, emissiveIntensity: .8}),
-  rug: new Lm({color: 0xa0384f, emissive: 0x2a0912}),
-  blanket: new Lm({color: 0xd2864a, emissive: 0x3a1c08}),
-  plant: new Lm({color: 0x5aab55, emissive: 0x143a14}),
-  pot: new Lm({color: 0xc2a58a, emissive: 0x2a2018}),
-  dice: new Lm({color: 0xf4efe2, emissive: 0x6a6658}),
+  floor: new ji({color: 0x302a26, roughness: .9, emissive: 0x0c0a09, emissiveIntensity: .6}),
+  seat: new ji({color: 0x7a5a42, roughness: .75, emissive: 0x2a1c12, emissiveIntensity: .9}),
+  seatDark: new ji({color: 0x3d2c22, roughness: .85, emissive: 0x0c0806, emissiveIntensity: .5}),
+  cream: new ji({color: 0xd9ceb4, roughness: .7, emissive: 0x2a251a, emissiveIntensity: .4}),
+  dash: new ji({color: 0x262b2d, roughness: .55, metalness: .3, emissive: 0x0a0d0e, emissiveIntensity: .7}),
+  wool: new ji({color: 0x34383a, roughness: 1, emissive: 0x0b0c0d, emissiveIntensity: .5}),
+  blanket: new ji({color: 0x6d776c, roughness: 1, emissive: 0x13160f, emissiveIntensity: .5}),
+  bulb: new wi({color: 0xffd7a0}),
   warm: new wi({color: 0xffc477}), hot: new wi({color: 0xfff1cf}),
   cyan: new wi({color: 0x69f4ff}), pink: new wi({color: 0xff5fb8}), green: new wi({color: 0x58ffa6}),
   red: new wi({color: 0xff4d4d}), amber: new wi({color: 0xffa23a}),
@@ -14326,104 +14334,154 @@ ufoShip.rotation.order = 'YXZ';
 const ufoHull = new xi(); ufoShip.add(ufoHull);      // tilts a little in flight
 const ufoCabin = new xi(); ufoShip.add(ufoCabin);    // stays level so the eye never slides
 const ufoBlink = [], ufoRimBulbs = [], ufoFlames = [];
+// The canopy is one ellipsoid; every cabin object is placed against it (SPACE_MOOD.md clip rule).
+const UFO_DOME = {rx: 1.4, ry: 1.6, rz: 1.85, cx: 0, cy: .3, cz: -.1};
+const UFO_EYE = new P(-.42, 1.4, .1);                // pilot's eye in ship space
+const ufoLamp = {lamp: null, glow: null, halos: [], bulbMat: ufoM.bulb, level: 1, target: 1, switchMesh: null, dashMats: []};
+const ufoDash = {cluster: null, nav: null, last: -1};
+function ufoGaugeCanvas(w, h) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const tx = new qt(cv); tx.colorSpace = 'srgb';
+  return {cv, c: cv.getContext('2d'), tx};
+}
 (function buildSaucer() {
-  // Oval body, a touch dented and patched, like something fixed in a garage.
-  const body = ufoAdd(ufoHull, ufoLatheGeo([[0, -.66], [.7, -.64], [1.2, -.5], [1.55, -.24], [1.72, -.02], [1.7, .13], [1.45, .32], [.9, .45], [0, .5]], 36), ufoM.hull);
+  // Body: one smooth oval, finished with a brass belt, panel seams and rim lamps.
+  const body = ufoAdd(ufoHull, ufoLatheGeo([[0, -.7], [.5, -.69], [.95, -.64], [1.3, -.52], [1.55, -.36], [1.69, -.18], [1.74, 0], [1.72, .1], [1.62, .2], [1.42, .3], [1.1, .37], [.7, .41], [0, .43]], 72), ufoM.hull);
   body.scale.set(1, 1, 1.3);
-  const belt = ufoAdd(ufoHull, ufoLatheGeo([[1.66, -.1], [1.76, -.06], [1.77, .06], [1.66, .1]], 36), ufoM.hullDark);
-  belt.scale.set(1, 1, 1.3);
-  const under = ufoAdd(ufoHull, ufoLatheGeo([[0, -.7], [.9, -.68], [1.0, -.62], [0, -.62]], 24), ufoM.hullDark);
-  under.scale.set(1, 1, 1.3);
-  // Rim lights: alternating warm and cyan bulbs.
-  for (let i = 0; i < 18; i++) {
-    const a = i / 18 * Math.PI * 2;
-    const b = ufoBall(ufoHull, .06, i % 2 ? ufoM.cyan : ufoM.warm, Math.cos(a) * 1.79, -.02, Math.sin(a) * 2.33);
-    ufoRimBulbs.push(b);
+  const ell = (rx, rz, y, n = 72) => { const p = []; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; p.push([Math.cos(a) * rx, y, Math.sin(a) * rz]); } return p; };
+  ufoAdd(ufoHull, ufoTubeGeo(ell(1.76, 2.29, .02), .03, 8, true), ufoM.brass);
+  ufoAdd(ufoHull, ufoTubeGeo(ell(1.3, 1.69, .32), .012, 6, true), ufoM.hullDark);
+  ufoAdd(ufoHull, ufoTubeGeo(ell(1.62, 2.1, -.36), .012, 6, true), ufoM.hullDark);
+  ufoAdd(ufoHull, ufoLatheGeo([[0, -.72], [1.0, -.7], [1.02, -.62], [0, -.62]], 48), ufoM.hullDark).scale.set(1, 1, 1.3);
+  for (let i = 0; i < 20; i++) {
+    const a = i / 20 * Math.PI * 2;
+    ufoRimBulbs.push(ufoBall(ufoHull, .045, ufoM.warm, Math.cos(a) * 1.79, -.04, Math.sin(a) * 2.33));
   }
-  // Three round headlamps on the nose.
-  for (const [x, y, z] of [[-.46, .12, -2.18], [.46, .12, -2.18], [0, .18, -2.26]]) {
-    ufoBall(ufoHull, .13, ufoM.hot, x, y, z); ufoBall(ufoHull, .19, new wi({color: 0xffe2a8, transparent: true, opacity: .2, blending: 2, depthWrite: false}), x, y, z);
+  // Three round nose lamps in brass bezels.
+  for (const [x, y, z] of [[-.46, .1, -2.15], [.46, .1, -2.15], [0, .16, -2.23]]) {
+    ufoBall(ufoHull, .12, ufoM.hot, x, y, z);
+    ufoAdd(ufoHull, ufoTubeGeo(ufoCircle(x, y, z - .02, .15, 'z', 24), .018, 6, true), ufoM.brass);
   }
-  // Side nacelles with glowing nozzles and flame plumes.
+  // Side nacelles: intake ring, hull-coloured barrel, cyan nozzle (the only cyan on the ship), additive plume.
   for (const sx of [-1, 1]) {
-    const nac = ufoAdd(ufoHull, ufoLatheGeo([[0, -.9], [.2, -.85], [.28, -.5], [.28, .6], [.2, .88], [0, .95]], 14), ufoM.trim, sx * 1.62, .08, .95);
+    const nac = ufoAdd(ufoHull, ufoLatheGeo([[0, -.9], [.2, -.86], [.28, -.55], [.3, -.3], [.3, .6], [.22, .88], [0, .95]], 28), ufoM.hull, sx * 1.62, .08, .95);
     nac.rotation.x = Math.PI / 2;
+    ufoAdd(ufoHull, ufoTubeGeo(ufoCircle(sx * 1.62, .08, .38, .31, 'z', 28), .02, 6, true), ufoM.brass);
     ufoBall(ufoHull, .2, ufoM.cyan, sx * 1.62, .08, 1.9, 1, 1, .5);
-    const fl = ufoAdd(ufoHull, ufoLatheGeo([[.17, 0], [.12, .6], [.05, 1.4], [0, 1.9]], 10), ufoM.flame, sx * 1.62, .08, 1.9);
+    const fl = ufoAdd(ufoHull, ufoLatheGeo([[.17, 0], [.12, .6], [.05, 1.4], [0, 1.9]], 12), ufoM.flame, sx * 1.62, .08, 1.9);
     fl.rotation.x = Math.PI / 2; ufoFlames.push(fl);
     ufoBox(ufoHull, .5, .06, .5, ufoM.hullDark, sx * 1.4, .2, .9);
   }
-  // Main rear engine.
-  const eng = ufoAdd(ufoHull, ufoLatheGeo([[.5, -.1], [.47, .1], [.34, .34], [.0, .34]], 18), ufoM.trim, 0, .05, 2.08);
+  const eng = ufoAdd(ufoHull, ufoLatheGeo([[.5, -.1], [.47, .1], [.34, .34], [.0, .34]], 28), ufoM.trim, 0, .05, 2.08);
   eng.rotation.x = Math.PI / 2;
   ufoBall(ufoHull, .3, ufoM.cyan, 0, .05, 2.4, 1, 1, .4);
-  const fl = ufoAdd(ufoHull, ufoLatheGeo([[.36, 0], [.26, .9], [.1, 2.2], [0, 3.2]], 12), ufoM.flame, 0, .05, 2.4);
+  const fl = ufoAdd(ufoHull, ufoLatheGeo([[.36, 0], [.26, .9], [.1, 2.2], [0, 3.2]], 14), ufoM.flame, 0, .05, 2.4);
   fl.rotation.x = Math.PI / 2; ufoFlames.push(fl);
-  const fl2 = ufoAdd(ufoHull, ufoLatheGeo([[.2, 0], [.12, .7], [0, 1.5]], 10), ufoM.flame2, 0, .05, 2.4);
+  const fl2 = ufoAdd(ufoHull, ufoLatheGeo([[.2, 0], [.12, .7], [0, 1.5]], 12), ufoM.flame2, 0, .05, 2.4);
   fl2.rotation.x = Math.PI / 2; ufoFlames.push(fl2);
-  // Tail fins, an antenna with a blinking tip, a repair patch with rivets.
-  for (const sx of [-1, 1]) { const f = ufoBox(ufoHull, .07, .6, .8, ufoM.hullDark, sx * .85, .78, 1.55); f.rotation.z = -sx * .3; }
-  ufoBox(ufoHull, .035, .6, .035, ufoM.trim, -.55, .78, 1.2).rotation.z = .2;
-  const tip = ufoBall(ufoHull, .05, ufoM.red, -.62, 1.08, 1.2); ufoBlink.push(tip);
-  ufoBox(ufoHull, .62, .025, .42, ufoM.patch, .85, .43, .5).rotation.y = .3;
-  for (const [x, z] of [[.6, .35], [1.1, .35], [.6, .65], [1.1, .65]]) ufoBall(ufoHull, .025, ufoM.trim, x, .46, z);
-  // Side hatch with a glowing seam.
-  ufoBox(ufoHull, .05, .78, .86, ufoM.hullDark, 1.69, .05, .25);
-  ufoBox(ufoHull, .06, .72, .03, ufoM.cyan, 1.71, .05, -.2);
-  ufoBox(ufoHull, .06, .72, .03, ufoM.cyan, 1.71, .05, .7);
-  ufoBox(ufoHull, .08, .04, .1, ufoM.trim, 1.72, .05, .62);
-  // Landing legs.
+  // Tail fins, antenna with a blink, one repair patch with rivets, side hatch.
+  for (const sx of [-1, 1]) { const f = ufoBox(ufoHull, .07, .6, .8, ufoM.hullDark, sx * .85, .62, 1.6); f.rotation.z = -sx * .3; }
+  ufoBox(ufoHull, .03, .6, .03, ufoM.trim, -.55, .66, 1.25).rotation.z = .2;
+  ufoBlink.push(ufoBall(ufoHull, .04, ufoM.red, -.62, .96, 1.25));
+  ufoBox(ufoHull, .62, .02, .42, ufoM.patch, .85, .31, .5).rotation.y = .3;
+  for (const [x, z] of [[.6, .35], [1.1, .35], [.6, .65], [1.1, .65]]) ufoBall(ufoHull, .02, ufoM.trim, x, .33, z);
+  ufoBox(ufoHull, .05, .78, .86, ufoM.hullDark, 1.69, .0, .25);
+  ufoBox(ufoHull, .06, .72, .02, ufoM.warm, 1.71, .0, -.2);
+  ufoBox(ufoHull, .06, .72, .02, ufoM.warm, 1.71, .0, .7);
+  ufoBox(ufoHull, .09, .04, .12, ufoM.brass, 1.73, .0, .62);
   for (const [x, z] of [[-1.0, -.9], [1.0, -.9], [-1.0, 1.1], [1.0, 1.1]]) {
     const leg = ufoBox(ufoHull, .09, .5, .09, ufoM.trim, x * .94, -.74, z); leg.rotation.z = -x * .22;
-    ufoAdd(ufoHull, ufoLatheGeo([[0, -.03], [.24, -.03], [.26, 0], [.0, .0]], 12), ufoM.hullDark, x * 1.02, -.96, z);
+    ufoAdd(ufoHull, ufoLatheGeo([[0, -.03], [.24, -.03], [.26, 0], [.0, .0]], 18), ufoM.hullDark, x * 1.02, -.96, z);
   }
-  // Bubble canopy and its ribs.
-  const dome = ufoAdd(ufoCabin, new lr(1.35, 36, 20, 0, Math.PI * 2, 0, Math.PI / 2), ufoM.glass, 0, .4, -.1);
-  dome.scale.set(1, 1.1, 1.1);
+
+  // ---- canopy ----
+  const D = UFO_DOME;
+  const dome = ufoAdd(ufoCabin, new lr(1, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), ufoM.glass, D.cx, D.cy, D.cz);
+  dome.scale.set(D.rx, D.ry, D.rz);
+  const ring = []; for (let i = 0; i < 72; i++) { const a = i / 72 * Math.PI * 2; ring.push([D.cx + Math.cos(a) * (D.rx + .01), D.cy, D.cz + Math.sin(a) * (D.rz + .01)]); }
+  ufoAdd(ufoCabin, ufoTubeGeo(ring, .035, 8, true), ufoM.brass);
   for (const a of [0, Math.PI / 2, Math.PI]) {
     const pts = [];
-    for (let k = 0; k <= 12; k++) { const e = k / 12 * Math.PI / 2; pts.push([Math.cos(a) * Math.cos(e) * 1.36, .4 + Math.sin(e) * 1.49, -.1 + Math.sin(a) * Math.cos(e) * 1.5]); }
-    ufoAdd(ufoCabin, ufoTubeGeo(pts, .011, 5), ufoM.trim);
+    for (let k = 0; k <= 16; k++) { const e = k / 16 * Math.PI / 2; pts.push([D.cx + Math.cos(a) * Math.cos(e) * (D.rx + .012), D.cy + Math.sin(e) * (D.ry + .012), D.cz + Math.sin(a) * Math.cos(e) * (D.rz + .012)]); }
+    ufoAdd(ufoCabin, ufoTubeGeo(pts, .012, 6), ufoM.brass);
   }
-  ufoAdd(ufoCabin, ufoTubeGeo(ufoCircle(0, .42, -.1, 1.36, 'y', 36), .05, 6, true), ufoM.trim);
+  // Warm dome glow, seen from outside when the lamp is on.
+  const glowM = new wi({color: 0xffa550, transparent: true, opacity: .035, blending: 2, depthWrite: false, side: 1, fog: false});
+  ufoAdd(ufoCabin, new lr(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), glowM, D.cx, D.cy + .05, D.cz).scale.set(D.rx - .06, D.ry - .08, D.rz - .06);
+  ufoLamp.halos.push({m: glowM, base: .035});
 
-  // ---- cozy cabin ----
-  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [1.25, 0], [1.28, .03], [0, .03]], 32), ufoM.floor, 0, .48, -.1).scale.set(1, 1, 1.1);
-  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.95, 0], [.98, .02], [0, .02]], 24), ufoM.rug, .1, .52, .15);
-  // Pilot seat, passenger seat, blanket.
-  for (const sx of [-.05, .82]) {
-    ufoBox(ufoCabin, .62, .16, .6, ufoM.seat, sx, .72, .3);
-    ufoBox(ufoCabin, .62, .66, .14, ufoM.seat, sx, 1.02, .62).rotation.x = .12;
-    ufoBox(ufoCabin, .1, .2, .5, ufoM.seatDark, sx - .36, .86, .3); ufoBox(ufoCabin, .1, .2, .5, ufoM.seatDark, sx + .36, .86, .3);
-    ufoBox(ufoCabin, .4, .52, .3, ufoM.seatDark, sx, .56, .3);
+  // ---- cabin: floor, rug, seats, curved dashboard ----
+  const FLOOR = .4;
+  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [1.22, 0], [1.26, -.08], [0, -.08]], 48), ufoM.floor, 0, FLOOR, -.1).scale.set(1, 1, 1.38);
+  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.9, 0], [.93, .015], [0, .015]], 40), ufoM.wool, -.1, FLOOR + .005, .15).scale.set(1, 1, 1.3);
+  const seat = (sx, z, mat) => {
+    ufoBox(ufoCabin, .34, .3, .34, ufoM.hullDark, sx, FLOOR + .15, z);           // pedestal
+    ufoBox(ufoCabin, .58, .13, .56, mat, sx, FLOOR + .36, z);                    // cushion
+    const back = ufoBox(ufoCabin, .56, .6, .12, mat, sx, FLOOR + .72, z + .34); back.rotation.x = .12;
+    ufoBall(ufoCabin, .14, mat, sx, FLOOR + 1.05, z + .38, 1.2, .8, .6);        // headrest
+    for (const s2 of [-1, 1]) ufoBox(ufoCabin, .07, .16, .44, ufoM.seatDark, sx + s2 * .33, FLOOR + .52, z + .02);   // armrests
+    ufoAdd(ufoCabin, ufoTubeGeo([[sx - .26, FLOOR + .435, z - .24], [sx - .26, FLOOR + .435, z + .24]], .007, 4), ufoM.cream);   // stitch lines
+    ufoAdd(ufoCabin, ufoTubeGeo([[sx + .26, FLOOR + .435, z - .24], [sx + .26, FLOOR + .435, z + .24]], .007, 4), ufoM.cream);
+    ufoAdd(ufoCabin, ufoTubeGeo([[sx - .2, FLOOR + .74, z + .275], [sx + .2, FLOOR + .74, z + .275]], .007, 4), ufoM.cream);
+  };
+  seat(-.42, .15, ufoM.seat); seat(.42, .15, ufoM.seat);
+  ufoBox(ufoCabin, .5, .04, .34, ufoM.blanket, .42, FLOOR + .45, .06).rotation.x = -.04;
+  // Dashboard: one curved console wrapped around the pilot, brass trim, instruments on its slope.
+  const DX = -.1, DZ = .3;
+  const dash = ufoAdd(ufoCabin, ufoLatheGeo([[.98, FLOOR], [.98, .82], [1.04, .95], [1.18, .99], [1.3, .93], [1.32, FLOOR]], 40, Math.PI - .8, Math.PI + .8), ufoM.dash, DX, 0, DZ);
+  dash.material = ufoM.dash;
+  const trim = []; for (let k = 0; k <= 30; k++) { const a = Math.PI - .8 + k / 30 * 1.6; trim.push([DX + Math.sin(a) * 1.2, 1.0, DZ + Math.cos(a) * 1.2]); }
+  ufoAdd(ufoCabin, ufoTubeGeo(trim, .011, 6), ufoM.brass);
+  const onDash = (phi, r, y) => [DX + Math.sin(phi) * r, y, DZ + Math.cos(phi) * r];
+  // instrument cluster (live canvas): speed, altitude, fuel
+  ufoDash.cluster = ufoGaugeCanvas(512, 240);
+  const clM = new ji({map: ufoDash.cluster.tx, roughness: .5, emissive: 0xffffff, emissiveMap: ufoDash.cluster.tx, emissiveIntensity: .9});
+  ufoLamp.dashMats.push(clM);
+  let p = onDash(Math.PI + .22, 1.14, 1.012);
+  const cl = ufoAdd(ufoCabin, new ba(.62, .29), clM, p[0], p[1], p[2]); cl.rotation.set(-.5, -.22, 0);
+  ufoAdd(ufoCabin, ufoTubeGeo([[-.31, -.145, 0], [.31, -.145, 0], [.31, .145, 0], [-.31, .145, 0]].map(q => { const v = new P(q[0], q[1], .004).applyEuler(cl.rotation); return [p[0] + v.x, p[1] + v.y, p[2] + v.z]; }), .009, 6, true), ufoM.brass);
+  // nav screen (live): bearing and distance to the outpost
+  ufoDash.nav = ufoGaugeCanvas(256, 192);
+  const nvM = new ji({map: ufoDash.nav.tx, roughness: .4, emissive: 0xffffff, emissiveMap: ufoDash.nav.tx, emissiveIntensity: .9});
+  ufoLamp.dashMats.push(nvM);
+  p = onDash(Math.PI - .38, 1.14, 1.012);
+  const nv = ufoAdd(ufoCabin, new ba(.32, .24), nvM, p[0], p[1], p[2]); nv.rotation.set(-.5, .3, 0);
+  ufoAdd(ufoCabin, ufoTubeGeo([[-.16, -.12, 0], [.16, -.12, 0], [.16, .12, 0], [-.16, .12, 0]].map(q => { const v = new P(q[0], q[1], .004).applyEuler(nv.rotation); return [p[0] + v.x, p[1] + v.y, p[2] + v.z]; }), .008, 6, true), ufoM.brass);
+  // switch bank on the pilot's left: three toggles and the large CABIN LAMP rocker
+  for (let k = 0; k < 3; k++) {
+    p = onDash(Math.PI + .62 + k * .09, 1.17, 1.0);
+    ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.022, 0], [.016, .05], [0, .055]], 10), ufoM.brass, p[0], p[1], p[2]).rotation.set(0, 0, (k - 1) * .25);
   }
-  ufoBox(ufoCabin, .56, .05, .38, ufoM.blanket, .82, 1.0, .5).rotation.x = .2;
-  // Dashboard with screens, dials and a little amber radio.
-  const dash = ufoBox(ufoCabin, 1.5, .4, .34, ufoM.dash, 0, .68, -1.02); dash.rotation.x = -.12;
-  const mk = (w, h, mat, x, y, z, rx = -.55) => { const s = ufoAdd(ufoCabin, new ba(w, h), mat, x, y, z); s.rotation.x = rx; return s; };
-  mk(.32, .18, ufoM.green, -.45, .93, -1.0); mk(.26, .16, ufoM.cyan, .02, .93, -1.0); mk(.18, .16, ufoM.amber, .4, .93, -.99);
-  for (let i = 0; i < 6; i++) ufoBall(ufoCabin, .022, [ufoM.pink, ufoM.green, ufoM.amber][i % 3], -.6 + i * .12, .9, -.88);
-  ufoBox(ufoCabin, .26, .11, .1, ufoM.seatDark, .55, 1.0, -.95);
-  ufoBall(ufoCabin, .025, ufoM.amber, .48, 1.0, -.89); ufoBall(ufoCabin, .025, ufoM.amber, .62, 1.0, -.89);
-  // Mug, plant, fuzzy dice, pendant lamp, string lights.
-  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.05, 0], [.055, .1], [.0, .1]], 10), ufoM.dice, -.72, .87, -.95);
-  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.12, 0], [.14, .18], [0, .18]], 10), ufoM.pot, -.95, .5, .85);
-  ufoBall(ufoCabin, .2, ufoM.plant, -.95, .86, .85, 1, 1.1, 1); ufoBall(ufoCabin, .12, ufoM.plant, -.86, 1.0, .9);
-  ufoAdd(ufoCabin, ufoTubeGeo([[.55, 1.82, -.7], [.55, 1.5, -.7]], .006, 4), ufoM.trim);
-  ufoBox(ufoCabin, .06, .06, .06, ufoM.dice, .55, 1.48, -.7).rotation.set(.4, .6, .2);
-  ufoBox(ufoCabin, .06, .06, .06, ufoM.dice, .62, 1.54, -.68).rotation.set(.2, .3, .5);
-  ufoAdd(ufoCabin, ufoTubeGeo([[-.4, 1.86, -.3], [-.4, 1.62, -.3]], .006, 4), ufoM.trim);
-  ufoBall(ufoCabin, .1, ufoM.warm, -.4, 1.56, -.3, 1, 1.15, 1);
-  ufoBall(ufoCabin, .15, new wi({color: 0xffb25a, transparent: true, opacity: .09, blending: 2, depthWrite: false}), -.4, 1.56, -.3);
-  for (let i = 0; i < 26; i++) {
-    const a = i / 26 * Math.PI * 2, sag = .1 * Math.abs(Math.sin(i / 26 * Math.PI * 6));
-    ufoBall(ufoCabin, .028, [ufoM.warm, ufoM.pink, ufoM.cyan, ufoM.hot][i % 4], Math.cos(a) * 1.15, 1.08 - sag, -.1 + Math.sin(a) * 1.22);
+  p = onDash(Math.PI + .62 - .12, 1.17, 1.0);
+  ufoBox(ufoCabin, .1, .014, .07, ufoM.hullDark, p[0], p[1] - .005, p[2]).rotation.y = Math.PI + .5;
+  const sw = ufoBox(ufoCabin, .045, .03, .05, ufoM.cream, p[0], p[1] + .02, p[2]);
+  sw.rotation.y = Math.PI + .5;
+  ufoLamp.switchMesh = sw; ufoLamp.switchBase = sw.rotation.clone();
+  // old radio, mug, brass compass
+  p = onDash(Math.PI - .85, 1.17, .995);
+  ufoBox(ufoCabin, .26, .09, .1, ufoM.seatDark, p[0], p[1] + .04, p[2]).rotation.y = Math.PI - .85 + Math.PI;
+  ufoBall(ufoCabin, .018, ufoM.amber, p[0] - .06, p[1] + .08, p[2] + .01);
+  p = onDash(Math.PI - .62, 1.22, .99);
+  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.04, 0], [.045, .09], [.0, .09]], 14), ufoM.cream, p[0], p[1], p[2]);
+  p = onDash(Math.PI + .03, 1.2, .995);
+  ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.05, 0], [.052, .014], [0, .014]], 20), ufoM.brass, p[0], p[1], p[2]);
+  // overhead: brass pendant lamp and a strand of warm bulbs
+  ufoAdd(ufoCabin, ufoTubeGeo([[.15, 1.8, .05], [.15, 1.66, .05]], .006, 4), ufoM.brass);
+  ufoAdd(ufoCabin, ufoLatheGeo([[.03, 0], [.08, -.02], [.17, -.14], [.18, -.16]], 24), ufoM.brass, .15, 1.66, .05);
+  const pendant = ufoBall(ufoCabin, .055, ufoM.bulb, .15, 1.52, .05, 1, 1.1, 1);
+  const ph = new wi({color: 0xffb25a, transparent: true, opacity: .09, blending: 2, depthWrite: false});
+  ufoBall(ufoCabin, .13, ph, .15, 1.52, .05); ufoLamp.halos.push({m: ph, base: .09});
+  const str = [];
+  for (let i = 0; i < 24; i++) {
+    const a = i / 24 * Math.PI * 2, sag = .06 * Math.abs(Math.sin(i / 24 * Math.PI * 6));
+    const q = [D.cx + Math.cos(a) * .72, 1.56 - sag, D.cz + Math.sin(a) * .98];
+    str.push(q); ufoBall(ufoCabin, .017, ufoM.bulb, q[0], q[1], q[2]);
   }
-  // Warm amber lamp, console glow, magenta underglow, engine light.
-  ufoAdd(ufoCabin, new lr(1.2, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), new wi({color: 0xffa550, transparent: true, opacity: .035, blending: 2, depthWrite: false, side: 1, fog: false}), 0, .45, -.1).scale.set(1, 1.05, 1.1);
-  const lamp = new Pn(0xffb05a, 7.5, 9, 1.7); lamp.position.set(-.4, 1.56, -.3); ufoCabin.add(lamp);
-  const glow = new Pn(0x62ffd8, 1.0, 3.4, 2); glow.position.set(0, 1.0, -.7); ufoCabin.add(glow);
-  const under2 = new Pn(0xff4fd8, 2.2, 8, 2); under2.position.set(0, -1.0, 0); ufoHull.add(under2);
+  ufoAdd(ufoCabin, ufoTubeGeo(str.concat([str[0]]), .004, 4), ufoM.hullDark);
+
+  // lights: one amber lamp, a faint dash glow, engine light while thrusting
+  const lamp = new Pn(0xffb05a, 7, 9, 1.7); lamp.position.set(.15, 1.5, .05); ufoCabin.add(lamp); ufoLamp.lamp = lamp;
+  const glow = new Pn(0xffc27a, 1.1, 3.4, 2); glow.position.set(-.1, 1.0, -.55); ufoCabin.add(glow); ufoLamp.glow = glow;
   const eng2 = new Pn(0x68f0ff, 0, 16, 2); eng2.position.set(0, .05, 3.2); ufoHull.add(eng2);
   ufoShip.userData.engineLight = eng2;
 })();
@@ -14562,7 +14620,7 @@ function spBuild() {
   }
   const deck = ufoAdd(A, ufoGeo(dpos, didx, duv), new ji({map: pTex, roughness: 1, metalness: 0, emissive: 0xffffff, emissiveMap: pTex, emissiveIntensity: .7}), 0, SP.cut, 0);
   deck.geometry.computeVertexNormals();
-  spGroup.userData.deck = deck;
+  spGroup.userData.deck = deck; spGroup.userData.deckMat = deck.material;
   spBuildOutpost(spGroup, rnd);
   localLightGroups.push(...spLights);
   // Debris drifting around the asteroid.
@@ -14784,10 +14842,15 @@ function ufoExit() {
   Nn.lookAt(ufoShip.position.x, Nn.position.y - .3, ufoShip.position.z);
   ufoAudioStop(); playInteractionSound('metal');
 }
-const ufoSpDummy = new P();
+const ufoSpDummy = new P(), ufoSwV = new P(), ufoD2 = new P();
 function ufoInteraction() {
   if (seated || inspection) return null;
-  if (ufo.flying) return ufo.landed ? {label: 'Step out of the saucer', action: ufoExit} : null;
+  if (ufo.flying) {
+    const sp2 = ufoLamp.switchMesh.getWorldPosition(ufoSwV).sub(Nn.position); Nn.getWorldDirection(ufoD2);
+    const along = ufoD2.dot(sp2);
+    if (along > 0 && along < 1.8 && sp2.lengthSq() - along * along < .014) return {label: 'Cabin lamp ' + (ufoLamp.target ? 'OFF' : 'ON'), action: ufoToggleLights};
+    return ufo.landed ? {label: 'Step out of the saucer', action: ufoExit} : null;
+  }
   const p = Nn.position;
   if (Math.abs(p.y - ufoShip.position.y) < 4 && Math.hypot(p.x - ufoShip.position.x, p.z - ufoShip.position.z) < 4.6)
     return {label: 'Board the little saucer', action: ufoBoard};
@@ -14808,8 +14871,8 @@ function ufoInteraction() {
 // ---- flight -------------------------------------------------------------------
 const ufoD = new P(), ufoR = new P(), ufoUpV = new P(0, 1, 0), ufoW = new P(), ufoEye = new P();
 function ufoPlaceCamera() {
-  const yaw = ufoShip.rotation.y;
-  Nn.position.set(ufoShip.position.x - .05 * Math.sin(yaw), ufoShip.position.y + 1.45, ufoShip.position.z - .05 * Math.cos(yaw));
+  const yaw = ufoShip.rotation.y, c = Math.cos(yaw), sn = Math.sin(yaw);
+  Nn.position.set(ufoShip.position.x + UFO_EYE.x * c + UFO_EYE.z * sn, ufoShip.position.y + UFO_EYE.y, ufoShip.position.z - UFO_EYE.x * sn + UFO_EYE.z * c);
 }
 function ufoUpdate(dt) {
   const s = ufo, ship = ufoShip, p = ship.position;
@@ -14856,7 +14919,7 @@ function ufoHudText(hint, mode) {
   const s = ufo, p = ufoShip.position;
   const sp = Math.round(s.speed).toLocaleString();
   const alt = ufoSpace ? (Math.abs(p.y - SP.py) < 600 && Math.hypot(p.x - SP.ax, p.z - SP.az) < 240 ? Math.round(p.y - SP.py) + ' m above deck' : (p.y / 1000).toFixed(1) + ' km') : (p.y > 2000 ? (p.y / 1000).toFixed(2) + ' km' : Math.round(p.y - os(p.x, p.z)) + ' m');
-  return hint + sp + ' m/s  ·  ALT ' + alt + '  ·  [' + (s.tier + 1) + '] ' + UFO_TIER_NAMES[s.tier] + (s.braking ? ' (auto-brake)' : '') + '  ·  FUEL ' + Math.round(s.fuel) + '%  ·  ' + mode + '  ·  WASD fly  ·  SPACE up  ·  C down  ·  1-6 / WHEEL speed';
+  return hint + sp + ' m/s  ·  ALT ' + alt + '  ·  [' + (s.tier + 1) + '] ' + UFO_TIER_NAMES[s.tier] + (s.braking ? ' (auto-brake)' : '') + '  ·  FUEL ' + Math.round(s.fuel) + '%  ·  ' + mode + '  ·  WASD fly  ·  SPACE up  ·  C down  ·  1-6 / WHEEL speed  ·  L lamp  ·  R chart  ·  Y warp';
 }
 addEventListener('wheel', e => {
   if (!ufo.flying || !active) return;
@@ -14921,6 +14984,275 @@ function ufoUpdateDust() {
 }
 
 // ---- per-frame: space mode switch, atmosphere fade, animation ----------------------
+// ---- cabin lamp, live instruments --------------------------------------------
+function ufoToggleLights() {
+  ufoLamp.target = ufoLamp.target ? 0 : 1;
+  playInteractionSound('metal');
+  ufoNote(ufoLamp.target ? 'Cabin lamp on' : 'Cabin lamp off', 2.5);
+}
+function ufoApplyLights(dt) {
+  const L = ufoLamp;
+  L.level += Math.max(-1, Math.min(1, (L.target - L.level) * 2)) * Math.min(1, dt * 1.7);
+  if (Math.abs(L.level - L.target) < .004) L.level = L.target;
+  const v = L.level, b = .05 + .95 * v;
+  L.lamp.intensity = 7 * v;
+  L.glow.intensity = .25 + .85 * v;
+  ufoM.bulb.color.setRGB(b, .84 * b, .63 * b);
+  for (const h of L.halos) h.m.opacity = h.base * v;
+  for (const m of L.dashMats) m.emissiveIntensity = .45 + .45 * v;
+  if (L.switchMesh) L.switchMesh.rotation.x = L.switchBase.x + (v > .5 ? -.35 : .35);
+}
+function ufoDial(c, cx, cy, r, v01, label, txt) {
+  c.save(); c.lineWidth = 3; c.strokeStyle = '#b48f55'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke();
+  c.lineWidth = 2; c.strokeStyle = 'rgba(255,214,160,.55)';
+  for (let k = 0; k <= 10; k++) { const a = Math.PI * .75 + k / 10 * Math.PI * 1.5, r1 = r - 4, r2 = r - (k % 5 === 0 ? 14 : 9); c.beginPath(); c.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); c.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2); c.stroke(); }
+  const a = Math.PI * .75 + Math.max(0, Math.min(1, v01)) * Math.PI * 1.5;
+  c.strokeStyle = '#ffd7a0'; c.lineWidth = 4; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a) * (r - 14), cy + Math.sin(a) * (r - 14)); c.stroke();
+  c.fillStyle = '#b48f55'; c.beginPath(); c.arc(cx, cy, 6, 0, 7); c.fill();
+  c.fillStyle = '#e8d6b0'; c.font = 'bold 15px "Courier New",monospace'; c.textAlign = 'center';
+  c.fillText(label, cx, cy + r * .5); c.fillStyle = '#ffd7a0'; c.font = 'bold 17px "Courier New",monospace'; c.fillText(txt, cx, cy + r * .5 + 21);
+  c.restore();
+}
+function ufoDrawDash(t) {
+  if (t - ufoDash.last < .12) return;
+  ufoDash.last = t;
+  const s = ufo, p = ufoShip.position;
+  let c = ufoDash.cluster.c;
+  c.fillStyle = '#0d1011'; c.fillRect(0, 0, 512, 240);
+  c.strokeStyle = 'rgba(180,143,85,.5)'; c.lineWidth = 2; c.strokeRect(6, 6, 500, 228);
+  const altShown = ufoSpace ? p.y : Math.max(0, p.y - os(p.x, p.z));
+  ufoDial(c, 96, 110, 80, Math.log10(1 + s.speed) / Math.log10(9001), 'SPEED', Math.round(s.speed) + ' m/s');
+  ufoDial(c, 256, 110, 80, Math.log10(1 + altShown) / Math.log10(16000), 'ALT', altShown > 1999 ? (altShown / 1000).toFixed(1) + ' km' : Math.round(altShown) + ' m');
+  ufoDial(c, 416, 110, 80, s.fuel / 100, 'FUEL', Math.round(s.fuel) + '%');
+  c.fillStyle = '#e8d6b0'; c.font = 'bold 18px "Courier New",monospace'; c.textAlign = 'center';
+  c.fillText('[' + (s.tier + 1) + '] ' + UFO_TIER_NAMES[s.tier] + (s.braking ? '  AUTO-BRAKE' : ''), 256, 222);
+  ufoDash.cluster.tx.needsUpdate = true;
+  // nav screen
+  c = ufoDash.nav.c;
+  c.fillStyle = '#0b1010'; c.fillRect(0, 0, 256, 192);
+  c.strokeStyle = 'rgba(127,214,201,.55)'; c.lineWidth = 2; c.strokeRect(4, 4, 248, 184);
+  const cx = 128, cy = 86, R = 66;
+  c.beginPath(); c.arc(cx, cy, R, 0, 7); c.stroke();
+  c.beginPath(); c.arc(cx, cy, R / 2, 0, 7); c.stroke();
+  c.beginPath(); c.moveTo(cx, cy - R); c.lineTo(cx, cy + R); c.moveTo(cx - R, cy); c.lineTo(cx + R, cy); c.stroke();
+  const dx = SP.ax - p.x, dz = SP.az - p.z, dy = SP.py - p.y, dist = Math.hypot(dx, dz);
+  Nn.getWorldDirection(ufoD);
+  const rel = Math.atan2(dx, dz) - Math.atan2(ufoD.x, ufoD.z);
+  const rr = Math.min(1, dist / 6000) * R;
+  c.fillStyle = '#ffd7a0'; c.beginPath(); c.moveTo(cx, cy - 9); c.lineTo(cx + 6, cy + 7); c.lineTo(cx - 6, cy + 7); c.closePath(); c.fill();
+  const ox = cx - Math.sin(rel) * rr, oy = cy - Math.cos(rel) * rr;
+  c.fillStyle = '#7fd6c9'; c.beginPath(); c.arc(ox, oy, 5, 0, 7); c.fill();
+  c.strokeStyle = '#7fd6c9'; c.beginPath(); c.arc(ox, oy, 9, 0, 7); c.stroke();
+  c.fillStyle = '#7fd6c9'; c.font = 'bold 15px "Courier New",monospace'; c.textAlign = 'center';
+  c.fillText('DRIFT OUTPOST', cx, 168); c.fillStyle = '#e8d6b0'; c.font = '13px "Courier New",monospace';
+  c.fillText((dist > 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m') + (Math.abs(dy) > 5 ? '  ' + (dy > 0 ? 'UP ' : 'DOWN ') + Math.round(Math.abs(dy)) + ' m' : ''), cx, 184);
+  ufoDash.nav.tx.needsUpdate = true;
+}
+
+// ---- rain in space -----------------------------------------------------------
+// Canon: it rains up here. Slow thin streaks that bend with the saucer's velocity, denser over the asteroid,
+// dry under the Orbit Gas canopy. No thunder, no flash, no explanation (SPACE_MOOD.md).
+const SP_RAIN_N = 1000;
+const spRainBase = new Float32Array(SP_RAIN_N * 3), spRainPos = new Float32Array(SP_RAIN_N * 6);
+(function () { const r = Vm(6161); for (let i = 0; i < spRainBase.length; i++) spRainBase[i] = r(); })();
+const spRainGeo = new It(); spRainGeo.setAttribute('position', new Et(spRainPos, 3));
+const spRainMat = new wi({color: 0xa8d4e6, transparent: true, opacity: 0, depthWrite: false, fog: false});
+const spRainMesh = new xt();
+spRainMesh.isLine = true; spRainMesh.isLineSegments = true; spRainMesh.type = 'LineSegments';
+spRainMesh.geometry = spRainGeo; spRainMesh.material = spRainMat; spRainMesh.frustumCulled = false; spRainMesh.visible = false;
+spRainMesh.name = 'Space rain';
+Nt.add(spRainMesh);
+const spRain = {level: 0, covered: false, aud: null, force: null};   // force: test hook (0..1) to pin the weather
+function spUnderCover(p) {
+  return p.x > SP.ax - 52 && p.x < SP.ax - 28 && p.z > SP.az + 42 && p.z < SP.az + 54 && p.y < SP.py + 8 && p.y > SP.py - 2;
+}
+function spRainUpdate(t, dt) {
+  const p = Nn.position;
+  const near = Math.hypot(p.x - SP.ax, p.y - SP.ay, p.z - SP.az) < 900;
+  const w = ufoSmooth(.42, .62, Hm(t * .006 + 3.3, 11.7));          // a slow weather field, minutes per change
+  spRain.covered = spUnderCover(p);
+  const target = (spRain.force != null ? spRain.force : w) * (near ? 1 : .45);
+  spRain.level += (target - spRain.level) * Math.min(1, dt * .4);
+  const lvl = spRain.level * (spRain.covered ? 0 : 1);
+  spRainMesh.visible = ufoSpace && lvl > .02;
+  if (spRainMesh.visible) {
+    const L = 46, H = 32, vel = ufo.flying ? ufo.vel : ufoSpDummy.set(0, 0, 0);
+    const rvx = -vel.x, rvy = -9 - vel.y, rvz = -vel.z, rl = Math.hypot(rvx, rvy, rvz) || 1, k = Math.min(.06, 2.4 / rl);
+    for (let i = 0; i < SP_RAIN_N; i++) {
+      const u = spRainBase[i * 3], v = spRainBase[i * 3 + 1], q = spRainBase[i * 3 + 2];
+      const x = p.x + ((((u * L) - p.x) % L) + L) % L - L / 2, z = p.z + ((((q * L) - p.z) % L) + L) % L - L / 2;
+      const y0 = v * H - t * 9, y = p.y + ((((y0) - p.y) % H) + H) % H - H / 2;
+      spRainPos[i * 6] = x; spRainPos[i * 6 + 1] = y; spRainPos[i * 6 + 2] = z;
+      spRainPos[i * 6 + 3] = x - rvx * k; spRainPos[i * 6 + 4] = y - rvy * k; spRainPos[i * 6 + 5] = z - rvz * k;
+    }
+    spRainGeo.attributes.position.needsUpdate = true;
+    spRainGeo.setDrawRange(0, Math.max(2, Math.floor(SP_RAIN_N * Math.min(1, lvl * 1.1)) * 2));
+    spRainMat.opacity = .8 * Math.sqrt(lvl);
+    const pinkNear = Math.max(0, 1 - Math.hypot(p.x - (SP.ax + 80), p.z - (SP.az - 14)) / 160);
+    spRainMat.color.setRGB(.66 + .3 * pinkNear, .83 - .1 * pinkNear, .9 - .0 * pinkNear);
+  }
+  const deck = spGroup.userData.deckMat;
+  if (deck) { deck.roughness = 1 - .55 * spRain.level; deck.emissiveIntensity = .7 + .35 * spRain.level; }
+  // rain bed in filtered noise: quiet in the cabin, loudest on the deck, muffled under cover
+  const ctx = audio.ctx;
+  if (ctx && ufoSpace && !spRain.aud && audio.noiseBuf) {
+    const ns = ctx.createBufferSource(); ns.buffer = audio.noiseBuf; ns.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 5200; bp.Q.value = .45;
+    const g = ctx.createGain(); g.gain.value = 0; ns.connect(bp); bp.connect(g); g.connect(audio.master); ns.start();
+    spRain.aud = {g, bp};
+  }
+  if (spRain.aud) {
+    const mul = ufoSpace ? (ufo.flying ? .3 : spRain.covered ? .3 : 1) : 0;
+    spRain.aud.g.gain.setTargetAtTime(.05 * spRain.level * mul, ctx.currentTime, .4);
+    spRain.aud.bp.frequency.setTargetAtTime(spRain.covered || ufo.flying ? 3200 : 5200, ctx.currentTime, .3);
+  }
+}
+
+// ---- star chart and waypoint ---------------------------------------------------
+const ufoChart = {el: null, cv: null, open: false, last: -1};
+function ufoChartEnsure() {
+  if (ufoChart.el) return;
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9;background:rgba(6,5,10,.7);pointer-events:none';
+  const cv = document.createElement('canvas'); cv.width = 640; cv.height = 560;
+  cv.style.cssText = 'max-width:96vw;max-height:90vh;border:2px solid #9e8b66;box-shadow:0 14px 42px rgba(0,0,0,.85)';
+  el.appendChild(cv); document.body.appendChild(el);
+  ufoChart.el = el; ufoChart.cv = cv;
+}
+function ufoToggleChart() {
+  ufoChartEnsure();
+  ufoChart.open = !ufoChart.open;
+  ufoChart.el.style.display = ufoChart.open ? 'flex' : 'none';
+  ufoChart.last = -1;
+  playInteractionSound('paper');
+}
+function ufoDrawChart(t) {
+  if (!ufoChart.open || t - ufoChart.last < .15) return;
+  ufoChart.last = t;
+  const c = ufoChart.cv.getContext('2d'), W = 640, H = 560, MW = 520;
+  const p = ufoShip.position, hx = UFO_HOME.x, hz = UFO_HOME.z;
+  c.fillStyle = '#1b1710'; c.fillRect(0, 0, W, H);
+  c.strokeStyle = '#6b5b3c'; c.lineWidth = 1;
+  // extent: ship, home, outpost
+  const xs = [p.x, hx, SP.ax - 240, SP.ax + 240, 0], zs = [p.z, hz, SP.az - 240, SP.az + 240, 0];
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+  const ext = Math.max(x1 - x0, z1 - z0, 1500) * 1.15, mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, s = (H - 80) / ext;
+  const X = x => (x - mx) * s + MW / 2 + 12, Z = z => (z - mz) * s + H / 2 + 8;
+  c.save(); c.beginPath(); c.rect(12, 40, MW, H - 52); c.clip();
+  const step = ext > 9000 ? 2000 : ext > 4000 ? 1000 : 500;
+  c.strokeStyle = 'rgba(180,150,100,.18)';
+  for (let gx = Math.ceil((mx - ext / 2) / step) * step; gx < mx + ext / 2; gx += step) { c.beginPath(); c.moveTo(X(gx), 40); c.lineTo(X(gx), H); c.stroke(); }
+  for (let gz = Math.ceil((mz - ext / 2) / step) * step; gz < mz + ext / 2; gz += step) { c.beginPath(); c.moveTo(12, Z(gz)); c.lineTo(MW + 12, Z(gz)); c.stroke(); }
+  // planet footprint
+  c.strokeStyle = 'rgba(110,160,210,.5)'; c.setLineDash([6, 6]); c.beginPath(); c.arc(X(SP.ex), Z(SP.ez), SP.earthR * s, 0, 7); c.stroke(); c.setLineDash([]);
+  // highway and station
+  c.strokeStyle = '#c9b88f'; c.lineWidth = 2; c.beginPath(); c.moveTo(12, Z(0)); c.lineTo(MW + 12, Z(0)); c.stroke();
+  c.fillStyle = '#c9b88f'; c.font = '11px "Courier New",monospace'; c.fillText('US 66', 18, Z(0) - 5);
+  c.fillRect(X(0) - 3, Z(0) - 3, 6, 6); c.fillText('SUNSET SERVICE', X(0) + 6, Z(0) - 8);
+  c.strokeStyle = '#d9b46a'; c.beginPath(); c.arc(X(hx), Z(hz), 5, 0, 7); c.stroke(); c.fillStyle = '#d9b46a'; c.fillText('SAUCER HOME', X(hx) + 8, Z(hz) + 18);
+  // asteroid, deck, runway
+  c.fillStyle = 'rgba(120,100,140,.35)'; c.strokeStyle = '#a58ac4'; c.lineWidth = 1.5; c.beginPath(); c.arc(X(SP.ax), Z(SP.az), SP.aR * s, 0, 7); c.fill(); c.stroke();
+  c.strokeStyle = '#7fd6c9'; c.beginPath(); c.arc(X(SP.ax), Z(SP.az), SP.plR * s, 0, 7); c.stroke();
+  c.lineWidth = Math.max(2, 14 * s); c.strokeStyle = '#7fd6c9'; c.beginPath(); c.moveTo(X(SP.ax - 200), Z(SP.az + 99)); c.lineTo(X(SP.ax + 120), Z(SP.az + 99)); c.stroke();
+  c.fillStyle = '#7fd6c9'; c.font = 'bold 12px "Courier New",monospace'; c.fillText('DRIFT OUTPOST', X(SP.ax) + SP.aR * s + 6, Z(SP.az) - 4);
+  c.font = '11px "Courier New",monospace'; c.fillText('RWY 07/25', X(SP.ax) + SP.aR * s + 6, Z(SP.az) + 10);
+  // ship, heading and line to the outpost
+  Nn.getWorldDirection(ufoD);
+  c.strokeStyle = 'rgba(255,215,160,.6)'; c.lineWidth = 1; c.setLineDash([4, 5]); c.beginPath(); c.moveTo(X(p.x), Z(p.z)); c.lineTo(X(SP.ax), Z(SP.az)); c.stroke(); c.setLineDash([]);
+  c.save(); c.translate(X(p.x), Z(p.z)); c.rotate(Math.atan2(ufoD.x, -ufoD.z));
+  c.fillStyle = '#ffd7a0'; c.beginPath(); c.moveTo(0, -11); c.lineTo(7, 8); c.lineTo(-7, 8); c.closePath(); c.fill(); c.restore();
+  c.restore();
+  // side strip: altitude
+  const sx = MW + 36, y0 = 70, y1 = H - 40, maxA = 8000, A = a => y1 - Math.min(1, a / maxA) * (y1 - y0);
+  c.strokeStyle = '#c9b88f'; c.lineWidth = 2; c.beginPath(); c.moveTo(sx, y0); c.lineTo(sx, y1); c.stroke();
+  c.font = '11px "Courier New",monospace'; c.fillStyle = '#c9b88f'; c.textAlign = 'left';
+  for (let a = 0; a <= maxA; a += 2000) { c.fillText(a / 1000 + ' km', sx + 8, A(a) + 4); c.beginPath(); c.moveTo(sx - 4, A(a)); c.lineTo(sx + 4, A(a)); c.stroke(); }
+  c.fillStyle = '#6b8bb0'; c.fillText('sky black', sx + 8, A(3200) + 4);
+  c.strokeStyle = '#6b8bb0'; c.setLineDash([3, 4]); c.beginPath(); c.moveTo(sx - 14, A(3200)); c.lineTo(sx + 4, A(3200)); c.stroke(); c.setLineDash([]);
+  c.fillStyle = '#7fd6c9'; c.fillText('deck', sx + 8, A(SP.py) + 4);
+  c.fillStyle = '#ffd7a0'; c.beginPath(); c.moveTo(sx - 12, A(p.y)); c.lineTo(sx - 3, A(p.y) - 5); c.lineTo(sx - 3, A(p.y) + 5); c.closePath(); c.fill();
+  // title and readout
+  c.fillStyle = '#e8d6b0'; c.font = 'bold 16px Georgia,serif'; c.textAlign = 'left';
+  c.fillText('STAR CHART  ·  LOCAL', 16, 26);
+  const dist = Math.hypot(SP.ax - p.x, SP.az - p.z), dy = SP.py - p.y;
+  c.font = '12px "Courier New",monospace'; c.textAlign = 'right';
+  c.fillText('OUTPOST ' + (dist / 1000).toFixed(1) + ' km  ' + (dy >= 0 ? 'UP ' : 'DOWN ') + Math.round(Math.abs(dy)) + ' m   ·   R close   ·   Y warp', W - 12, 26);
+}
+const ufoMarker = {el: null};
+function ufoMarkerUpdate() {
+  if (!ufoMarker.el) {
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;left:0;top:0;z-index:7;pointer-events:none;display:none;color:#ffe0b0;font:bold 12px "Courier New",monospace;letter-spacing:1px;text-shadow:0 0 6px rgba(0,0,0,.9);transform:translate(-50%,-50%);text-align:center';
+    document.body.appendChild(el); ufoMarker.el = el;
+  }
+  const p = Nn.position, dx = SP.ax - p.x, dz = SP.az - p.z, dy = SP.py + 30 - p.y, dist = Math.hypot(dx, dy, dz);
+  const show = ufo.flying && active && dist > 450 && !ufoChart.open;
+  if (!show) { ufoMarker.el.style.display = 'none'; return; }
+  const v = ufoSpDummy.set(SP.ax, SP.py + 30, SP.az).project(Nn);
+  let x = v.x, y = v.y, arrow = '◆';
+  if (v.z > 1) { x = -x; y = -y; }
+  const off = v.z > 1 || Math.abs(x) > .9 || Math.abs(y) > .85;
+  if (off) {
+    const m = Math.max(Math.abs(x), Math.abs(y), .001); x = x / m * .88; y = y / m * .82;
+    arrow = Math.abs(x) > Math.abs(y) * 1.2 ? (x > 0 ? '▶' : '◀') : (y > 0 ? '▲' : '▼');
+  }
+  ufoMarker.el.style.display = 'block';
+  ufoMarker.el.style.left = ((x * .5 + .5) * innerWidth) + 'px';
+  ufoMarker.el.style.top = ((-y * .5 + .5) * innerHeight) + 'px';
+  ufoMarker.el.style.opacity = String(Math.min(.85, (dist - 450) / 600));
+  ufoMarker.el.innerHTML = arrow + '<br>DRIFT OUTPOST · ' + (dist > 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m');
+}
+
+// ---- fast travel -----------------------------------------------------------------
+const UFO_WARPS = [
+  {special: 'home', name: 'THE LITTLE SAUCER', route: 'SIDE ROAD', mile: 'desert'},
+  {special: 'sky', name: 'ABOVE THE DESERT', route: 'FLIGHT', mile: '1.5 km up'},
+  {special: 'orbit', name: 'DRIFT OUTPOST · ORBIT VIEW', route: 'FLIGHT', mile: 'above the deck'},
+  {special: 'runway', name: 'DRIFT OUTPOST · RUNWAY 07', route: 'DECK', mile: 'threshold'},
+  {special: 'pumps', name: 'DRIFT OUTPOST · ORBIT GAS', route: 'DECK', mile: 'parking ring'},
+];
+function ufoWarpList() { return UFO_WARPS.map(w => Object.assign({}, w)); }
+function ufoWarp(id) {
+  const S = SP, wasFlying = ufo.flying;
+  let x, y, z, yaw, land = true;
+  if (id === 'home') { x = UFO_HOME.x; z = UFO_HOME.z; y = os(x, z) + .97; yaw = Math.PI / 2; }
+  else if (id === 'sky') { x = UFO_HOME.x; z = UFO_HOME.z; y = 1500; yaw = Math.PI / 2; land = false; }
+  else if (id === 'orbit') { x = S.ax - 420; z = S.az + 520; y = S.py + 240; yaw = Math.atan2(-(S.ax - x), -(S.az - z)); land = false; }
+  else if (id === 'runway') { x = S.ax - 192; z = S.az + 99; y = S.py + .97; yaw = -Math.PI / 2; }
+  else { x = S.ax - 40; z = S.az + 77; y = S.py + .97; yaw = 0; }
+  if (y > 3200) { spBuild(); ufoSetSpace(true); } else { ufoSetSpace(false); recenterDesert(x, z, Infinity); }
+  ufoShip.position.set(x, y, z); ufoShip.rotation.set(0, yaw, 0); ufoHull.rotation.set(0, 0, 0);
+  ufo.vel.set(0, 0, 0); ufo.speed = 0; ufo.landed = land;
+  const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+  if (wasFlying || !land) {
+    if (!wasFlying) { ufo.flying = true; ufoAudioStart(); }
+    inspection = null; Nn.fov = 78; Nn.updateProjectionMatrix();
+    ufoPlaceCamera();
+    Nn.lookAt(Nn.position.x + fx * 10, Nn.position.y - (land ? .3 : 1.5), Nn.position.z + fz * 10);
+  } else {
+    const px = x + Math.cos(yaw) * 3.1, pz = z - Math.sin(yaw) * 3.1;
+    br = 0; oo = true; inspection = null; Nn.fov = 65; Nn.updateProjectionMatrix();
+    Nn.position.set(px, ufoGroundAt(px, pz) + jm, pz);
+    Nn.lookAt(x, Nn.position.y - .3, z);
+  }
+}
+function ufoWarpWithFade(stop) {
+  closeTravelModal(true);
+  travelBusy = true;
+  const fade = document.getElementById('rest-fade'), caption = document.getElementById('travel-caption');
+  if (caption) { caption.textContent = stop.name; caption.style.opacity = '1'; }
+  if (fade) fade.style.opacity = '1';
+  if (audio.ctx && audio.master) audio.master.gain.setTargetAtTime(0.05, audio.ctx.currentTime, 0.12);
+  setTimeout(() => ufoWarp(stop.special), 560);
+  setTimeout(() => {
+    if (fade) fade.style.opacity = '0';
+    if (caption) caption.style.opacity = '0';
+    if (audio.ctx && audio.master && !audio.muted) audio.master.gain.setTargetAtTime((typeof gameSettings !== 'undefined' ? gameSettings.masterVolume : 0.85) * 0.9, audio.ctx.currentTime + 0.2, 0.25);
+    travelBusy = false;
+    if (travelPointerLockedBefore && !cursorMode) { try { wr.lock(); } catch (e) {} }
+  }, 1500);
+}
+
 let ufoHidden = [], ufoEnterT = 0;
 const ufoKeep = new Set();
 function ufoSetSpace(on) {
@@ -15013,6 +15345,11 @@ function ufoFrame(dt, t) {
     const dx = Nn.position.x - SP.ax, dz = Nn.position.z - SP.az, d = Math.hypot(dx, dz);
     if (d > 196 && Nn.position.y < SP.py + 6) { Nn.position.x = SP.ax + dx / d * 196; Nn.position.z = SP.az + dz / d * 196; }
   }
+  ufoApplyLights(dt);
+  ufoDrawDash(t);
+  spRainUpdate(t, dt);
+  ufoDrawChart(t);
+  ufoMarkerUpdate();
   ufoUpdateDust();
   ufoAudioUpdate();
   // Cozy glow reads best from outside at night: the cabin lamp never dims.
@@ -15169,7 +15506,7 @@ addEventListener('keydown',event=>{
     return;
   }
   if(travelBusy) return;
-  if(key==='Backquote' && !ufo.flying) { openTravelModal(true); event.preventDefault(); return; }
+  if(key==='Backquote') { openTravelModal(true); event.preventDefault(); return; }
   if(key==='KeyO') { openSettingsModal(); event.preventDefault(); return; }
   if(restModalActive) {
     if(key==='Escape') { closeRestModal(); event.preventDefault(); return; }
@@ -15204,13 +15541,15 @@ addEventListener('keydown',event=>{
   if(ufo.flying){
     if(key>='Digit1'&&key<='Digit6'){ufo.tier=+key.slice(5)-1;return;}
     if(key==='KeyF'){ufoExit();return;}
+    if(key==='KeyL'){ufoToggleLights();return;}
   }
+  if(key==='KeyR' && (ufo.flying||ufoSpace)){ufoToggleChart();return;}
   if(key==='KeyE')findInteractionTarget()?.action();
   if(key==='KeyT') {
     if(inspection==='motelBed') { openRestModal('bed'); return; }
     if(seated && carSpeed===0 && cabinBlanketOpen && (parkingBrake || gearState==='P')) { openRestModal('coupe'); return; }
   }
-  if(key==='KeyY' && seated)openTravelModal(false);
+  if(key==='KeyY' && (seated||ufo.flying||ufoSpace))openTravelModal(false);
   if(key==='KeyC' && seated)toggleDoor(driverDoor);
   if(key==='KeyF')leaveCar();
   if(key==='KeyR' && seated && carSpeed===0 && glovebox.engaged)setRoadMapOpen(!roadMap.visible);
@@ -15685,7 +16024,7 @@ if(k>.85&&rainFactor<0.1&&t>audio.nextChirp){audio.nextChirp=t+Dn(6,18);insectCh
     .52+Math.sin(angle)*radius*.5+.10*Math.sin(angle*11.7));
   gasSign.localToWorld(gasMothPoint).toArray(mothPos,mi*3);
 }mothGeo.attributes.position.needsUpdate=!0;moths.material.opacity=.55*Math.max(0,(k-.35)/.65);updateTumbleweed(i,t);renderInteractionMirror(i);ufoLateAudio();renderWithInspection()}document.getElementById("app")._game = {
-  ufo, ufoShip, spGroup, SP, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt,
+  ufo, ufoShip, spGroup, SP, spRain, ufoLamp, ufoWarp, ufoToggleLights, UFO_DOME, ufoBoard, ufoExit, ufoHome, spBuild, ufoSetSpace, UFO_HOME, ufoGroundAt,
   Nt, Nn, coupe, os, nwRoadZ, nwRoadSlopeZ, nwRoadY, nwSFromX, nwXFromS, carSurfaceAt,
   ROUTE_CATALOG, throughTurnout, sitInCar, leaveCar, setRoadMapOpen, driveCar, groundCoupe, recenterDesert,
   updateTelephoneLine, fn, driverDoor, glovebox, roadMap,
