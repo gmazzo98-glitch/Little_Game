@@ -4694,7 +4694,7 @@ function toggleMute(){if(!audio.ctx)return;audio.muted=!audio.muted;applyMasterV
 function gasTick(){if(!audio.tickGain||audio.ctx.state!=="running")return;var dx=Nn.position.x-$n.position.x,dy=Nn.position.y-$n.position.y,dz=Nn.position.z-$n.position.z;if(dx*dx+dy*dy+dz*dz>28*28)return;var t=audio.ctx.currentTime,g=audio.tickGain.gain;g.cancelScheduledValues(t);g.setValueAtTime(.09,t);g.exponentialRampToValueAtTime(1e-4,t+.05);g.setValueAtTime(.06,t+.11);g.exponentialRampToValueAtTime(1e-4,t+.18)}
 function insectChirp(at){if(!audio.ctx||audio.ctx.state!=="running")return;var c=audio.ctx,o=c.createOscillator();o.type="triangle";o.frequency.value=3900+Math.random()*700;var g=c.createGain();g.gain.value=0;o.connect(g);g.connect(audio.insectGain);var t=at;for(var p=0;p<3;p++){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.012,t+.012);g.gain.linearRampToValueAtTime(0,t+.05);t+=.09}o.start(at);o.stop(t+.1)}
 // Synthesized footsteps: sand scuff, asphalt thud, harder canopy concrete, interior floors share the asphalt voice, timber bridge.
-function footstep(surf){if(!audio.ctx||audio.ctx.state!=="running")return;if(surf===3)surf=1;var c=audio.ctx,s=c.createBufferSource();s.buffer=audio.noiseBuf;s.playbackRate.value=.65+Math.random()*.3;var f=c.createBiquadFilter();var isGrass = surf === 5, isGravel = surf === 6, isMound = surf === 7, isBoards = surf === 8;f.type=(isGrass||isGravel||isBoards||surf===1||surf===2)?"bandpass":"lowpass";f.frequency.value=isGrass?820+Math.random()*150:(isGravel?680+Math.random()*120:(isMound?230+Math.random()*60:(isBoards?290+Math.random()*80:(surf===2?460+Math.random()*120:(surf===4?320+Math.random()*80:(surf?380+Math.random()*120:200+Math.random()*60))))));f.Q.value=isGravel?1.35:(isGrass?0.65:(isBoards?1.5:(surf===2?1.1:(surf===4?1.4:(surf?.8:.5)))));var g=c.createGain();var t=c.currentTime,peak=(surf===2?.058:(surf===4?.048:(surf?.052:.038)))+Math.random()*.012,atk=surf===2?.004:.006;g.gain.setValueAtTime(1e-4,t);g.gain.linearRampToValueAtTime(peak,t+atk);g.gain.exponentialRampToValueAtTime(1e-4,t+.1);s.connect(f);f.connect(g);var th=c.createOscillator();th.type="triangle";th.frequency.setValueAtTime(surf===4?88:(surf?72:60),t);th.frequency.exponentialRampToValueAtTime(surf===4?52:(surf?46:42),t+.06);var tg2=c.createGain();tg2.gain.setValueAtTime(1e-4,t);tg2.gain.linearRampToValueAtTime(surf===2?.055:(surf===4?.050:(surf?.045:.028)),t+.004);tg2.gain.exponentialRampToValueAtTime(1e-4,t+.075);th.connect(tg2);var mix=c.createGain();g.connect(mix);tg2.connect(mix);var out=mix;if(c.createStereoPanner){var p=c.createStereoPanner();audio.stepSide=1-audio.stepSide;p.pan.value=(audio.stepSide?.38:-.38)+Dn(-.08,.08);mix.connect(p);out=p}out.connect(audio.master);th.start(t);th.stop(t+.09);s.start(t,Math.random()*1.5,.15);s.stop(t+.17)}
+function footstep(surf){if(!audio.ctx||audio.ctx.state!=="running")return;if(surf===3)surf=1;var c=audio.ctx,s=c.createBufferSource();s.buffer=audio.noiseBuf;s.playbackRate.value=.65+Math.random()*.3;var f=c.createBiquadFilter();var isGrass = surf === 5, isGravel = surf === 6, isMound = surf === 7, isBoards = surf === 8, isDeck = surf === 9;f.type=(isGrass||isGravel||isBoards||isDeck||surf===1||surf===2)?"bandpass":"lowpass";f.frequency.value=isGrass?820+Math.random()*150:(isGravel?680+Math.random()*120:(isMound?230+Math.random()*60:(isBoards?290+Math.random()*80:(isDeck?520+Math.random()*80:(surf===2?460+Math.random()*120:(surf===4?320+Math.random()*80:(surf?380+Math.random()*120:200+Math.random()*60)))))));f.Q.value=isGravel?1.35:(isGrass?0.65:(isBoards?1.5:(isDeck?1.6:(surf===2?1.1:(surf===4?1.4:(surf?.8:.5))))));var g=c.createGain();var t=c.currentTime,peak=(isDeck?.048:(surf===2?.058:(surf===4?.048:(surf?.052:.038))))+Math.random()*.012,atk=(isDeck||surf===2)?.004:.006;g.gain.setValueAtTime(1e-4,t);g.gain.linearRampToValueAtTime(peak,t+atk);g.gain.exponentialRampToValueAtTime(1e-4,t+.1);s.connect(f);f.connect(g);var th=c.createOscillator();th.type="triangle";th.frequency.setValueAtTime(isDeck?104:(surf===4?88:(surf?72:60)),t);th.frequency.exponentialRampToValueAtTime(isDeck?54:(surf===4?52:(surf?46:42)),t+.06);var tg2=c.createGain();tg2.gain.setValueAtTime(1e-4,t);tg2.gain.linearRampToValueAtTime(isDeck?.052:(surf===2?.055:(surf===4?.050:(surf?.045:.028))),t+.004);tg2.gain.exponentialRampToValueAtTime(1e-4,t+.075);th.connect(tg2);var mix=c.createGain();g.connect(mix);tg2.connect(mix);var out=mix;if(c.createStereoPanner){var p=c.createStereoPanner();audio.stepSide=1-audio.stepSide;p.pan.value=(audio.stepSide?.38:-.38)+Dn(-.08,.08);mix.connect(p);out=p}out.connect(audio.master);th.start(t);th.stop(t+.09);s.start(t,Math.random()*1.5,.15);s.stop(t+.17)}
 function onAsphalt(){
   const {x,z}=Nn.position;
   if (Math.abs(z)<=3.5 || forecourt.some(([x0,z0,x1,z1])=>x>=x0 && x<=x1 && z>=z0 && z<=z1)) return true;
@@ -4712,8 +4712,9 @@ function fernShelterAt(x, z) {
   if (across < 4.4 && depth >= 6.5 && depth <= 12.2) return 2;
   return 0;
 }
-// 0 sand/dirt trail, 1 asphalt, 2 canopy concrete, 3 office/room/counter floor, 4 timber bridge
+// 0 sand/dirt trail, 1 asphalt, 2 canopy concrete, 3 office/room/counter floor, 4 timber bridge, 9 space outpost deck
 function footSurface(){
+  if (typeof ufoSpace !== 'undefined' && ufoSpace) return 9;
   const {x,z}=Nn.position;
   if(Math.abs(x)<5.7 && z>-20.4 && z<-12.9)return 3;
   if(Math.abs(x-(-4600-1.8))<3.6 && z>-19.2 && z<-13.2)return 3;
@@ -8986,7 +8987,7 @@ const interactionPlate=(parent,position,size,material)=>{
 const interactionSounds={
   metal:[490,.09,.035], wood:[135,.13,.065], bell:[1120,.62,.038],
   paper:[930,.11,.018], rubber:[85,.09,.034], glass:[1830,.15,.022],
-  latch:[270,.07,.055], grit:[240,.24,.028]
+  latch:[270,.07,.055], grit:[240,.24,.028], click:[1420,.035,.045]
 };
 function playInteractionSound(name) {
   const ctx=audio.ctx;
@@ -11637,6 +11638,12 @@ function renderTravelModal() {
     : `WESTERN MOTOR GUIDE  •  RIDE IT OUT AT 50  •  TANK ${Math.round(fuelLevel * 100)}%`;
   const title = document.getElementById('travel-title');
   if (title) title.textContent = travelSpaceMode ? 'FLIGHT COMPUTER' : travelDevMode ? 'WARP TO…' : 'TRIP CARD';
+  const hint = document.getElementById('travel-hint');
+  if (hint) {
+    hint.textContent = travelSpaceMode
+      ? 'UP / DOWN choose  ·  ENTER fly  ·  Y or ` flight computer  ·  ESC cancel'
+      : 'UP / DOWN choose  ·  ENTER go  ·  Y trip card in the parked coupe  ·  ` dev warp  ·  ESC cancel';
+  }
   const timeRow = document.getElementById('travel-time-row');
   if (timeRow) timeRow.style.display = travelDevMode ? 'flex' : 'none';
   const selected = listEl.children[travelSelected];
@@ -11690,6 +11697,10 @@ function travelPlaceCoupe(s) {
   coupe.updateMatrixWorld(true);
 }
 function travelTo(stop, dev) {
+  if (typeof ufoSpace !== 'undefined' && ufoSpace) {
+    ufoSetSpace(false);
+    if (ufo.flying) { ufo.flying = false; ufoAudioStop(); }
+  }
   const cost = travelCost(stop);
   const wasSeated = seated;
   travelPlaceCoupe(stop.s);
@@ -14285,6 +14296,15 @@ function ufoCanvasTex(w, h, painter) {
   painter(cv.getContext('2d'), w, h);
   const tx = new qt(cv); tx.colorSpace = 'srgb'; tx.needsUpdate = true; return tx;
 }
+const ufoStarDiscTex = ufoCanvasTex(32, 32, (c, w, h) => {
+  const g = c.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.7, 'rgba(255,255,255,0.22)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+});
 // Neon-lettered sign: dark board with glowing text.
 function ufoSign(parent, text, w, h, color, x, y, z, ry = 0, sub = '') {
   const tex = ufoCanvasTex(512, Math.round(512 * h / w), (c, cw, ch) => {
@@ -14298,6 +14318,15 @@ function ufoSign(parent, text, w, h, color, x, y, z, ry = 0, sub = '') {
     c.shadowBlur = 26; c.font = 'bold ' + fs0 + 'px "Arial Black",Impact,sans-serif';
     c.fillStyle = color; c.fillText(text, cw / 2, ch * (sub ? .4 : .52));
     c.shadowBlur = 8; c.fillStyle = '#fff'; c.fillText(text, cw / 2, ch * (sub ? .4 : .52));
+    if (text === 'ORBIT GAS') {
+      // Trace of care: repaired neon letter ('I' in ORBIT has a splice sleeve joint and jumper wire)
+      const baseW = c.measureText('ORB').width, iW = c.measureText('I').width, fullW = c.measureText('ORBIT GAS').width;
+      const ix = cw / 2 - fullW / 2 + baseW + iW / 2, iy = ch * .4;
+      c.save(); c.shadowBlur = 0;
+      c.strokeStyle = '#0a0610'; c.lineWidth = 6; c.beginPath(); c.moveTo(ix - 7, iy); c.lineTo(ix + 7, iy); c.stroke();
+      c.strokeStyle = '#6efbff'; c.lineWidth = 2.5; c.beginPath(); c.arc(ix + 6, iy, 5, -Math.PI / 2, Math.PI / 2); c.stroke();
+      c.restore();
+    }
     if (sub) { c.shadowBlur = 14; c.fillStyle = '#ffe7a8'; let f2 = Math.round(ch * .18); c.font = 'bold ' + f2 + 'px Arial,sans-serif'; const w2 = c.measureText(sub).width; if (w2 > cw * .86) { f2 = Math.floor(f2 * cw * .86 / w2); c.font = 'bold ' + f2 + 'px Arial,sans-serif'; } c.fillText(sub, cw / 2, ch * .78); }
   });
   const m = new dt(new ba(w, h), new wi({map: tex, side: 2, fog: false}));
@@ -14307,19 +14336,22 @@ function ufoSign(parent, text, w, h, color, x, y, z, ry = 0, sub = '') {
 // ---- materials --------------------------------------------------------------
 // Palette rule (SPACE_MOOD.md): graphite, brushed brass, tan leather, cream, one muted teal. Amber is the only warm light.
 const ufoM = {
-  hull: new ji({color: 0x93a39f, roughness: .5, metalness: .35, emissive: 0x141b1a, emissiveIntensity: .7}),
-  hullDark: new ji({color: 0x4a5755, roughness: .6, metalness: .3, emissive: 0x0d1211, emissiveIntensity: .7}),
-  patch: new ji({color: 0x8d6b45, roughness: .7, metalness: .2, emissive: 0x1c130b, emissiveIntensity: .5}),
-  trim: new ji({color: 0xc8cdc6, roughness: .35, metalness: .5, emissive: 0x1c2020, emissiveIntensity: .5}),
+  hull: new ji({color: 0x93a39f, roughness: .56, metalness: .42, emissive: 0x141b1a, emissiveIntensity: .65}),
+  hullDark: new ji({color: 0x3d4947, roughness: .65, metalness: .35, emissive: 0x090e0d, emissiveIntensity: .65}),
+  patch: new ji({color: 0x8a663f, roughness: .68, metalness: .25, emissive: 0x1c130b, emissiveIntensity: .5}),
+  trim: new ji({color: 0xc4c9c2, roughness: .35, metalness: .55, emissive: 0x181c1c, emissiveIntensity: .5}),
   brass: new ji({color: 0xa88650, roughness: .4, metalness: .6, emissive: 0x1a1208, emissiveIntensity: .3}),
   glass: new wi({color: 0xd6fbff, transparent: true, opacity: .022, depthWrite: false, side: 1, fog: false}),
   floor: new ji({color: 0x302a26, roughness: .9, emissive: 0x0c0a09, emissiveIntensity: .6}),
   seat: new ji({color: 0x7a5a42, roughness: .75, emissive: 0x2a1c12, emissiveIntensity: .9}),
+  seatWorn: new ji({color: 0x9b7554, roughness: .45, metalness: .12, emissive: 0x24160c, emissiveIntensity: .8}),
   seatDark: new ji({color: 0x3d2c22, roughness: .85, emissive: 0x0c0806, emissiveIntensity: .5}),
   cream: new ji({color: 0xd9ceb4, roughness: .7, emissive: 0x2a251a, emissiveIntensity: .4}),
   dash: new ji({color: 0x262b2d, roughness: .55, metalness: .3, emissive: 0x0a0d0e, emissiveIntensity: .7}),
   wool: new ji({color: 0x34383a, roughness: 1, emissive: 0x0b0c0d, emissiveIntensity: .5}),
   blanket: new ji({color: 0x6d776c, roughness: 1, emissive: 0x13160f, emissiveIntensity: .5}),
+  tape: new ji({color: 0xd6cbb0, roughness: .85, emissive: 0x181610, emissiveIntensity: .4}),
+  mugStain: new ji({color: 0x24180e, roughness: .95, emissive: 0x0a0604, emissiveIntensity: .6}),
   bulb: new wi({color: 0xffd7a0}),
   warm: new wi({color: 0xffc477}), hot: new wi({color: 0xfff1cf}),
   cyan: new wi({color: 0x69f4ff}), pink: new wi({color: 0xff5fb8}), green: new wi({color: 0x58ffa6}),
@@ -14352,7 +14384,18 @@ function ufoGaugeCanvas(w, h) {
   ufoAdd(ufoHull, ufoTubeGeo(ell(1.76, 2.29, .02), .03, 8, true), ufoM.brass);
   ufoAdd(ufoHull, ufoTubeGeo(ell(1.3, 1.69, .32), .012, 6, true), ufoM.hullDark);
   ufoAdd(ufoHull, ufoTubeGeo(ell(1.62, 2.1, -.36), .012, 6, true), ufoM.hullDark);
-  ufoAdd(ufoHull, ufoLatheGeo([[0, -.72], [1.0, -.7], [1.02, -.62], [0, -.62]], 48), ufoM.hullDark).scale.set(1, 1, 1.3);
+  // Four radial panel seams across the hull
+  for (const an of [Math.PI * .25, Math.PI * .75, Math.PI * 1.25, Math.PI * 1.75]) {
+    const sn = Math.sin(an), cn = Math.cos(an);
+    const seam = [[cn * .4, .42, sn * .4 * 1.3], [cn * .9, .38, sn * .9 * 1.3], [cn * 1.45, .25, sn * 1.45 * 1.3], [cn * 1.72, .03, sn * 1.72 * 1.3]];
+    ufoAdd(ufoHull, ufoTubeGeo(seam, .008, 4), ufoM.hullDark);
+  }
+  // Underside grav-plate core: concentric stepped rings, radiator slots and inspection hatch
+  ufoAdd(ufoHull, ufoLatheGeo([[0, -.72], [.42, -.71], [.46, -.66], [.78, -.65], [.82, -.63], [1.02, -.62], [0, -.62]], 48), ufoM.hullDark).scale.set(1, 1, 1.3);
+  ufoAdd(ufoHull, ufoTubeGeo(ell(.44, .44 * 1.3, -.69, 40), .018, 6, true), ufoM.brass);
+  ufoAdd(ufoHull, ufoTubeGeo(ell(.8, .8 * 1.3, -.64, 48), .014, 6, true), ufoM.trim);
+  ufoBox(ufoHull, .28, .015, .36, ufoM.brass, 0, -.705, -.45);  // ventral access plate
+  for (const [hx, hz] of [[-.1, -.58], [.1, -.58], [-.1, -.32], [.1, -.32]]) ufoBall(ufoHull, .012, ufoM.trim, hx, -.70, hz);
   for (let i = 0; i < 20; i++) {
     const a = i / 20 * Math.PI * 2;
     ufoRimBulbs.push(ufoBall(ufoHull, .045, ufoM.warm, Math.cos(a) * 1.79, -.04, Math.sin(a) * 2.33));
@@ -14367,13 +14410,18 @@ function ufoGaugeCanvas(w, h) {
     const nac = ufoAdd(ufoHull, ufoLatheGeo([[0, -.9], [.2, -.86], [.28, -.55], [.3, -.3], [.3, .6], [.22, .88], [0, .95]], 28), ufoM.hull, sx * 1.62, .08, .95);
     nac.rotation.x = Math.PI / 2;
     ufoAdd(ufoHull, ufoTubeGeo(ufoCircle(sx * 1.62, .08, .38, .31, 'z', 28), .02, 6, true), ufoM.brass);
+    ufoAdd(ufoHull, ufoTubeGeo(ufoCircle(sx * 1.62, .08, 1.82, .24, 'z', 24), .015, 6, true), ufoM.trim); // titanium exhaust baffle ring
     ufoBall(ufoHull, .2, ufoM.cyan, sx * 1.62, .08, 1.9, 1, 1, .5);
     const fl = ufoAdd(ufoHull, ufoLatheGeo([[.17, 0], [.12, .6], [.05, 1.4], [0, 1.9]], 12), ufoM.flame, sx * 1.62, .08, 1.9);
     fl.rotation.x = Math.PI / 2; ufoFlames.push(fl);
     ufoBox(ufoHull, .5, .06, .5, ufoM.hullDark, sx * 1.4, .2, .9);
   }
+  // Main rear engine: tapered cowl fairing, titanium baffle rings, cyan core and dual plumes.
   const eng = ufoAdd(ufoHull, ufoLatheGeo([[.5, -.1], [.47, .1], [.34, .34], [.0, .34]], 28), ufoM.trim, 0, .05, 2.08);
   eng.rotation.x = Math.PI / 2;
+  const engCowl = ufoAdd(ufoHull, ufoLatheGeo([[.52, -.35], [.48, 0], [.38, .4], [0, .42]], 24), ufoM.hull, 0, .14, 1.85);
+  engCowl.rotation.x = Math.PI / 2; engCowl.scale.set(1.1, 1, .7);
+  ufoAdd(ufoHull, ufoTubeGeo(ufoCircle(0, .05, 2.32, .36, 'z', 28), .018, 6, true), ufoM.trim); // outer exhaust baffle
   ufoBall(ufoHull, .3, ufoM.cyan, 0, .05, 2.4, 1, 1, .4);
   const fl = ufoAdd(ufoHull, ufoLatheGeo([[.36, 0], [.26, .9], [.1, 2.2], [0, 3.2]], 14), ufoM.flame, 0, .05, 2.4);
   fl.rotation.x = Math.PI / 2; ufoFlames.push(fl);
@@ -14383,15 +14431,25 @@ function ufoGaugeCanvas(w, h) {
   for (const sx of [-1, 1]) { const f = ufoBox(ufoHull, .07, .6, .8, ufoM.hullDark, sx * .85, .62, 1.6); f.rotation.z = -sx * .3; }
   ufoBox(ufoHull, .03, .6, .03, ufoM.trim, -.55, .66, 1.25).rotation.z = .2;
   ufoBlink.push(ufoBall(ufoHull, .04, ufoM.red, -.62, .96, 1.25));
-  ufoBox(ufoHull, .62, .02, .42, ufoM.patch, .85, .31, .5).rotation.y = .3;
-  for (const [x, z] of [[.6, .35], [1.1, .35], [.6, .65], [1.1, .65]]) ufoBall(ufoHull, .02, ufoM.trim, x, .33, z);
+  // One repair patch: curved hand-fitted plate with 8 perimeter rivets and subtle gasket border
+  const patchP = ufoBox(ufoHull, .62, .022, .42, ufoM.patch, .85, .31, .5); patchP.rotation.y = .3;
+  ufoBox(ufoHull, .65, .008, .45, ufoM.hullDark, .85, .305, .5).rotation.y = .3; // gasket seam
+  const rCos = Math.cos(.3), rSin = Math.sin(.3);
+  for (const [lx, lz] of [[-.27, -.17], [0, -.17], [.27, -.17], [.27, 0], [.27, .17], [0, .17], [-.27, .17], [-.27, 0]]) {
+    const wx = .85 + lx * rCos + lz * rSin, wz = .5 - lx * rSin + lz * rCos;
+    ufoBall(ufoHull, .016, ufoM.brass, wx, .326, wz);
+  }
   ufoBox(ufoHull, .05, .78, .86, ufoM.hullDark, 1.69, .0, .25);
   ufoBox(ufoHull, .06, .72, .02, ufoM.warm, 1.71, .0, -.2);
   ufoBox(ufoHull, .06, .72, .02, ufoM.warm, 1.71, .0, .7);
   ufoBox(ufoHull, .09, .04, .12, ufoM.brass, 1.73, .0, .62);
+  // Articulated landing gear: upper strut, knee knuckle, hydraulic piston and wide footpad
   for (const [x, z] of [[-1.0, -.9], [1.0, -.9], [-1.0, 1.1], [1.0, 1.1]]) {
-    const leg = ufoBox(ufoHull, .09, .5, .09, ufoM.trim, x * .94, -.74, z); leg.rotation.z = -x * .22;
-    ufoAdd(ufoHull, ufoLatheGeo([[0, -.03], [.24, -.03], [.26, 0], [.0, .0]], 18), ufoM.hullDark, x * 1.02, -.96, z);
+    const leg = ufoBox(ufoHull, .09, .42, .09, ufoM.hullDark, x * .94, -.68, z); leg.rotation.z = -x * .22;
+    ufoBall(ufoHull, .065, ufoM.trim, x * .98, -.84, z); // knee joint knuckle
+    ufoBox(ufoHull, .055, .24, .055, ufoM.trim, x * .99, -.92, z); // hydraulic piston
+    ufoAdd(ufoHull, ufoLatheGeo([[0, -.03], [.24, -.03], [.26, 0], [0, .01]], 20), ufoM.hullDark, x * 1.01, -.96, z); // beveled footpad
+    ufoTubeGeo(ufoCircle(x * 1.01, -.955, z, .18, 'y', 16), .01, 4, true);
   }
 
   // ---- canopy ----
@@ -14417,6 +14475,8 @@ function ufoGaugeCanvas(w, h) {
   const seat = (sx, z, mat) => {
     ufoBox(ufoCabin, .34, .3, .34, ufoM.hullDark, sx, FLOOR + .15, z);           // pedestal
     ufoBox(ufoCabin, .58, .13, .56, mat, sx, FLOOR + .36, z);                    // cushion
+    // Trace of care: polished outer leather edge where pilot slides in
+    if (sx < 0) ufoBox(ufoCabin, .03, .07, .50, ufoM.seatWorn, sx - .275, FLOOR + .375, z);
     const back = ufoBox(ufoCabin, .56, .6, .12, mat, sx, FLOOR + .72, z + .34); back.rotation.x = .12;
     ufoBall(ufoCabin, .14, mat, sx, FLOOR + 1.05, z + .38, 1.2, .8, .6);        // headrest
     for (const s2 of [-1, 1]) ufoBox(ufoCabin, .07, .16, .44, ufoM.seatDark, sx + s2 * .33, FLOOR + .52, z + .02);   // armrests
@@ -14440,6 +14500,10 @@ function ufoGaugeCanvas(w, h) {
   let p = onDash(Math.PI + .22, 1.14, 1.012);
   const cl = ufoAdd(ufoCabin, new ba(.62, .29), clM, p[0], p[1], p[2]); cl.rotation.set(-.5, -.22, 0);
   ufoAdd(ufoCabin, ufoTubeGeo([[-.31, -.145, 0], [.31, -.145, 0], [.31, .145, 0], [-.31, .145, 0]].map(q => { const v = new P(q[0], q[1], .004).applyEuler(cl.rotation); return [p[0] + v.x, p[1] + v.y, p[2] + v.z]; }), .009, 6, true), ufoM.brass);
+  // Trace of care: paper tape strip on console beside gauge cluster with faint handwritten alignment mark
+  p = onDash(Math.PI + .42, 1.15, 1.002);
+  const tape = ufoBox(ufoCabin, .07, .002, .026, ufoM.tape, p[0], p[1] + .002, p[2]); tape.rotation.y = Math.PI + .42;
+  ufoBox(ufoCabin, .004, .003, .018, ufoM.dash, p[0], p[1] + .003, p[2]).rotation.y = Math.PI + .42; // pencil tick
   // nav screen (live): bearing and distance to the outpost
   ufoDash.nav = ufoGaugeCanvas(256, 192);
   const nvM = new ji({map: ufoDash.nav.tx, roughness: .4, emissive: 0xffffff, emissiveMap: ufoDash.nav.tx, emissiveIntensity: .9});
@@ -14454,15 +14518,21 @@ function ufoGaugeCanvas(w, h) {
   }
   p = onDash(Math.PI + .62 - .12, 1.17, 1.0);
   ufoBox(ufoCabin, .1, .014, .07, ufoM.hullDark, p[0], p[1] - .005, p[2]).rotation.y = Math.PI + .5;
-  const sw = ufoBox(ufoCabin, .045, .03, .05, ufoM.cream, p[0], p[1] + .02, p[2]);
+  ufoBox(ufoCabin, .06, .016, .06, ufoM.brass, p[0], p[1] + .006, p[2]).rotation.y = Math.PI + .5; // switch bezel
+  // The physical rocker switch: thumb wear on upper surface
+  const sw = ufoBox(ufoCabin, .044, .028, .048, ufoM.cream, p[0], p[1] + .02, p[2]);
   sw.rotation.y = Math.PI + .5;
+  ufoBox(ufoCabin, .036, .004, .022, ufoM.seatDark, p[0], p[1] + .033, p[2]).rotation.y = Math.PI + .5; // worn thumb scuff
   ufoLamp.switchMesh = sw; ufoLamp.switchBase = sw.rotation.clone();
-  // old radio, mug, brass compass
+  // old radio, mug, brass compass, and a faint coffee mug ring stain
   p = onDash(Math.PI - .85, 1.17, .995);
   ufoBox(ufoCabin, .26, .09, .1, ufoM.seatDark, p[0], p[1] + .04, p[2]).rotation.y = Math.PI - .85 + Math.PI;
   ufoBall(ufoCabin, .018, ufoM.amber, p[0] - .06, p[1] + .08, p[2] + .01);
   p = onDash(Math.PI - .62, 1.22, .99);
   ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.04, 0], [.045, .09], [.0, .09]], 14), ufoM.cream, p[0], p[1], p[2]);
+  // Trace of care: coffee ring where a mug stood
+  p = onDash(Math.PI - .72, 1.16, .995);
+  ufoAdd(ufoCabin, ufoTubeGeo(ufoCircle(p[0], p[1] + .001, p[2], .036, 'y', 20), .002, 4, true), ufoM.mugStain);
   p = onDash(Math.PI + .03, 1.2, .995);
   ufoAdd(ufoCabin, ufoLatheGeo([[0, 0], [.05, 0], [.052, .014], [0, .014]], 20), ufoM.brass, p[0], p[1], p[2]);
   // overhead: brass pendant lamp and a strand of warm bulbs
@@ -14543,7 +14613,7 @@ function spBuild() {
     sc[i * 3] = b * (t < .3 ? .7 : 1); sc[i * 3 + 1] = b * (t < .3 ? .85 : .9); sc[i * 3 + 2] = b * (t > .6 ? .75 : 1);
   }
   const sg = new It(); sg.setAttribute('position', new Et(sp, 3)); sg.setAttribute('color', new Et(sc, 3));
-  const stars = new or(sg, new Qi({size: 2.4, sizeAttenuation: false, vertexColors: true, fog: false, depthWrite: false}));
+  const stars = new or(sg, new Qi({size: 3.2, map: ufoStarDiscTex, transparent: true, alphaTest: 0.02, sizeAttenuation: false, vertexColors: true, fog: false, depthWrite: false}));
   stars.frustumCulled = false; stars.renderOrder = 6; spFollow.add(stars);
   // The sun.
   const sunP = spSun.clone().multiplyScalar(60000);
@@ -14618,7 +14688,7 @@ function spBuild() {
     const a = 1 + (r - 1) * SS + s, b = 1 + (r - 1) * SS + (s + 1) % SS, c = 1 + r * SS + s, d = 1 + r * SS + (s + 1) % SS;
     didx.push(a, b, c, b, d, c);
   }
-  const deck = ufoAdd(A, ufoGeo(dpos, didx, duv), new ji({map: pTex, roughness: 1, metalness: 0, emissive: 0xffffff, emissiveMap: pTex, emissiveIntensity: .7}), 0, SP.cut, 0);
+  const deck = ufoAdd(A, ufoGeo(dpos, didx, duv), new ji({map: pTex, roughness: 1, metalness: 0, emissive: 0xffffff, emissiveMap: pTex, emissiveIntensity: .32}), 0, SP.cut, 0);
   deck.geometry.computeVertexNormals();
   spGroup.userData.deck = deck; spGroup.userData.deckMat = deck.material;
   spBuildOutpost(spGroup, rnd);
@@ -14639,18 +14709,27 @@ function spPaintDeck(c, W, H) {
   const rr = Vm(77);
   for (let i = 0; i < 9000; i++) { c.fillStyle = 'rgba(' + (rr() < .5 ? '255,255,255' : '10,6,20') + ',' + (rr() * .05).toFixed(3) + ')'; c.fillRect(rr() * W, rr() * H, 2 + rr() * 6, 2 + rr() * 6); }
   const glow = (col, blur) => { c.shadowColor = col; c.shadowBlur = blur; c.strokeStyle = col; c.fillStyle = col; };
-  // faint hex pavers on the aprons
+  // faint hex pavers on the aprons (toned down so they do not glow harshly at grazing angles)
   const hexPatch = (x0, z0, x1, z1, col) => {
     c.save(); c.beginPath(); c.rect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S); c.clip();
-    c.fillStyle = 'rgba(70,56,100,.55)'; c.fillRect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S);
-    c.strokeStyle = col; c.lineWidth = 1.2; c.globalAlpha = .26;
+    c.fillStyle = 'rgba(38,28,54,.45)'; c.fillRect(X(x0), Z(z0), (x1 - x0) * S, (z1 - z0) * S);
+    c.strokeStyle = col; c.lineWidth = 1.0; c.globalAlpha = .11;
     const q = 2.6 * S;
     for (let yy = Z(z0); yy < Z(z1); yy += q * .87) for (let xx = X(x0) + ((Math.round(yy / (q * .87)) % 2) ? q / 2 : 0); xx < X(x1); xx += q) {
       c.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; c.lineTo(xx + Math.cos(a) * q * .55, yy + Math.sin(a) * q * .55); } c.closePath(); c.stroke();
     }
     c.restore();
   };
-  hexPatch(-64, 26, -16, 72, '#52f4ff'); hexPatch(4, 26, 44, 60, '#ff6fd0');
+  hexPatch(-64, 26, -16, 72, '#38a8b8'); hexPatch(4, 26, 44, 60, '#9a4c84');
+  // Trace of care: ghost rectangle on the deck where an old vending machine once stood
+  c.save();
+  c.fillStyle = 'rgba(16,11,26,.7)'; c.fillRect(X(-31), Z(36), 3.4 * S, 2.0 * S);
+  c.strokeStyle = 'rgba(110,85,140,.35)'; c.lineWidth = 1.5; c.strokeRect(X(-31), Z(36), 3.4 * S, 2.0 * S);
+  c.fillStyle = 'rgba(8,5,14,.9)';
+  for (const [bx, bz] of [[-30.7, 36.3], [-27.9, 36.3], [-30.7, 37.7], [-27.9, 37.7]]) {
+    c.beginPath(); c.arc(X(bx), Z(bz), .24 * S, 0, 7); c.fill();
+  }
+  c.restore();
   // plaza spiral at the motel
   c.save(); c.translate(X(80), Z(-14)); c.fillStyle = 'rgba(40,24,70,.9)'; c.beginPath(); c.arc(0, 0, 30 * S, 0, 7); c.fill();
   glow('#c06bff', 12); c.lineWidth = 3; c.beginPath();
@@ -14709,6 +14788,8 @@ function spBuildOutpost(parent, rnd) {
       ufoBall(p, .42, new wi({color: 0x9af7ff}), 0, 2.95, 0, 1, 1.1, 1);
       ufoBall(p, .62, ufoHaloMat(0x4df3ff, .18), 0, 2.95, 0);
       ufoAdd(p, ufoTubeGeo([[.45, 1.4, 0], [.9, 1.0, sz * .2], [.8, .5, sz * .25], [.6, .5, sz * .3]], .05, 5), sm.dark);
+      // Trace of care: fuel hose patched with wrapped electrical tape
+      if (px === -5 && sz === 1) ufoBox(p, .13, .11, .13, new ji({color: 0x1b1b1b, roughness: .9, emissive: 0x050505}), .8, .62, sz * .24);
     }
     spPumps.push(new P(SP.ax - 40 + px, SP.py, SP.az + 48));
     Dt(SP.ax - 40 + px - 1.6, SP.az + 48 - .7, SP.ax - 40 + px + 1.6, SP.az + 48 + .7, SP.py, SP.py + 4);
@@ -14718,10 +14799,10 @@ function spBuildOutpost(parent, rnd) {
   ufoBox(G, 5, 1.6, .06, sm.wl, -2, 2.2, -6.66);
   ufoNeon(G, [[-4.6, 3.1, -6.62], [.6, 3.1, -6.62], [.6, 1.3, -6.62], [-4.6, 1.3, -6.62]], 0xffd24d, .07, true);
   Dt(SP.ax - 40 - 6, SP.az + 48 - 11.8, SP.ax - 40 + 2, SP.az + 48 - 6.6, SP.py, SP.py + 6);
-  // pylon with neon ring and star
+  // pylon with hero neon ring (cyan with pink accent) and star
   ufoBox(G, .6, 20, .6, sm.mint, 15, 10, -2);
-  ufoNeon(G, ufoCircle(15, 17.5, -2, 4.2, 'x'), 0x4df3ff, .16, true);
-  ufoNeon(G, ufoCircle(15, 17.5, -2, 3.7, 'x'), 0xff4fd8, .1, true);
+  ufoNeon(G, ufoCircle(15, 17.5, -2, 4.2, 'x'), 0x4df3ff, .18, true);
+  ufoNeon(G, ufoCircle(15, 17.5, -2, 3.7, 'x'), 0xff4fd8, .12, true);
   const star = []; for (let k = 0; k <= 5; k++) { const a = k * 4 * Math.PI / 5 - Math.PI / 2; star.push([15, 21.8 + Math.sin(a) * 1.5, -2 + Math.cos(a) * 1.5]); }
   ufoNeon(G, star, 0xffd24d, .09);
   ufoSign(G, 'ORBIT GAS', 6.4, 2.6, '#4df3ff', 15.8, 17.5, -2, Math.PI / 2, 'ALL GRADES · ALL GALAXIES');
@@ -14738,10 +14819,33 @@ function spBuildOutpost(parent, rnd) {
     const w = ufoAdd(T, ufoLatheGeo([[0, -.2], [.62, -.2], [.62, .2], [0, .2]], 14), sm.dark, wx, .62, wz); w.rotation.x = Math.PI / 2;
     const hub = ufoAdd(T, ufoLatheGeo([[0, -.22], [.32, -.22], [.32, .22], [0, .22]], 10), new wi({color: 0xff5fb8}), wx, .62, wz); hub.rotation.x = Math.PI / 2;
   }
+  // The one warm pool: warm peach serving window with shelf counter
   ufoBox(T, 4.4, 1.3, .06, sm.wl, -.4, 2.5, 1.57);
+  ufoBox(T, 4.2, 1.15, .02, new wi({color: 0xffca7a}), -.4, 2.5, 1.58); // warm interior pool
+  ufoBox(T, 4.5, .06, .32, sm.cream, -.4, 1.82, 1.72); // counter shelf
   ufoNeon(T, [[-2.7, 3.2, 1.62], [1.9, 3.2, 1.62], [1.9, 1.8, 1.62], [-2.7, 1.8, 1.62]], 0xff4fd8, .08, true);
   for (let k = 0; k < 10; k++) { const s = ufoBox(T, .48, .08, 1.5, k % 2 ? sm.cream : new ji({color: 0xff4f8a, emissive: 0x3a0a1a, emissiveIntensity: .8}), -2.2 + k * .5, 3.35 - .0, 2.25); s.rotation.x = .38; }
-  for (let k = 0; k < 14; k++) ufoBall(T, .06, [ufoM.warm, ufoM.pink, ufoM.cyan, ufoM.green][k % 4], -3 + k * .45, 3.0 - .1 * Math.abs(Math.sin(k * 1.1)), 2.9);
+  // String lights: warm amber and soft ivory only (no rainbow competition)
+  for (let k = 0; k < 12; k++) ufoBall(T, .055, k % 2 ? ufoM.warm : ufoM.bulb, -2.6 + k * .47, 3.0 - .08 * Math.abs(Math.sin(k * 1.1)), 2.85);
+  // Trace of care: crossed-out menu board beside the window
+  const menuTex = ufoCanvasTex(256, 320, (mc, mw, mh) => {
+    mc.fillStyle = '#140f1d'; mc.fillRect(0, 0, mw, mh);
+    mc.strokeStyle = '#c06bff'; mc.lineWidth = 4; mc.strokeRect(6, 6, mw - 12, mh - 12);
+    mc.fillStyle = '#ffebd0'; mc.font = 'bold 18px "Courier New",monospace'; mc.textAlign = 'center';
+    mc.fillText('NOVA NOSH', mw / 2, 32);
+    mc.font = '12px "Courier New",monospace'; mc.textAlign = 'left';
+    mc.fillStyle = '#c4b0dc'; mc.fillText('COSMIC TACO', 14, 75); mc.fillText('STARDUST CRISP', 14, 125); mc.fillText('DRIFT SHAKE', 14, 175);
+    mc.textAlign = 'right'; mc.fillStyle = 'rgba(255,210,120,.45)'; mc.fillText('3.50', mw - 70, 75);
+    mc.strokeStyle = '#ff4d4d'; mc.lineWidth = 2.5; mc.beginPath(); mc.moveTo(mw - 105, 71); mc.lineTo(mw - 65, 71); mc.stroke(); // crossed out
+    mc.fillStyle = '#ffd24d'; mc.fillText('5.00', mw - 16, 75);
+    mc.fillText('2.00', mw - 16, 125);
+    mc.fillStyle = 'rgba(255,210,120,.45)'; mc.fillText('2.50', mw - 70, 175);
+    mc.strokeStyle = '#ff4d4d'; mc.lineWidth = 2.5; mc.beginPath(); mc.moveTo(mw - 105, 171); mc.lineTo(mw - 65, 171); mc.stroke();
+    mc.fillStyle = '#ffd24d'; mc.fillText('3.50', mw - 16, 175);
+    mc.fillStyle = '#9b86b2'; mc.font = 'italic 10px sans-serif'; mc.textAlign = 'center'; mc.fillText('"EXACT CREDIT ONLY"', mw / 2, 285);
+  });
+  const menuM = new dt(new ba(1.1, 1.4), new wi({map: menuTex, side: 2, fog: false}));
+  menuM.position.set(-2.8, 2.5, 1.58); T.add(menuM);
   ufoSign(T, 'NOVA NOSH', 4.6, 1.7, '#ff7bd0', -.4, 5.0, 0, 0, 'TACOS · TOASTED STARDUST');
   ufoBox(T, .15, 1.0, .15, sm.dark, -2.4, 4.1, 0); ufoBox(T, .15, 1.0, .15, sm.dark, 1.6, 4.1, 0);
   for (const [tx, tz] of [[-3, 6.6], [3.2, 7.4]]) {
@@ -14749,26 +14853,36 @@ function spBuildOutpost(parent, rnd) {
     ufoAdd(T, ufoLatheGeo([[0, 0], [1.1, 0], [1.1, .1], [0, .1]], 20), sm.cream, tx, .95, tz);
     ufoNeon(T, ufoCircle(tx, 1.08, tz, 1.1, 'y', 28), 0x58ffa6, .05, true);
   }
-  col(0xff4fd8, 30, 40, 23, 4.2, 48); col(0xffc477, 12, 22, 25, 1.4, 50);
+  col(0xff4fd8, 30, 40, 23, 4.2, 48); col(0xffc477, 14, 22, 25, 1.4, 50);
   Dt(SP.ax + 23 - 3.8, SP.az + 44 - 1.7, SP.ax + 23 + 6.6, SP.az + 44 + 1.7, SP.py, SP.py + 5);
 
   // ---------- DRIFT INN: the strange motel ----------
   const M = new xi(); M.position.set(80, 0, -14); O.add(M);
-  ufoAdd(M, ufoLatheGeo([[3.6, 0], [2.6, 3], [3.2, 8], [2.2, 14], [2.8, 19], [.8, 25], [0, 27]], 20), sm.plum);
+  ufoAdd(M, ufoLatheGeo([[3.6, 0], [2.6, 3], [3.2, 8], [2.2, 14], [2.8, 19], [.8, 25], [0, 27]], 24), sm.plum);
   [3, 8, 14, 19, 23].forEach((y, i) => ufoNeon(M, ufoCircle(0, y, 0, [2.75, 3.3, 2.35, 2.9, 1.6][i] + .18, 'y', 36), [0xff4fd8, 0x4df3ff, 0xc06bff, 0x58ffa6, 0xffd24d][i], .12, true));
-  const beacon = ufoBall(M, .8, new wi({color: 0xff4fd8}), 0, 28, 0); spNeonPulse.push(beacon);
+  // The single pulsing coal: Drift Inn beacon
+  const beacon = ufoBall(M, .85, new wi({color: 0xff4fd8}), 0, 28, 0); spNeonPulse.push(beacon);
   ufoBall(M, 1.6, ufoHaloMat(0xff4fd8, .2), 0, 28, 0);
   const beam = ufoAdd(M, ufoLatheGeo([[.5, 0], [.3, 40], [0, 90]], 10), ufoHaloMat(0xff7bd0, .12), 0, 28, 0);
-  const podColors = [sm.teal, sm.orange, sm.mint, sm.plum];
+  // Stacked modular pods with architectural detail (deep plum shell, structural belt, warm portholes, struts)
   for (let i = 0; i < 9; i++) {
-    const a = i * 2.4 + .3, rad = 6.6 + (i % 3) * 1.3, y = 3.6 + i * 2.5;
+    const a = i * 2.4 + .3, rad = 6.8 + (i % 3) * 1.2, y = 3.6 + i * 2.5;
     const px = Math.cos(a) * rad, pz = Math.sin(a) * rad;
-    const pod = ufoBall(M, 2.3, podColors[i % 4], px, y, pz, 1, .78, 1);
-    ufoAdd(M, ufoTubeGeo([[px * .3, y - .2, pz * .3], [px * .75, y - .1, pz * .75]], .55, 6), sm.dark);
-    const wx = Math.cos(a), wz = Math.sin(a);
-    const win = ufoAdd(M, new ba(1.5, 1.0), sm.wl, px + wx * 2.22, y, pz + wz * 2.22); win.rotation.y = Math.PI / 2 - a; win.material = new wi({color: [0xffd9a0, 0xffa8e0, 0xa8f3ff][i % 3], side: 2});
-    ufoNeon(M, ufoCircle(px + wx * 2.25, y, pz + wz * 2.25, .95, wx * wx > wz * wz ? 'x' : 'z', 24).map(p => p), [0xff4fd8, 0x4df3ff, 0x58ffa6][i % 3], .05, true);
-    ufoAdd(M, ufoTubeGeo(ufoCircle(px, y - .55, pz, 2.5, 'y', 30), .06, 5, true), sm.trim, 0, 0, 0);
+    const podG = new xi(); podG.position.set(px, y, pz); podG.rotation.y = Math.PI / 2 - a; M.add(podG);
+    ufoAdd(podG, ufoLatheGeo([[0, -.9], [.9, -.85], [1.5, -.5], [1.7, 0], [1.5, .5], [.9, .85], [0, .9]], 20), sm.plum).scale.set(1.3, .85, 1.1);
+    ufoAdd(podG, ufoLatheGeo([[0, -.92], [.7, -.88], [.72, -.8], [0, -.8]], 16), sm.dark).scale.set(1.3, .85, 1.1); // lower skirt
+    ufoAdd(podG, ufoTubeGeo(ufoCircle(0, 0, 0, 1.88, 'y', 28), .028, 6, true), sm.trim); // structural belt
+    // Twin portholes with warm white glow
+    for (const sx of [-.55, .55]) {
+      ufoAdd(podG, new ba(.7, .55), new wi({color: 0xffebd0, side: 2}), sx, .05, 1.55);
+      ufoAdd(podG, ufoTubeGeo(ufoCircle(sx, .05, 1.56, .34, 'z', 16), .022, 6, true), sm.dark);
+    }
+    // Communication spar on top
+    ufoBox(podG, .035, .7, .035, sm.trim, 0, .9, 0);
+    ufoBall(podG, .03, sm.plum, 0, 1.26, 0);
+    // Twin structural truss struts to center tower
+    ufoAdd(M, ufoTubeGeo([[px * .32, y - .25, pz * .32], [px * .78, y - .1, pz * .78]], .24, 6), sm.dark);
+    ufoAdd(M, ufoTubeGeo([[px * .28, y + .3, pz * .28], [px * .72, y + .2, pz * .72]], .14, 5), sm.trim);
   }
   // lobby pod with a door
   const lobby = ufoBall(M, 3.8, sm.cream, -7.5, 1.4, 6.5, 1.1, .6, 1.1);
@@ -14779,6 +14893,15 @@ function spBuildOutpost(parent, rnd) {
   Dt(SP.ax + 80 - 4.4, SP.az - 14 - 4.4, SP.ax + 80 + 4.4, SP.az - 14 + 4.4, SP.py, SP.py + 28);
   Dt(SP.ax + 80 - 11.4, SP.az - 14 + 2.8, SP.ax + 80 - 3.6, SP.az - 14 + 10.2, SP.py, SP.py + 4);
   col(0xc06bff, 80, 110, 80, 12, -14); col(0xff4fd8, 40, 70, 80, 29, -14); col(0xffa23a, 22, 36, 72, 3, -2); col(0x4df3ff, 30, 60, 90, 6, 4);
+  // Trace of care: front-desk call bell with worn brass clapper on its podium
+  const bellStand = new xi(); bellStand.position.set(72.5, 0, -4); O.add(bellStand);
+  ufoBox(bellStand, .55, .95, .45, sm.dark, 0, .475, 0); // podium
+  ufoBox(bellStand, .62, .05, .52, sm.plum, 0, .975, 0); // brass-trimmed top
+  ufoAdd(bellStand, ufoLatheGeo([[0, 0], [.14, 0], [.15, .02], [0, .02]], 16), sm.dark, 0, 1.0, 0); // base
+  ufoAdd(bellStand, ufoLatheGeo([[0, .08], [.05, .08], [.11, .05], [.13, .01], [0, .01]], 20), ufoM.brass, 0, 1.0, 0); // bell cup
+  ufoAdd(bellStand, ufoTubeGeo([[0, 1.08, 0], [0, 1.13, 0]], .01, 6), ufoM.trim); // stem
+  ufoBall(bellStand, .025, ufoM.brass, 0, 1.135, 0); // clapper button
+  ufoBox(bellStand, .02, .004, .02, ufoM.trim, 0, 1.155, 0); // worn thumb scuff
   spBell = new P(SP.ax + 72.5, SP.py, SP.az - 4);
 
   // ---------- runway lights and the radio mast ----------
@@ -14791,25 +14914,25 @@ function spBuildOutpost(parent, rnd) {
     mq.position.set(-200 + k * 320 / (n - 1), .3, 113); mq.updateMatrix(); rl2.setMatrixAt(k, mq.matrix);
   }
   rl.instanceMatrix.needsUpdate = true; rl2.instanceMatrix.needsUpdate = true;
-  // mast
+  // mast: one lime accent ring
   ufoBox(O, .5, 38, .5, sm.dark, 130, 19, 60);
   const mastBulb = ufoBall(O, .6, new wi({color: 0xff4d4d}), 130, 38.5, 60); spNeonPulse.push(mastBulb);
   ufoNeon(O, ufoCircle(130, 30, 60, 2.4, 'y', 24), 0x58ffa6, .08, true);
   col(0x58ffa6, 14, 40, 130, 31, 60);
-  // crystal clusters around the rim
-  const cryCols = [0xff4fd8, 0x4df3ff, 0xc06bff, 0x58ffa6, 0xffd24d];
+  // Faceted hexagonal crystal columns around the rim (amethyst and pale cyan mineral quartz)
+  const cryCols = [0x9d72d6, 0x6edbf5, 0xba88ea, 0xb8d9ea];
   for (let k = 0; k < 22; k++) {
     const a = rnd() * Math.PI * 2, rad = 188 + rnd() * 30, x = Math.cos(a) * rad, z = Math.sin(a) * rad;
     if (z > 70 && z < 130 && x < 130) continue;
     const cg = new xi(); cg.position.set(x, 0, z); O.add(cg);
-    const colr = cryCols[k % 5];
+    const colr = cryCols[k % 4];
     const mat = new wi({color: colr});
     for (let j = 0; j < 5; j++) {
       const h = 5 + rnd() * 11, w = .8 + rnd() * 1.5;
-      const m = ufoAdd(cg, ufoLatheGeo([[0, 0], [w, 0], [w * .7, h * .7], [0, h]], 5), mat, (rnd() - .5) * 4, 0, (rnd() - .5) * 4);
-      m.rotation.set((rnd() - .5) * .5, rnd() * 3, (rnd() - .5) * .5);
+      const m = ufoAdd(cg, ufoLatheGeo([[0, 0], [w, 0], [w, h * .75], [0, h]], 6), mat, (rnd() - .5) * 4, 0, (rnd() - .5) * 4);
+      m.rotation.set((rnd() - .5) * .4, rnd() * 3, (rnd() - .5) * .4);
     }
-    ufoBall(cg, 5, ufoHaloMat(colr, .12), 0, 5, 0);
+    ufoBall(cg, 4.5, ufoHaloMat(colr, .10), 0, 5, 0);
     if (k % 4 === 0) col(colr, 9, 36, x, 5, z);
   }
   spLights.push({position: new P(SP.ax, SP.py, SP.az), range: 520, cull: 1100, lights, space: 'only'});
@@ -14958,12 +15081,64 @@ function ufoAudioStop() {
   u.g.gain.setTargetAtTime(0, c.currentTime, .4); u.ng.gain.setTargetAtTime(0, c.currentTime, .4);
   setTimeout(() => { try { [u.a, u.b, u.sub, u.lfo, u.lfo2, u.ns].forEach(n => n.stop()); } catch (e) {} }, 2200);
 }
+let spHumAud = null, spNextClink = 0;
+function spAudioStart() {
+  const c = audio.ctx; if (!c || spHumAud) return;
+  const o1 = c.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 60;
+  const o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = 120;
+  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 240; f.Q.value = 2.5;
+  const g1 = c.createGain(); g1.gain.value = 0.4;
+  const g2 = c.createGain(); g2.gain.value = 0.3;
+  const master = c.createGain(); master.gain.value = 0;
+  o1.connect(g1); g1.connect(f);
+  o2.connect(g2); g2.connect(f);
+  f.connect(master);
+  master.connect(audio.master);
+  [o1, o2].forEach(o => o.start());
+  spHumAud = {o1, o2, f, master};
+}
+function spAudioStop() {
+  if (!spHumAud) return;
+  const c = audio.ctx, s = spHumAud; spHumAud = null;
+  s.master.gain.setTargetAtTime(0, c.currentTime, 0.2);
+  setTimeout(() => { try { [s.o1, s.o2].forEach(o => o.stop()); } catch (e) {} }, 1000);
+}
 // Called last in the frame so it overrides the desert's own wind and insect levels: there is no air up here.
 function ufoLateAudio() {
-  if (!ufoSpace || !audio.ctx) return;
+  if (!audio.ctx) return;
   const t = audio.ctx.currentTime;
+  if (!ufoSpace) {
+    if (spHumAud) spAudioStop();
+    return;
+  }
   if (audio.windGain) audio.windGain.gain.setTargetAtTime(.0001, t, .15);
   if (audio.insectGain) audio.insectGain.gain.setTargetAtTime(.0001, t, .15);
+
+  // Transformer hum near Orbit Gas canopy/pylon
+  if (!spHumAud) spAudioStart();
+  if (spHumAud) {
+    const dOrbit = Math.hypot(Nn.position.x - (SP.ax - 40), Nn.position.z - (SP.az + 77));
+    const targetGain = (!audio.muted && !document.hidden && !ufo.flying)
+      ? 0.042 * Math.max(0, 1 - Math.min(1, Math.max(0, dOrbit - 12) / 48))
+      : 0;
+    spHumAud.master.gain.setTargetAtTime(targetGain, t, 0.25);
+
+    // Rare thermal tick / expansion clink near Orbit Gas (event rate cap: average 45s, min 35s)
+    if (dOrbit < 45 && !ufo.flying && !audio.muted && !document.hidden) {
+      if (spNextClink === 0) spNextClink = t + 25 + Math.random() * 20;
+      if (t >= spNextClink) {
+        spNextClink = t + 35 + Math.random() * 20;
+        const clickOsc = audio.ctx.createOscillator(); clickOsc.type = 'triangle';
+        clickOsc.frequency.setValueAtTime(840, t);
+        clickOsc.frequency.exponentialRampToValueAtTime(320, t + 0.035);
+        const clickGain = audio.ctx.createGain();
+        clickGain.gain.setValueAtTime(0.012, t);
+        clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+        clickOsc.connect(clickGain); clickGain.connect(audio.master);
+        clickOsc.start(t); clickOsc.stop(t + 0.04);
+      }
+    }
+  }
 }
 function ufoAudioUpdate() {
   if (!ufoAud) return;
@@ -14981,7 +15156,7 @@ function ufoAudioUpdate() {
 const ufoDustN = 240, ufoDustBase = new Float32Array(ufoDustN * 3), ufoDustPos = new Float32Array(ufoDustN * 3);
 (function () { const r = Vm(808); for (let i = 0; i < ufoDustN * 3; i++) ufoDustBase[i] = r(); })();
 const ufoDustGeo = new It(); ufoDustGeo.setAttribute('position', new Et(ufoDustPos, 3));
-const ufoDust = new or(ufoDustGeo, new Qi({color: 0xcfe9ff, size: 1.1, sizeAttenuation: false, transparent: true, opacity: .4, fog: false, depthWrite: false}));
+const ufoDust = new or(ufoDustGeo, new Qi({color: 0xcfe9ff, size: 2.2, map: ufoStarDiscTex, sizeAttenuation: false, transparent: true, opacity: .45, fog: false, depthWrite: false}));
 ufoDust.frustumCulled = false; ufoDust.visible = false; Nt.add(ufoDust);
 function ufoUpdateDust() {
   const show = ufo.flying && (ufoSpace || Nn.position.y > 1800) && ufo.speed > 40;
@@ -14998,7 +15173,7 @@ function ufoUpdateDust() {
 // ---- cabin lamp, live instruments --------------------------------------------
 function ufoToggleLights() {
   ufoLamp.target = ufoLamp.target ? 0 : 1;
-  playInteractionSound('metal');
+  playInteractionSound('click');
   ufoNote(ufoLamp.target ? 'Cabin lamp on' : 'Cabin lamp off', 2.5);
 }
 function ufoApplyLights(dt) {
@@ -15011,7 +15186,7 @@ function ufoApplyLights(dt) {
   ufoM.bulb.color.setRGB(b, .84 * b, .63 * b);
   for (const h of L.halos) h.m.opacity = h.base * v;
   for (const m of L.dashMats) m.emissiveIntensity = .45 + .45 * v;
-  if (L.switchMesh) L.switchMesh.rotation.x = L.switchBase.x + (v > .5 ? -.35 : .35);
+  if (L.switchMesh) L.switchMesh.rotation.x = L.switchBase.x + (v - .5) * -.7;
 }
 function ufoDial(c, cx, cy, r, v01, label, txt) {
   c.save(); c.lineWidth = 3; c.strokeStyle = '#b48f55'; c.beginPath(); c.arc(cx, cy, r, 0, 7); c.stroke();
@@ -15049,11 +15224,12 @@ function ufoDrawDash(t) {
   const dx = SP.ax - p.x, dz = SP.az - p.z, dy = SP.py - p.y, dist = Math.hypot(dx, dz);
   Nn.getWorldDirection(ufoD);
   const rel = Math.atan2(dx, dz) - Math.atan2(ufoD.x, ufoD.z);
-  const rr = Math.min(1, dist / 6000) * R;
+  const norm = Math.log10(Math.max(1, dist) / 120) / Math.log10(25000 / 120);
+  const rr = Math.max(0.20, Math.min(0.95, norm)) * R;
   c.fillStyle = '#ffd7a0'; c.beginPath(); c.moveTo(cx, cy - 9); c.lineTo(cx + 6, cy + 7); c.lineTo(cx - 6, cy + 7); c.closePath(); c.fill();
   const ox = cx - Math.sin(rel) * rr, oy = cy - Math.cos(rel) * rr;
-  c.fillStyle = '#7fd6c9'; c.beginPath(); c.arc(ox, oy, 5, 0, 7); c.fill();
-  c.strokeStyle = '#7fd6c9'; c.beginPath(); c.arc(ox, oy, 9, 0, 7); c.stroke();
+  c.fillStyle = '#7fd6c9'; c.beginPath(); c.arc(ox, oy, 4, 0, 7); c.fill();
+  c.strokeStyle = '#7fd6c9'; c.lineWidth = 1.2; c.beginPath(); c.arc(ox, oy, 7.5, 0, 7); c.stroke();
   c.fillStyle = '#7fd6c9'; c.font = 'bold 15px "Courier New",monospace'; c.textAlign = 'center';
   c.fillText('DRIFT OUTPOST', cx, 168); c.fillStyle = '#e8d6b0'; c.font = '13px "Courier New",monospace';
   c.fillText((dist > 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m') + (Math.abs(dy) > 5 ? '  ' + (dy > 0 ? 'UP ' : 'DOWN ') + Math.round(Math.abs(dy)) + ' m' : ''), cx, 184);
@@ -15134,25 +15310,22 @@ const ufoMarker = {el: null};
 function ufoMarkerUpdate() {
   if (!ufoMarker.el) {
     const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;left:0;top:0;z-index:7;pointer-events:none;display:none;color:#ffe0b0;font:bold 12px "Courier New",monospace;letter-spacing:1px;text-shadow:0 0 6px rgba(0,0,0,.9);transform:translate(-50%,-50%);text-align:center';
+    el.style.cssText = 'position:fixed;left:0;top:0;z-index:7;pointer-events:none;display:none;color:#e8d6b0;font:11px "Courier New",monospace;letter-spacing:1px;text-shadow:0 0 5px rgba(0,0,0,.95);transform:translate(-50%,-50%);text-align:center';
     document.body.appendChild(el); ufoMarker.el = el;
   }
   const p = Nn.position, dx = SP.ax - p.x, dz = SP.az - p.z, dy = SP.py + 30 - p.y, dist = Math.hypot(dx, dy, dz);
-  const show = ufo.flying && active && dist > 450 && !ufoChart.open;
+  const show = ufo.flying && active && dist > 380 && !ufoChart.open;
   if (!show) { ufoMarker.el.style.display = 'none'; return; }
   const v = ufoSpDummy.set(SP.ax, SP.py + 30, SP.az).project(Nn);
-  let x = v.x, y = v.y, arrow = '◆';
-  if (v.z > 1) { x = -x; y = -y; }
-  const off = v.z > 1 || Math.abs(x) > .9 || Math.abs(y) > .85;
-  if (off) {
-    const m = Math.max(Math.abs(x), Math.abs(y), .001); x = x / m * .88; y = y / m * .82;
-    arrow = Math.abs(x) > Math.abs(y) * 1.2 ? (x > 0 ? '▶' : '◀') : (y > 0 ? '▲' : '▼');
-  }
+  // Approach order: colour first. Only show waypoint when within forward field of view (no edge arrows).
+  const inView = v.z < 1 && Math.abs(v.x) < .82 && Math.abs(v.y) < .82;
+  if (!inView) { ufoMarker.el.style.display = 'none'; return; }
   ufoMarker.el.style.display = 'block';
-  ufoMarker.el.style.left = ((x * .5 + .5) * innerWidth) + 'px';
-  ufoMarker.el.style.top = ((-y * .5 + .5) * innerHeight) + 'px';
-  ufoMarker.el.style.opacity = String(Math.min(.85, (dist - 450) / 600));
-  ufoMarker.el.innerHTML = arrow + '<br>DRIFT OUTPOST · ' + (dist > 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m');
+  ufoMarker.el.style.left = ((v.x * .5 + .5) * innerWidth) + 'px';
+  ufoMarker.el.style.top = ((-v.y * .5 + .5) * innerHeight + 16) + 'px';
+  const opac = Math.max(0, Math.min(.55, (dist - 380) / 450));
+  ufoMarker.el.style.opacity = String(opac);
+  ufoMarker.el.innerHTML = '◇ DRIFT OUTPOST · ' + (dist > 1000 ? (dist / 1000).toFixed(1) + ' km' : Math.round(dist) + ' m');
 }
 
 // ---- fast travel -----------------------------------------------------------------
@@ -15166,6 +15339,7 @@ const UFO_WARPS = [
 function ufoWarpList() { return UFO_WARPS.map(w => Object.assign({}, w)); }
 function ufoWarp(id) {
   const S = SP, wasFlying = ufo.flying;
+  if (seated) { seated = false; carSpeed = 0; steeringAngle = 0; }
   let x, y, z, yaw, land = true;
   if (id === 'home') { x = UFO_HOME.x; z = UFO_HOME.z; y = os(x, z) + .97; yaw = Math.PI / 2; }
   else if (id === 'sky') { x = UFO_HOME.x; z = UFO_HOME.z; y = 1500; yaw = Math.PI / 2; land = false; }
@@ -15224,7 +15398,10 @@ function ufoSetSpace(on) {
 function ufoFrame(dt, t) {
   const p = ufoShip.position, camY = Nn.position.y;
   // Parked ships left up in space go home when the player leaves.
-  if (!ufo.flying && !ufoSpace && p.y > 3000) ufoHome();
+  if (!ufo.flying && !ufoSpace && p.y > 3000) {
+    ufoHome();
+    ufoNote('The little saucer slipped out of orbit and returned to its desert spot.', 6);
+  }
   // Space mode with hysteresis, keyed to where the player's eyes are.
   const fl = ufo.flying;
   ufoLightGroup.cull = fl ? 800 : 75;

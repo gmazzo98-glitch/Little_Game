@@ -2,7 +2,7 @@
 
 This file is the mood card for the space layer of Neon Gas, the way [MOOD.md](MOOD.md) is for the highway regions. It sits under MOOD.md's shared grammar and next to [AESTHETIC.md](AESTHETIC.md) (light and palette) and [AMBIENCE.md](AMBIENCE.md) (sound). [ROADMAP.md](ROADMAP.md) holds status and validation. Everything here is a design proposal until a roadmap entry says otherwise.
 
-**Status (2026-11-08):** the cabin rules, lamp switch, alien engine voice, long-lasting fuel, chart and fast travel below are implemented in `index.html`; the outpost hierarchy and care traces and the outpost sound layers are still to do. See the validation record in ROADMAP.md and the follow-up brief in [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md).
+**Status (2026-11-08):** S1 saucer polish, S2 outpost hierarchy & traces of care, S4 space sky & tuned approach, S5 sound layers (drone, Orbit Gas transformer hum, boots on deck pavers, thermal clink), and S6 calibrated reachability & clean fast travel are implemented and verified in index.html. See the 2026-11-08d validation record in [ROADMAP.md](ROADMAP.md).
 
 The space layer is a **user-requested exception** (see AGENTS.md): a hidden saucer in the desert, a climb out of the atmosphere, and an asteroid outpost with a runway, fuel stop, food truck and motel. The ground game is untouched. This file keeps the exception coherent with the rest of the game instead of becoming a second, louder game.
 

@@ -31,7 +31,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 4 — Procedural audio | Wind, localized neon (Sunset Service, Cinder Court, Starlite Diner), indoor shelter muffling, multi-surface footsteps (sand, asphalt, canopy concrete, linoleum, timber bridge), shelter-aware night insects, 3-speed V8 coupe engine with tire roll and multi-surface grip, highway tar-joint thumps, dual-tone horn, turn-signal relay tick, static/beacon AM radio, and obstruction-aware hum timbre implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign implemented (source-level); under-canopy dust motes removed on 2026-11-06 at the user's request (they read as fireflies between the pumps); tumbleweed re-added on 2026-11-06 per the user's request (procedural lattice, one at a time, desert-only paths); acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle refueling (`Pump fuel into coupe`), Cinder Court show room, Starlite Diner & Bar, full coupe driving & handling dynamics (highway coasting glide, speed-sensitive caster return, passing kickdown, carburetor induction moan, RWD loose-surface throttle oversteer/counter-steer, driver bench seat inertia, dual-axle joint cadence, speedometer needle quiver, and cozy amber dash illumination) | Separate glovebox/map, refueling, cabin controls, multi-surface driving, and full period land-yacht handling verified offline. Full stillness acceptance remains open. |
-| Easter egg — little saucer and asteroid outpost | Implemented on 2026-11-06 at the user's request; cabin, lamp, rain, chart and fast travel reworked 2026-11-08 after review. Visual acceptance open. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); next work: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06 record. |
+| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). Saucer polish, outpost hierarchy, traces of care, circular star particles, transformer hum, boots on deck, calibrated radar & waypoints, clean fast travel. Visual acceptance open. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06 and 2026-11-08d records. |
 | World expansion — Pacific Northwest | Implemented prototype. Visual acceptance open following user review. | The user rejected the terrain and biome transition. The source audit found a river-carving arithmetic defect and position-driven biome/weather rules. [PACIFIC_NORTHWEST.md](PACIFIC_NORTHWEST.md#feasibility-review--2026-11-05) recommends prototyping a curved mountain tunnel between authored dry and wet regions, then reviewing its terrain, trees, driving, sound, and performance before extending the route. Earlier implementation and measurement records remain below. 2026-11-05 terrain and mood pass implemented locally (see record); acceptance still open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
@@ -214,6 +214,42 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-08d — Saucer exterior polish, outpost hierarchy, traces of care, space sky and sound (Milestones S0–S6)
+
+- **S0 Baseline verified:** offline test harness captured matched baseline stills (desert parked, cabin lamp on/off, open space with Earth, runway, Orbit Gas, Nova Nosh, Drift Inn). Zero runtime network requests verified via headless offline harness.
+- **S1 Saucer polish & care:**
+  - Automated vertex-level ellipsoid margin check tool (`scripts/check_cabin_clip.js`) verified all 71 interior meshes / 7,339 vertices with 0 clipping failures and a minimum clearance margin of 7.03 cm (> 5 cm requirement).
+  - Traces of care added to cabin: polished driver seat leather edge, paper masking tape strip with handwritten pencil alignment line, coffee mug ring stain on console, dark Bakelite switch body with brass bezel and worn thumb scuff on the rocker.
+  - Physical switch feel: `L` key triggers audible toggle click sound and smoothly rotates the physical rocker mesh.
+  - Saucer exterior: soft matte brushed metal (`roughness: 0.56, metalness: 0.42`), four radial panel seams on upper/lower hull, stepped grav-emitter underside plate with brass retaining ring, ventral maintenance hatch with perimeter fastener bolts, titanium radiator fins, articulated landing gear knuckles with hydraulic struts and beveled disc pads, handcrafted repair patch with perimeter brass rivets.
+- **S2 Outpost hierarchy and care:**
+  - Hex deck pavers softened to prevent grazing angle glare (`emissiveIntensity: 0.32`, muted violet/cyan palette). Ghost rectangle of weathered dark deck footprint with 4 corner bolt marks added where a vending machine once stood.
+  - Orbit Gas: Hero cyan ring (`0x4df3ff`) with pink accent (`0xff4fd8`); patched fuel hose wrapped in black friction tape at pump 1; repaired neon letter 'I' in 'ORBIT GAS' with brass sleeve splice and jumper wire.
+  - Nova Nosh: Single warm pool serving window (warm peach light, counter shelf); removed noisy rainbow string lights; added framed chalkboard menu board with prices crossed out and rewritten (`3.50` -> `5.00`, `2.50` -> `3.50`).
+  - Drift Inn: Remodeled modular hotel pods with structural belt rings, twin diagonal support truss struts, warm white portholes, communication aerial spars, podium call bell with worn brass clapper, slow pulsing magenta coal beacon.
+  - Crystals: Remodeled into faceted hexagonal prisms with sharp pyramidal crowns (`ufoLatheGeo(..., 6)`), restrained to mineral amethyst and cyan quartz palette (`[0x9d72d6, 0x6edbf5, 0xba88ea, 0xb8d9ea]`).
+- **S4 Space sky and approach:**
+  - Approach order made true: color first, silhouette second, sound third, detail last.
+  - Circular star and dust particles: generated 32x32 soft radial gradient texture map for `PointsMaterial` (`stars` and `ufoDust`), eliminating harsh square pixel artifacts at 1080p.
+  - Waypoint marker tuned: unobtrusive muted bone text (`font: 11px "Courier New"`, max opacity 0.55), only displayed when outpost is within forward field of view (no arcade edge arrows), positioned 16 px below the light so the pulsing coal beacon and cyan ring are seen first; fades out smoothly inside 400 m.
+  - Procedural Earth kept to 4 noise octaves; nebula kept to 3 noise octaves.
+- **S5 Sound:**
+  - Saucer alien drone kept low, gentle, detuned tritone with vibrato and sub-swell (< 1.4 kHz).
+  - Added localized electrical transformer hum near Orbit Gas canopy/pylon (60 Hz / 120 Hz mains hum, peak under canopy, falls off out to 60 m).
+  - Added boots-on-the-deck footstep sound (`surf === 9` in `footSurface` and `footstep`): crisp heel strike and sole friction on deck pavers.
+  - Added rare thermal tick / expansion clink in Orbit Gas structure (event cap: average 45 s, minimum 35 s).
+  - Verified wind and insects remain muted in space and recover cleanly upon returning to the desert; audio mutes when tab is hidden or muted.
+- **S6 Reachability:**
+  - Fixed warp card hint text: dynamically displays flight computer controls while flying or on deck (`UP / DOWN choose · ENTER fly · Y or ` + '`' + ` flight computer · ESC cancel`).
+  - Nav screen blip scaling: replaced linear clamp with continuous logarithmic mapping across 200 m to 25 km; reads cleanly without overlapping the player icon at 300 m and stays distinct at 20 km.
+  - Added clear HUD note when saucer parked in space returns home after player fast-travels away (`The little saucer slipped out of orbit and returned to its desert spot.`).
+  - Fast-travel state handling: warping from coupe cleanly resets `seated = false`, warping from space back to highway restores desert view and camera clipping cleanly.
+- **Verification:**
+  - `node --check` passed on extracted script.
+  - `scripts/verify_offline.js` confirmed zero runtime network requests (PASS).
+  - `scripts/check_cabin_clip.js` verified 71 meshes, 7,339 vertices, 0 clipping failures, min margin 7.03 cm (PASS).
+  - Headless test runner captured matched stills of saucer, cabin lamp on/off, planet, runway, Orbit Gas, Nova Nosh, and Drift Inn.
 
 ### 2026-11-08c — Multi-second freezes fixed: constant light count and shader warm-up (user report)
 
