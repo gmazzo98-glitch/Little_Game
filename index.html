@@ -16522,50 +16522,116 @@ function ufoAudioStop() {
   u.g.gain.setTargetAtTime(0, c.currentTime, .4); u.ng.gain.setTargetAtTime(0, c.currentTime, .4);
   setTimeout(() => { try { [u.a, u.b, u.sub, u.lfo, u.lfo2, u.ns].forEach(n => n.stop()); } catch (e) {} }, 2200);
 }
-let spHumAud = null, spNextClink = 0;
+let spAud = null, spNextClink = 0, spNextPip = 0;
 function spAudioStart() {
-  const c = audio.ctx; if (!c || spHumAud) return;
+  const c = audio.ctx; if (!c || spAud) return;
+  // 1. Transformer hum (Orbit Gas, x -40, z 48)
   const o1 = c.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 60;
   const o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = 120;
-  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 240; f.Q.value = 2.5;
+  const fHum = c.createBiquadFilter(); fHum.type = 'lowpass'; fHum.frequency.value = 240; fHum.Q.value = 2.5;
+  const gHum = c.createGain(); gHum.gain.value = 0;
   const g1 = c.createGain(); g1.gain.value = 0.4;
   const g2 = c.createGain(); g2.gain.value = 0.3;
-  const master = c.createGain(); master.gain.value = 0;
-  o1.connect(g1); g1.connect(f);
-  o2.connect(g2); g2.connect(f);
-  f.connect(master);
-  master.connect(audio.master);
-  [o1, o2].forEach(o => o.start());
-  spHumAud = {o1, o2, f, master};
+  o1.connect(g1); g1.connect(fHum);
+  o2.connect(g2); g2.connect(fHum);
+  fHum.connect(gHum); gHum.connect(audio.master);
+
+  // 2. Laundromat rhythmic tumbling drum (Spin Cycle, x -14, z 24)
+  const nsWash = c.createBufferSource(); nsWash.buffer = audio.noiseBuf; nsWash.loop = true;
+  const fWash = c.createBiquadFilter(); fWash.type = 'lowpass'; fWash.frequency.value = 220; fWash.Q.value = 3.0;
+  const gWash = c.createGain(); gWash.gain.value = 0;
+  const lfoWash = c.createOscillator(); lfoWash.type = 'sine'; lfoWash.frequency.value = 1.6;
+  const lfoWashGain = c.createGain(); lfoWashGain.gain.value = 60;
+  lfoWash.connect(lfoWashGain); lfoWashGain.connect(fWash.frequency);
+  nsWash.connect(fWash); fWash.connect(gWash); gWash.connect(audio.master);
+
+  // 3. Kitchen exhaust fan & gentle griddle sizzle (Nova Nosh, x 23, z 44)
+  const nsCook = c.createBufferSource(); nsCook.buffer = audio.noiseBuf; nsCook.loop = true;
+  const fCook = c.createBiquadFilter(); fCook.type = 'bandpass'; fCook.frequency.value = 440; fCook.Q.value = 1.8;
+  const fanTone = c.createOscillator(); fanTone.type = 'triangle'; fanTone.frequency.value = 110;
+  const gCook = c.createGain(); gCook.gain.value = 0;
+  const gFan = c.createGain(); gFan.gain.value = 0.15;
+  fanTone.connect(gFan); gFan.connect(gCook);
+  nsCook.connect(fCook); fCook.connect(gCook); gCook.connect(audio.master);
+
+  // 4. Bioluminescent bubbling / organic resonance (Gertrude's Greenhouse, x 48, z -20)
+  const oGreen = c.createOscillator(); oGreen.type = 'sine'; oGreen.frequency.value = 160;
+  const lfoGreen = c.createOscillator(); lfoGreen.type = 'sine'; lfoGreen.frequency.value = 0.85;
+  const lfoGreenGain = c.createGain(); lfoGreenGain.gain.value = 25;
+  lfoGreen.connect(lfoGreenGain); lfoGreenGain.connect(oGreen.frequency);
+  const fGreen = c.createBiquadFilter(); fGreen.type = 'lowpass'; fGreen.frequency.value = 320; fGreen.Q.value = 4.0;
+  const gGreen = c.createGain(); gGreen.gain.value = 0;
+  oGreen.connect(fGreen); fGreen.connect(gGreen); gGreen.connect(audio.master);
+
+  // 5. Electric neon ballast buzz (The Event Horizon, x -5, z 62)
+  const oNeon = c.createOscillator(); oNeon.type = 'sawtooth'; oNeon.frequency.value = 120;
+  const fNeon = c.createBiquadFilter(); fNeon.type = 'bandpass'; fNeon.frequency.value = 720; fNeon.Q.value = 6.0;
+  const gNeon = c.createGain(); gNeon.gain.value = 0;
+  oNeon.connect(fNeon); fNeon.connect(gNeon); gNeon.connect(audio.master);
+
+  const allOscs = [o1, o2, nsWash, lfoWash, nsCook, fanTone, oGreen, lfoGreen, oNeon];
+  allOscs.forEach(o => { try { o.start(); } catch (e) {} });
+
+  spAud = {
+    allOscs,
+    gHum, gWash, gCook, gGreen, gNeon
+  };
 }
 function spAudioStop() {
-  if (!spHumAud) return;
-  const c = audio.ctx, s = spHumAud; spHumAud = null;
-  s.master.gain.setTargetAtTime(0, c.currentTime, 0.2);
-  setTimeout(() => { try { [s.o1, s.o2].forEach(o => o.stop()); } catch (e) {} }, 1000);
+  if (!spAud) return;
+  const c = audio.ctx, s = spAud; spAud = null;
+  const t = c.currentTime;
+  [s.gHum, s.gWash, s.gCook, s.gGreen, s.gNeon].forEach(g => {
+    try { g.gain.setTargetAtTime(0, t, 0.2); } catch (e) {}
+  });
+  setTimeout(() => {
+    try { s.allOscs.forEach(o => { try { o.stop(); } catch (e) {} }); } catch (e) {}
+  }, 1000);
 }
 // Called last in the frame so it overrides the desert's own wind and insect levels: there is no air up here.
 function ufoLateAudio() {
   if (!audio.ctx) return;
   const t = audio.ctx.currentTime;
   if (!ufoSpace) {
-    if (spHumAud) spAudioStop();
+    if (spAud) spAudioStop();
     return;
   }
   if (audio.windGain) audio.windGain.gain.setTargetAtTime(.0001, t, .15);
   if (audio.insectGain) audio.insectGain.gain.setTargetAtTime(.0001, t, .15);
 
-  // Transformer hum near Orbit Gas canopy/pylon
-  if (!spHumAud) spAudioStart();
-  if (spHumAud) {
-    const dOrbit = Math.hypot(Nn.position.x - (SP.ax - 40), Nn.position.z - (SP.az + 77));
-    const targetGain = (!audio.muted && !document.hidden && !ufo.flying)
-      ? 0.042 * Math.max(0, 1 - Math.min(1, Math.max(0, dOrbit - 12) / 48))
-      : 0;
-    spHumAud.master.gain.setTargetAtTime(targetGain, t, 0.25);
+  if (!spAud) spAudioStart();
+  if (spAud) {
+    const px = Nn.position.x, pz = Nn.position.z;
+    const active = (!audio.muted && !document.hidden && !ufo.flying);
 
-    // Rare thermal tick / expansion clink near Orbit Gas (event rate cap: average 45s, min 35s)
-    if (dOrbit < 45 && !ufo.flying && !audio.muted && !document.hidden) {
+    // 1. Orbit Gas transformer hum
+    const dOrbit = Math.hypot(px - (SP.ax - 40), pz - (SP.az + 48));
+    const humGain = active ? 0.042 * Math.max(0, 1 - Math.min(1, Math.max(0, dOrbit - 10) / 38)) : 0;
+    spAud.gHum.gain.setTargetAtTime(humGain, t, 0.2);
+
+    // 2. Spin Cycle laundromat drum tumble
+    const dWash = Math.hypot(px - (SP.ax - 14), pz - (SP.az + 24));
+    const washGain = active ? 0.034 * Math.max(0, 1 - Math.min(1, Math.max(0, dWash - 5) / 22)) : 0;
+    spAud.gWash.gain.setTargetAtTime(washGain, t, 0.2);
+
+    // 3. Nova Nosh kitchen fan & sizzle
+    const dCook = Math.hypot(px - (SP.ax + 23), pz - (SP.az + 44));
+    const cookGain = active ? 0.028 * Math.max(0, 1 - Math.min(1, Math.max(0, dCook - 4) / 20)) : 0;
+    spAud.gCook.gain.setTargetAtTime(cookGain, t, 0.2);
+
+    // 4. Gertrude's Greenhouse bubbling
+    const dGreen = Math.hypot(px - (SP.ax + 48), pz - (SP.az - 20));
+    const greenGain = active ? 0.032 * Math.max(0, 1 - Math.min(1, Math.max(0, dGreen - 6) / 24)) : 0;
+    spAud.gGreen.gain.setTargetAtTime(greenGain, t, 0.2);
+
+    // 5. Event Horizon neon ballast buzz
+    const dNeon = Math.hypot(px - (SP.ax - 5), pz - (SP.az + 62));
+    const neonGain = active ? 0.022 * Math.max(0, 1 - Math.min(1, Math.max(0, dNeon - 5) / 20)) : 0;
+    spAud.gNeon.gain.setTargetAtTime(neonGain, t, 0.2);
+
+    // Ambient events:
+    // a. Rare thermal tick / expansion clink near Orbit Gas (average 45s, min 35s)
+    if (dOrbit < 45 && active) {
       if (spNextClink === 0) spNextClink = t + 25 + Math.random() * 20;
       if (t >= spNextClink) {
         spNextClink = t + 35 + Math.random() * 20;
@@ -16577,6 +16643,24 @@ function ufoLateAudio() {
         clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
         clickOsc.connect(clickGain); clickGain.connect(audio.master);
         clickOsc.start(t); clickOsc.stop(t + 0.04);
+      }
+    }
+
+    // b. Creature pips & soft clinks near Plaza/Patio/Inn (average 25s, min 18s, max range 40m)
+    const dPlaza = Math.hypot(px - (SP.ax + 14), pz - (SP.az + 10));
+    if (dPlaza < 40 && active) {
+      if (spNextPip === 0) spNextPip = t + 15 + Math.random() * 15;
+      if (t >= spNextPip) {
+        spNextPip = t + 20 + Math.random() * 18;
+        const pipOsc = audio.ctx.createOscillator(); pipOsc.type = 'sine';
+        const pipHz = 980 + Math.random() * 320;
+        pipOsc.frequency.setValueAtTime(pipHz, t);
+        pipOsc.frequency.exponentialRampToValueAtTime(pipHz * 0.85, t + 0.04);
+        const pipGain = audio.ctx.createGain();
+        pipGain.gain.setValueAtTime(0.007, t);
+        pipGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+        pipOsc.connect(pipGain); pipGain.connect(audio.master);
+        pipOsc.start(t); pipOsc.stop(t + 0.045);
       }
     }
   }
