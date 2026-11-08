@@ -31,7 +31,7 @@ The execution plan for the single-file vignette. [AESTHETIC.md](AESTHETIC.md) de
 | Phase 4 — Procedural audio | Wind, localized neon (Sunset Service, Cinder Court, Starlite Diner), indoor shelter muffling, multi-surface footsteps (sand, asphalt, canopy concrete, linoleum, timber bridge), shelter-aware night insects, 3-speed V8 coupe engine with tire roll and multi-surface grip, highway tar-joint thumps, dual-tone horn, turn-signal relay tick, static/beacon AM radio, and obstruction-aware hum timbre implemented. Listening review remains open. | Requested early by the user; Phase 2/3 visual acceptance still open |
 | Phase 5 — Sparse micro-life | Moths near the GAS sign implemented (source-level); under-canopy dust motes removed on 2026-11-06 at the user's request (they read as fireflies between the pumps); tumbleweed re-added on 2026-11-06 per the user's request (procedural lattice, one at a time, desert-only paths); acceptance pending | Phase 4 acceptance; cut anything that reads as activity |
 | Phase 6 — Stillness and interaction polish | Window rest, blanket use, glovebox map, physical nozzle refueling (`Pump fuel into coupe`), Cinder Court show room, Starlite Diner & Bar, full coupe driving & handling dynamics (highway coasting glide, speed-sensitive caster return, passing kickdown, carburetor induction moan, RWD loose-surface throttle oversteer/counter-steer, driver bench seat inertia, dual-axle joint cadence, speedometer needle quiver, and cozy amber dash illumination) | Separate glovebox/map, refueling, cabin controls, multi-surface driving, and full period land-yacht handling verified offline. Full stillness acceptance remains open. |
-| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestones O0 baseline, O1 strip skeleton, and O2 hero upgrades verified (2026-11-08h)**; O3–O8 in progress. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, 2026-11-08f, 2026-11-08g, and 2026-11-08h records. |
+| Easter egg — little saucer and asteroid outpost | Complete through S1, S2, S4, S5, S6 (2026-11-08d). **Drift Outpost overhaul: Milestones O0 baseline, O1 strip skeleton, O2 hero upgrades, and O3 new buildings verified (2026-11-08i)**; O4–O8 in progress. Design authority: [SPACE_MOOD.md](SPACE_MOOD.md); launch prompt: [AGENT_PROMPT_SPACE.md](AGENT_PROMPT_SPACE.md). | A cozy Rick-and-Morty-style pod parked in the desert 87 m from the station; six flight speeds; climb past 3.2 km to leave the atmosphere; a neon asteroid with runway, fuel stop, food truck and strange motel. See the 2026-11-06, 2026-11-08d, 2026-11-08f, 2026-11-08g, 2026-11-08h, and 2026-11-08i records. |
 | World expansion — Pacific Northwest | Implemented prototype. Visual acceptance open following user review. | The user rejected the terrain and biome transition. The source audit found a river-carving arithmetic defect and position-driven biome/weather rules. [PACIFIC_NORTHWEST.md](PACIFIC_NORTHWEST.md#feasibility-review--2026-11-05) recommends prototyping a curved mountain tunnel between authored dry and wet regions, then reviewing its terrain, trees, driving, sound, and performance before extending the route. Earlier implementation and measurement records remain below. 2026-11-05 terrain and mood pass implemented locally (see record); acceptance still open. |
 
 G0–G3 are an added visual foundation, not a renumbering of the original six atmosphere phases. Later phases may be skipped by an explicit scope decision; do not bypass an earlier failed gate silently. Fixes that protect offline play, controls, or the existing cycle can happen at any time.
@@ -214,6 +214,71 @@ For each `index.html` change:
 7. Update the status table, relevant checkboxes, and record below in the same commit. Include actual evidence or mark a check pending with its reason. A phase passes only after its stated acceptance criteria pass; later milestones remain planned.
 
 ## Validation and decision record
+
+### 2026-11-08i — Drift Outpost overhaul: new buildings across Tier A & B (Milestone O3)
+
+- **Tier A Hero Buildings implemented in code:**
+  - **SPIN CYCLE Laundromat (`x = -14, z = 24`, north side of Main Street):**
+    - Low wide Googie building (11.2m wide, 4.2m high, 6.8m deep) in cream stucco, turquoise Googie pilasters, and forward-sloping tangerine cantilever roof.
+    - Front storefront glass façade with 6 circular front-loader washing machine portholes in chrome bezels.
+    - Custom GLSL `ShaderMaterial` with shared `uTime` uniform rendering animated tumbling laundry (coral red shirt, turquoise towel, canary yellow sock, soapy froth, drum vignette, glass reflection) across the 5 operating portholes.
+    - 6th porthole dark and empty with a yellow handwritten `"OUT OF ORDER"` tag and taped cross decals across the glass.
+    - Landmark 4.2m tall rooftop Googie neon sock sign in magenta (`#ff4fd8`) with cyan toe/heel patches (`#4df3ff`), steel truss armature, and script neon `"SPIN CYCLE · 24 HR QUANTUM WASH"`.
+    - Lone dropped magenta sock prop on the asphalt pavement outside the front door.
+    - Lint exhaust vent on building side, interior folding table, and molded laundry basket visible through glass.
+    - AABB collider: `SP.ax - 14 ± 5.8, SP.az + 24 ± 3.6`.
+  - **THE EVENT HORIZON Lounge (`x = -5, z = 62`, south side of Main Street):**
+    - Round violet matte dome bar (`radius = 5.0m, height = 4.8m`) with stepped dark plinth and Googie gold belt trim.
+    - Recessed entry portal with dark smoked glass and brass handles.
+    - Landmark procedural relativistic black-hole accretion disc shader disc (`radius = 1.45m`) mounted above the entrance: pitch-black central event horizon, swirling Doppler-beamed relativistic photon ring (gold/white), cyan and deep violet accretion bands, edge fade, and neon halo ring.
+    - Cantilevered Googie boomerang armature holding a wireframe neon martini glass (`#ff4fd8`) with glowing green olive (`#58ffa6`) and red pimento on a brass skewer.
+    - Script neon `"EVENT HORIZON"` and stamped brass door plaque: `"HAPPY HOUR: ALL RELATIVE"`.
+    - Outdoor cocktail patio with curved stone border, 2 atomic circular cocktail tables on tulip pedestals, 4 atomic stools with brass seats, and a miniature flickering glass candle lamp.
+    - AABB collider: `SP.ax - 5 ± 5.6, SP.az + 62 ± 5.6`.
+  - **PLANET POP Gumball Machine (`x = 14, z = 6`, center of The Plaza):**
+    - Monumental 10.5m house-sized gumball machine on stepped octagonal cherry red and cream enamel cast-iron stand.
+    - Chrome mechanical housing with turn crank handle, red knob, and 25¢ embossed coin slot bezel.
+    - Clear spherical glass globe (`radius = 2.5m`) holding 24 miniature colorful ringed and textured planets (Earth swirl, Saturn rings, Jupiter bands, Mars, Neptune) that gently bob on a slow sine wave when the player is within 40m.
+    - Propped-open chrome dispenser chute at `y = 0.9m` with an inquisitive little Hop-Hop critter sitting inside peeking out with two glossy eyes.
+    - Curved neon sign wrapped around the red cap: `"PLANET POP · GENUINE WORLDS · 25¢"` with sputnik starburst finial.
+    - AABB collider: `SP.ax + 14 ± 2.8, SP.az + 6 ± 2.8`.
+  - **ZORP'S USED ROCKETS (`x = 45, z = 54`, south side of Main Street):**
+    - Lot with 4 vintage tin rockets on launch stilts: *The Comet '58* (torpedo fuselage, 3 delta fins, hanging `"999 CR"` tag), *Meteor Cruiser* (two-stage rocket with slanted red `"SOLD"` decal), *Space Cadet Hopper* (bubble runabout with stencil `"AS-IS"`), *Star Jet 500* (needle-nose interceptor).
+    - 1950s canned-ham travel trailer office in mint green and cream with rooftop TV antenna, door, steps, and large painted sign `"ZORP'S · PRE-OWNED CRAFT · LOW MILEAGE · EASY TERMS"`.
+    - Inflatable tube-dancer (4.2m tall) waving and flailing on fan blower base via animated vertex shader.
+    - Perimeter steel poles with sagging triangular carnival pennant lines.
+    - AABB colliders on trailer and rocket pads.
+
+- **Tier B Supporting Buildings implemented in code:**
+  - **GERTRUDE'S GREENHOUSE (`x = 48, z = -20`, Quiet Side):**
+    - Faceted geodesic glass dome (`radius = 5.5m`) with brass strut ribs and cylindrical airlock entrance vestibule.
+    - Hand-painted sign above airlock: `"FRESH AIR · BOTANICALS · GERTRUDE'S GREENHOUSE"`.
+    - Central bioluminescent alien spiral tree with 8 glowing lime/mint blossoms (`#b6ff5a`, `#8ff0d8`).
+    - 6 spiraling alien fern fronds swaying gently on a sine wave.
+    - Drifting bioluminescent spore particle cloud (`Points`) floating inside dome.
+    - AABB collider: `SP.ax + 48 ± 5.6, SP.az - 20 ± 5.6`.
+  - **PAR SEC MINI GOLF (`x = -22, z = -22`, Back Lot):**
+    - 3-hole miniature golf course with green astro-turf fairways and red brick curbs.
+    - Landmark space windmill on Hole 2 with revolving Saturn-ring blades (`spSpin`) and fairway tunnel.
+    - Golf ball stuck comically on the lip of a miniature crater obstacle on Hole 2.
+    - Flag pins in cups 1, 2, and 3. Vintage brass putter leaned against tee box marker.
+    - Googie neon sign: `"PAR SEC · MINI GOLF · 18 HOLES IN 3"`.
+    - AABB collider: `SP.ax - 22 ± 1.8, SP.az - 22 ± 1.8`.
+  - **SEE YOUR HOUSE OBSERVATION DECK (`x = 32, z = -65`, Rim facing Earth):**
+    - Semicircular raised platform terrace on the rim with tubular brass perimeter railing.
+    - Antique brass coin-operated telescope on fluted pedestal with dual focus knobs, counterweight, and embossed coin box: `"25¢ · NO REFUNDS ON CLOUDS"`.
+    - Observation bench on platform.
+    - Interactive experience in `ufoInteraction()`: approaching telescope prompts `Look through telescope (25¢)`. Pressing E triggers camera telephoto zoom looking towards Earth (FOV transitions from 65 to 22) for 5 seconds with audio bell/clink and narrative note.
+    - AABB colliders for telescope pedestal and rim railing, leaving terrace walkway completely open.
+
+- **Verification & Acceptance:**
+  - **Triangles:** 120,644 triangles (comfortably under the locked budget of ≤ 140,000; baseline was 84,752, O2 was 96,498).
+  - **Draw calls:** 443 draw calls (budget is ≤ 450; achieved through batching static elements into shared meshes per material, including batching the 22 crystal clusters into 4 color batches).
+  - **Light count:** Strictly 15 lights (12 point, 2 spot, 1 dir), zero runtime light additions or deletions; all building illumination provided by emissive materials, additive halos, and pre-painted deck light pools.
+  - **Colliders & walking:** Verified 0 collisions on Main Street route (Route 1) and 0 collisions on Plaza/Back Lot/Telescope route (Route 2). Gaps between all solid structures exceed 1.2m.
+  - **Interaction:** `ufoInteraction()` verified returning `Look through telescope (25¢)` at `(SP.ax + 32, SP.az - 64)`.
+  - **Offline & self-containment:** `verify_offline.js` passed with 0 runtime network requests; `node --check` passed cleanly on extracted inline scripts; `check_cabin_clip.js` passed with 71 meshes, 0 failures, 7.03 cm minimum margin.
+  - **Stills captured:** 7 matched viewpoint stills in `captures/` (`o3_spin_cycle_30m.png`, `o3_event_horizon_30m.png`, `o3_planet_pop_30m.png`, `o3_zorps_rockets_30m.png`, `o3_greenhouse_30m.png`, `o3_minigolf_30m.png`, `o3_telescope_deck_3m.png`).
 
 ### 2026-11-08h — Drift Outpost overhaul: hero upgrades for Orbit Gas, Nova Nosh, Drift Inn (Milestone O2)
 

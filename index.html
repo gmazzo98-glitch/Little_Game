@@ -14666,7 +14666,7 @@ const spGroup = new xi(); spGroup.visible = false; spGroup.name = 'Asteroid outp
 Nt.add(spGroup);
 const spFollow = new xi(); spGroup.add(spFollow);           // follows the camera (sky things)
 const spLights = [], spNeonPulse = [], spSpin = [];
-var spPumps = [], spBell = new P(), spBellRingTimer = 0, spNoMat = null, spVacMat = null;
+var spPumps = [], spBell = new P(), spBellRingTimer = 0, spNoMat = null, spVacMat = null, spShaderTime = { value: 0 }, spTelescopeTimer = 0;
 let spBuilt = false;
 function spBuild() {
   if (spBuilt) return; spBuilt = true;
@@ -15562,6 +15562,501 @@ function spBuildOutpost(parent, rnd) {
   ttMesh.position.set(-1.95, 1.6, -.3); ttMesh.rotation.y = Math.PI / 2; busG.add(ttMesh);
   Dt(SP.ax + 30 - 2.2, SP.az + 49 - 1.3, SP.ax + 30 + 2.2, SP.az + 49 + 1.3, SP.py, SP.py + 3.2);
 
+  // ==================== TIER A & B NEW BUILDINGS (O3) ====================
+  sm.red = new ji({color: 0xd92b3a, roughness: .45, metalness: .1, emissive: 0x4a0a12, emissiveIntensity: .8});
+  sm.lime = new ji({color: 0xb6ff5a, roughness: .4, metalness: .1, emissive: 0x28500c, emissiveIntensity: .85});
+  sm.yellow = new ji({color: 0xf5db7a, roughness: .5, emissive: 0x453c15, emissiveIntensity: .7});
+  sm.pink = new ji({color: 0xff4fa3, roughness: .45, emissive: 0x5a1035, emissiveIntensity: .85});
+
+  // ---------- 1. SPIN CYCLE: laundromat with tumbling porthole shader, giant neon sock ----------
+  const SC = new xi(); SC.position.set(-14, 0, 24); O.add(SC);
+  ufoBox(SC, 11.2, 3.8, 6.8, sm.cream, 0, 1.9, 0);
+  const scRoof = ufoBox(SC, 12.4, .45, 7.8, sm.orange, 0, 4.0, .3); scRoof.rotation.x = -.08;
+  ufoBox(SC, 12.6, .14, 8.0, sm.teal, 0, 4.25, .3).rotation.x = -.08;
+  const scPilBatch = ufoBatch();
+  for (const px of [-5.6, -1.8, 1.8, 5.6]) scPilBatch.add(new Cn(.45, 3.8, .35), px, 1.9, 3.45);
+  scPilBatch.add(new Cn(10.8, .2, .1), 0, .1, 3.42);
+  scPilBatch.add(new Cn(10.8, .2, .1), 0, 3.7, 3.42);
+  scPilBatch.build(SC, sm.teal);
+  ufoBox(SC, 10.6, 3.5, .05, new wi({color: 0x6ffcff, transparent: true, opacity: .28, side: 2}), 0, 1.9, 3.4);
+
+  const laundryMat = new rt({
+    uniforms: { uTime: spShaderTime },
+    vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform float uTime; varying vec2 vUv; void main() {
+      vec2 uv = vUv * 2.0 - 1.0; float r = length(uv); if (r > 0.95) discard;
+      vec3 col = vec3(0.08, 0.16, 0.22) * (1.2 - r * 0.4);
+      col += vec3(0.35, 0.3, 0.15) * smoothstep(0.8, -0.4, uv.y);
+      float a1 = uTime * 2.5; vec2 p1 = vec2(cos(a1) * 0.38, sin(a1) * 0.32 + sin(uTime * 5.0) * 0.08);
+      float d1 = length(uv - p1); if (d1 < 0.28) col = mix(col, vec3(1.0, 0.3, 0.45), smoothstep(0.28, 0.22, d1));
+      float a2 = uTime * 2.5 + 2.1; vec2 p2 = vec2(cos(a2) * 0.42, sin(a2) * 0.35);
+      float d2 = length(uv - p2); if (d2 < 0.22) col = mix(col, vec3(0.2, 0.85, 0.8), smoothstep(0.22, 0.16, d2));
+      float a3 = uTime * 2.5 + 4.2; vec2 p3 = vec2(cos(a3) * 0.35, sin(a3) * 0.28);
+      float d3 = length(uv - p3); if (d3 < 0.18) col = mix(col, vec3(1.0, 0.85, 0.2), smoothstep(0.18, 0.12, d3));
+      col += vec3(0.4) * smoothstep(0.7, 0.9, uv.x + uv.y);
+      col *= smoothstep(0.95, 0.85, r);
+      gl_FragColor = vec4(col, 1.0);
+    }`
+  });
+
+  const scBezelBatch = ufoBatch();
+  const scTrimBatch = ufoBatch();
+  const pXs = [-4.2, -2.5, -.9, .8, 2.5, 4.2];
+  for (let i = 0; i < 6; i++) {
+    const wx = pXs[i], wy = 1.6, wz = 3.44;
+    scTrimBatch.add(new Cn(1.5, 2.6, .1), wx, wy, wz);
+    scBezelBatch.add(ufoTubeGeo(ufoCircle(0, 0, 0, .58, 'z', 16), .045, 6, true), wx, wy, wz + .06);
+    scTrimBatch.add(new Cn(.35, .28, .04), wx, wy + .95, wz + .06);
+    scBezelBatch.add(ufoLatheGeo([[0, 0], [.04, 0], [.04, .08], [0, .08]], 8), wx, wy + .95, wz + .08, Math.PI / 2, 0, 0);
+    if (i < 5) {
+      const drumM = new dt(new ba(1.1, 1.1), laundryMat);
+      drumM.position.set(wx, wy, wz + .04); SC.add(drumM);
+    } else {
+      ufoBox(SC, 1.0, 1.0, .02, sm.dark, wx, wy, wz + .04);
+      const oooTex = ufoCanvasTex(128, 128, (oc, ow, oh) => {
+        oc.fillStyle = '#e8d248'; oc.fillRect(0, 0, ow, oh);
+        oc.strokeStyle = '#8a7a15'; oc.lineWidth = 4; oc.strokeRect(4, 4, ow - 8, oh - 8);
+        oc.fillStyle = '#991010'; oc.font = 'bold 15px "Courier New",monospace'; oc.textAlign = 'center';
+        oc.fillText('OUT OF', ow / 2, 50); oc.fillText('ORDER', ow / 2, 80);
+      });
+      const oooM = new dt(new ba(.6, .6), new wi({map: oooTex, side: 2, fog: false}));
+      oooM.position.set(wx, wy, wz + .06); oooM.rotation.z = -.12; SC.add(oooM);
+      scTrimBatch.add(new Cn(.8, .08, .02), wx, wy, wz + .07, 0, 0, .45);
+      scTrimBatch.add(new Cn(.8, .08, .02), wx, wy, wz + .07, 0, 0, -.45);
+    }
+  }
+  scBezelBatch.build(SC, ufoM.trim);
+  scTrimBatch.build(SC, sm.cream);
+
+  const sockG = new xi(); sockG.position.set(0, 4.6, .3); SC.add(sockG);
+  ufoBox(sockG, .08, 2.2, .08, sm.dark, -1.2, 1.1, 0);
+  ufoBox(sockG, .08, 2.2, .08, sm.dark, 1.2, 1.1, 0);
+  ufoBox(sockG, 2.6, .08, .08, sm.dark, 0, 1.8, 0);
+  const sockPath = [
+    [-.7, 3.8, 0], [.7, 3.8, 0], [.6, 1.8, 0], [1.4, 1.0, 0], [1.8, .8, 0],
+    [2.0, .4, 0], [1.7, .1, 0], [1.1, .1, 0], [.1, .6, 0], [-.5, 1.1, 0], [-.7, 1.8, 0], [-.7, 3.8, 0]
+  ];
+  ufoNeon(sockG, sockPath, 0xff4fd8, .11, true);
+  ufoNeon(sockG, [[1.4, 1.0, .02], [1.8, .8, .02], [2.0, .4, .02], [1.7, .1, .02], [1.1, .1, .02]], 0x4df3ff, .08);
+  ufoNeon(sockG, [[-.5, 1.1, .02], [-.1, 1.5, .02], [.3, 1.1, .02]], 0x4df3ff, .08);
+  ufoSign(SC, 'SPIN CYCLE', 6.2, 2.2, '#2fe0d0', 0, 5.6, 2.8, 0, '24 HR QUANTUM WASH · FREE LINT');
+
+  const droppedSock = ufoBox(SC, .35, .03, .45, new ji({color: 0xff4fd8, roughness: .8}), 1.8, .02, 4.6);
+  droppedSock.rotation.y = .38;
+  ufoAdd(SC, ufoLatheGeo([[0, 0], [.18, 0], [.18, .5], [.24, .6], [0, .6]], 8), sm.dark, 5.7, 2.2, -1.2).rotation.z = Math.PI / 2;
+  const scIntBatch = ufoBatch();
+  scIntBatch.add(new Cn(3.4, .08, 1.4), -2.4, 1.1, 1.6);
+  scIntBatch.add(new Cn(.1, 1.1, .1), -3.9, .55, 1.6);
+  scIntBatch.add(new Cn(.1, 1.1, .1), -.9, .55, 1.6);
+  scIntBatch.build(SC, sm.teal);
+  ufoBox(SC, .9, .45, .6, sm.orange, -2.4, 1.38, 1.6);
+  Dt(SP.ax - 14 - 5.8, SP.az + 24 - 3.6, SP.ax - 14 + 5.8, SP.az + 24 + 3.6, SP.py, SP.py + 5.2);
+
+  // ---------- 2. THE EVENT HORIZON: dome lounge, black-hole swirl shader, martini neon ----------
+  const EH = new xi(); EH.position.set(-5, 0, 62); O.add(EH);
+  ufoAdd(EH, ufoLatheGeo([[0, 0], [5.4, 0], [5.4, .6], [5.0, .6], [0, .6]], 24), sm.dark);
+  ufoAdd(EH, ufoLatheGeo([[0, .6], [5.0, .6], [4.8, 2.0], [4.0, 3.5], [2.6, 4.6], [0, 5.0]], 24), sm.plum);
+  ufoNeon(EH, ufoCircle(0, 2.2, 0, 4.85, 'y', 36), 0xffd24d, .09, true);
+  ufoBox(EH, 3.2, 3.2, 1.4, sm.dark, 0, 1.8, -4.6);
+  ufoBox(EH, 3.4, .18, 1.6, sm.orange, 0, 3.4, -4.6);
+  ufoBox(EH, 1.6, 2.4, .08, new wi({color: 0x9af7ff, transparent: true, opacity: .35}), 0, 1.4, -5.2);
+
+  const blackHoleMat = new rt({
+    uniforms: { uTime: spShaderTime },
+    vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform float uTime; varying vec2 vUv; void main() {
+      vec2 uv = (vUv - 0.5) * 2.0; float r = length(uv); if (r > 0.98) discard;
+      if (r < 0.26) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+      float angle = atan(uv.y, uv.x);
+      float spiral = angle * 2.0 - 5.0 * log(r + 0.1) + uTime * 2.2;
+      float bands = sin(spiral) * 0.5 + 0.5; bands += sin(spiral * 2.0 + uTime) * 0.25;
+      vec3 col = mix(vec3(0.55, 0.15, 0.95), vec3(0.2, 0.9, 1.0), smoothstep(0.8, 0.4, r));
+      col = mix(col, vec3(1.0, 0.95, 0.6), smoothstep(0.4, 0.27, r) * (0.8 + 0.4 * bands));
+      float beaming = 0.8 + 0.4 * uv.x; col *= beaming;
+      col *= smoothstep(0.98, 0.85, r);
+      gl_FragColor = vec4(col, 1.0);
+    }`
+  });
+  const bhDisc = new dt(new lr(1.45, 24, 16), blackHoleMat);
+  bhDisc.position.set(0, 4.4, -4.8); bhDisc.rotation.x = .25; EH.add(bhDisc);
+  ufoNeon(EH, ufoCircle(0, 4.4, -4.8, 1.55, 'z', 28), 0x9a5cff, .08, true);
+
+  const martG = new xi(); martG.position.set(-3.8, 3.8, -4.2); EH.add(martG);
+  martG.rotation.y = .4;
+  ufoBox(martG, .08, 2.6, .08, sm.dark, 0, 0, 0);
+  ufoNeon(martG, [[0, 0, 0], [0, 1.0, 0], [-.8, 1.9, 0], [.8, 1.9, 0], [0, 1.0, 0]], 0x4df3ff, .08);
+  ufoBall(martG, .16, new wi({color: 0x58ffa6}), 0, 1.5, .05);
+  ufoBall(martG, .06, new wi({color: 0xff3b5c}), 0, 1.5, .2);
+  ufoNeon(martG, [[-.2, 1.3, .05], [.4, 1.8, .05]], 0xffd24d, .05);
+  ufoSign(EH, 'EVENT HORIZON', 5.6, 1.8, '#c06bff', 0, 5.8, -4.2, 0, 'ALL WELCOME · NO RETURN');
+
+  const plaqueTex = ufoCanvasTex(128, 64, (pc, pw, ph) => {
+    pc.fillStyle = '#b08a38'; pc.fillRect(0, 0, pw, ph);
+    pc.strokeStyle = '#5c4515'; pc.lineWidth = 2; pc.strokeRect(3, 3, pw - 6, ph - 6);
+    pc.fillStyle = '#1c1405'; pc.font = 'bold 11px sans-serif'; pc.textAlign = 'center';
+    pc.fillText('HAPPY HOUR:', pw / 2, 28); pc.fillText('ALL RELATIVE', pw / 2, 48);
+  });
+  const plaqueM = new dt(new ba(.55, .28), new wi({map: plaqueTex, side: 2, fog: false}));
+  plaqueM.position.set(.9, 1.8, -5.25); EH.add(plaqueM);
+
+  const patioDarkBatch = ufoBatch();
+  const patioBrassBatch = ufoBatch();
+  const patioCreamBatch = ufoBatch();
+  for (let k = -3; k <= 3; k++) {
+    const pa = -Math.PI / 2 + k * .3;
+    patioDarkBatch.add(new Cn(1.2, .25, .4), Math.cos(pa) * 7.5, .12, Math.sin(pa) * 7.5, 0, -pa, 0);
+  }
+  for (const [tx, tz] of [[-2.5, -6.8], [2.2, -6.6]]) {
+    patioDarkBatch.add(ufoLatheGeo([[0, 0], [.35, 0], [.18, .08], [.06, .9], [0, .9]], 10), tx, 0, tz);
+    patioCreamBatch.add(ufoLatheGeo([[0, .9], [.75, .9], [.75, .96], [0, .96]], 16), tx, 0, tz);
+    for (const sx of [-.8, .8]) {
+      patioDarkBatch.add(ufoLatheGeo([[0, 0], [.22, 0], [.05, .6], [0, .6]], 8), tx + sx, 0, tz + .4);
+      patioBrassBatch.add(ufoLatheGeo([[0, .6], [.24, .6], [.24, .7], [0, .7]], 12), tx + sx, 0, tz + .4);
+    }
+  }
+  patioDarkBatch.build(EH, sm.dark);
+  patioBrassBatch.build(EH, ufoM.brass);
+  patioCreamBatch.build(EH, sm.cream);
+  ufoAdd(EH, ufoLatheGeo([[0, 0], [.08, 0], [.08, .16], [0, .16]], 8), sm.teal, -2.5, .96, -6.8);
+  const candleFlame = ufoBall(EH, .04, new wi({color: 0xffa030}), -2.5, 1.15, -6.8);
+  spSpin.push((t) => { candleFlame.scale.setScalar(.8 + .4 * Math.sin(t * 18.0 + Math.cos(t * 7.0))); });
+  Dt(SP.ax - 5 - 5.6, SP.az + 62 - 5.6, SP.ax - 5 + 5.6, SP.az + 62 + 5.6, SP.py, SP.py + 5.8);
+
+  // ---------- 3. PLANET POP: monumental gumball machine with bobbing mini-planets ----------
+  const PP = new xi(); PP.position.set(14, 0, 6); O.add(PP);
+  const ppRedBatch = ufoBatch();
+  const ppCreamBatch = ufoBatch();
+  const ppDarkBatch = ufoBatch();
+  ppRedBatch.add(ufoLatheGeo([[0, 0], [2.8, 0], [2.6, .4], [2.2, 1.2], [1.8, 2.2], [2.1, 2.6], [0, 2.6]], 16), 0, 0, 0);
+  ppCreamBatch.add(ufoLatheGeo([[0, 2.6], [2.2, 2.6], [2.0, 3.2], [1.7, 3.4], [0, 3.4]], 16), 0, 0, 0);
+  ppDarkBatch.add(ufoTubeGeo(ufoCircle(0, .05, 0, 2.82, 'y', 24), .06, 6, true), 0, 0, 0);
+  ppDarkBatch.add(ufoTubeGeo(ufoCircle(0, 2.6, 0, 2.12, 'y', 24), .05, 6, true), 0, 0, 0);
+
+  const crankG = new xi(); crankG.position.set(0, 2.2, 2.0); PP.add(crankG);
+  ufoBox(crankG, .7, .8, .3, ufoM.trim, 0, 0, 0);
+  ufoAdd(crankG, ufoLatheGeo([[0, 0], [.12, 0], [.08, .18], [0, .18]], 10), ufoM.trim, 0, 0, .15).rotation.x = Math.PI / 2;
+  ufoBox(crankG, .06, .45, .06, ufoM.trim, .18, 0, .26).rotation.z = .4;
+  ufoBall(crankG, .08, sm.red, .34, .18, .26);
+  ufoBox(crankG, .24, .12, .04, sm.dark, 0, .26, .16);
+  ufoBox(crankG, .14, .02, .05, ufoM.brass, 0, .26, .16);
+
+  const chuteG = new xi(); chuteG.position.set(0, .9, 2.15); PP.add(chuteG);
+  ufoBox(chuteG, .9, .65, .5, sm.dark, 0, 0, 0);
+  ufoBox(chuteG, .8, .06, .4, ufoM.trim, 0, -.28, .15);
+  const flap = ufoBox(chuteG, .75, .5, .04, ufoM.trim, 0, .15, .15); flap.rotation.x = -.6;
+  const critterG = new xi(); critterG.position.set(0, -.08, .1); chuteG.add(critterG);
+  ufoBall(critterG, .24, new ji({color: 0x8be3c3, roughness: .85}), 0, 0, 0);
+  ufoBall(critterG, .07, new wi({color: 0xffebd0}), -.09, .08, .18);
+  ufoBall(critterG, .07, new wi({color: 0xffebd0}), .09, .08, .18);
+  ufoBall(critterG, .035, sm.dark, -.09, .08, .23);
+  ufoBall(critterG, .035, sm.dark, .09, .08, .23);
+
+  const globeG = new xi(); globeG.position.set(0, 5.8, 0); PP.add(globeG);
+  const globeM = new dt(new lr(2.5, 24, 20), new wi({color: 0xaef4ff, transparent: true, opacity: .22, side: 2}));
+  globeG.add(globeM);
+  ppDarkBatch.add(ufoTubeGeo(ufoCircle(0, 3.4, 0, 1.72, 'y', 24), .08, 6, true), 0, 0, 0);
+  ppRedBatch.add(ufoLatheGeo([[0, 8.2], [1.7, 8.2], [1.5, 8.8], [.6, 9.4], [0, 9.6]], 16), 0, 0, 0);
+  ppDarkBatch.build(PP, sm.dark);
+  ppRedBatch.build(PP, sm.red);
+  ppCreamBatch.build(PP, sm.cream);
+
+  const popStar = [];
+  for (let k = 0; k <= 8; k++) {
+    const a = k * Math.PI / 4, r1 = k % 2 === 0 ? 1.4 : .7;
+    popStar.push([0, 10.4 + Math.sin(a) * r1, Math.cos(a) * r1]);
+  }
+  ufoNeon(PP, popStar, 0xffd24d, .08, true);
+  ufoBall(PP, .32, sm.yellow, 0, 10.4, 0);
+
+  const planetsGroup = new xi(); globeG.add(planetsGroup);
+  const planetColors = [0x4df3ff, 0xff7bd0, 0xffd24d, 0x58ffa6, 0xff5a36, 0xc06bff, 0x8be3c3, 0xffffff];
+  const planetBatch = ufoBatch();
+  const ringBatch = ufoBatch();
+  for (let i = 0; i < 24; i++) {
+    const theta = (i / 24) * Math.PI * 2 + (i % 3) * .4;
+    const phi = Math.acos(2 * ((i + .5) / 24) - 1);
+    const pr = .7 + (i % 4) * .38;
+    const px = Math.sin(phi) * Math.cos(theta) * pr;
+    const py = Math.cos(phi) * pr * .75;
+    const pz = Math.sin(phi) * Math.sin(theta) * pr;
+    const pSize = .22 + (i % 5) * .07;
+    planetBatch.add(new lr(pSize, 8, 6), px, py, pz);
+    if (i % 4 === 0) ringBatch.add(ufoTubeGeo(ufoCircle(0, 0, 0, pSize * 1.8, 'y', 14), .02, 4, true), px, py, pz, .35, 0, .2);
+  }
+  planetBatch.build(planetsGroup, sm.plum);
+  ringBatch.build(planetsGroup, ufoM.brass);
+  spSpin.push((t) => {
+    const p = Nn.position;
+    if (Math.hypot(p.x - (SP.ax + 14), p.z - (SP.az + 6)) < 40) {
+      planetsGroup.position.y = Math.sin(t * 1.8) * .12;
+      planetsGroup.rotation.y = t * .15;
+    }
+  });
+
+  ufoNeon(PP, ufoCircle(0, 8.4, 0, 1.8, 'y', 28), 0xff4fd8, .10, true);
+  ufoSign(PP, 'PLANET POP', 5.2, 1.8, '#ff4fd8', 0, 8.9, 0, 0, 'GENUINE WORLDS · 25¢');
+  ufoSign(PP, 'PLANET POP', 5.2, 1.8, '#4df3ff', 0, 8.9, 0, Math.PI, 'GENUINE WORLDS · 25¢');
+  Dt(SP.ax + 14 - 2.8, SP.az + 6 - 2.8, SP.ax + 14 + 2.8, SP.az + 6 + 2.8, SP.py, SP.py + 10.5);
+
+  // ---------- 4. ZORP'S USED ROCKETS: rockets on stilts, trailer office, tube-dancer ----------
+  const ZR = new xi(); ZR.position.set(45, 0, 54); O.add(ZR);
+  const trG = new xi(); trG.position.set(-4.5, 0, -3.5); trG.rotation.y = .2; ZR.add(trG);
+  const zorpMintBatch = ufoBatch();
+  const zorpCreamBatch = ufoBatch();
+  const zorpDarkBatch = ufoBatch();
+  zorpMintBatch.add(new Cn(5.2, 2.5, 2.6), 0, 1.6, 0);
+  zorpCreamBatch.add(new Cn(5.24, .35, 2.64), 0, 2.7, 0);
+  zorpCreamBatch.add(new Cn(1.0, 2.0, .08), -1.4, 1.3, 1.32);
+  zorpDarkBatch.add(new Cn(1.2, .18, .5), -1.4, .09, 1.55);
+  zorpDarkBatch.add(new Cn(.06, 1.4, .06), -.6, 3.4, 0);
+  zorpDarkBatch.add(new Cn(.8, .04, .04), -.6, 3.8, 0);
+  zorpDarkBatch.add(new Cn(.5, .04, .04), -.6, 4.0, 0);
+  zorpMintBatch.build(trG, sm.mint);
+  zorpCreamBatch.build(trG, sm.cream);
+  zorpDarkBatch.build(trG, sm.dark);
+  ufoBox(trG, 5.3, .06, 2.68, ufoM.trim, 0, 1.5, 0);
+  ufoBox(trG, 1.2, 1.0, .08, new wi({color: 0x9af7ff}), .8, 1.8, 1.32);
+
+  const zorpSignTex = ufoCanvasTex(256, 128, (zc, zw, zh) => {
+    zc.fillStyle = '#f0db4f'; zc.fillRect(0, 0, zw, zh);
+    zc.strokeStyle = '#c02828'; zc.lineWidth = 5; zc.strokeRect(4, 4, zw - 8, zh - 8);
+    zc.fillStyle = '#a01515'; zc.font = 'bold 22px "Arial Black",sans-serif'; zc.textAlign = 'center';
+    zc.fillText("ZORP'S", zw / 2, 38);
+    zc.font = 'bold 13px sans-serif'; zc.fillStyle = '#1c1c1c';
+    zc.fillText('PRE-OWNED CRAFT', zw / 2, 65);
+    zc.font = 'italic 11px sans-serif'; zc.fillStyle = '#555';
+    zc.fillText('LOW MILEAGE · EASY TERMS', zw / 2, 92);
+    zc.font = 'bold 10px monospace'; zc.fillStyle = '#a01515';
+    zc.fillText('"NO REASONABLE OFFER REFUSED"', zw / 2, 114);
+  });
+  const zorpSignM = new dt(new ba(2.4, 1.2), new wi({map: zorpSignTex, side: 2, fog: false}));
+  zorpSignM.position.set(-4.5, 4.2, -2.1); zorpSignM.rotation.y = .2; ZR.add(zorpSignM);
+
+  const dancerG = new xi(); dancerG.position.set(-1.2, 0, -5.4); ZR.add(dancerG);
+  ufoAdd(dancerG, ufoLatheGeo([[0, 0], [.38, 0], [.38, .35], [.24, .45], [0, .45]], 12), sm.dark);
+  const tubeDancerMat = new rt({
+    uniforms: { uTime: spShaderTime },
+    vertexShader: `uniform float uTime; varying vec2 vUv; void main() {
+      vUv = uv; vec3 pos = position; float h = clamp(pos.y / 4.2, 0.0, 1.0); float h2 = h * h;
+      float swayX = sin(uTime * 4.2) * 0.7 * h2 + sin(uTime * 8.5 + pos.y * 1.5) * 0.25 * h;
+      float swayZ = cos(uTime * 3.1) * 0.6 * h2;
+      pos.x += swayX; pos.z += swayZ;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+    }`,
+    fragmentShader: `varying vec2 vUv; void main() {
+      float stripe = sin(vUv.y * 24.0) * 0.5 + 0.5;
+      vec3 col = mix(vec3(1.0, 0.75, 0.1), vec3(1.0, 0.35, 0.1), smoothstep(0.3, 0.7, stripe));
+      if (vUv.y > 0.82 && vUv.y < 0.94) {
+        float eyeDist = abs(vUv.x - 0.5);
+        if (eyeDist > 0.12 && eyeDist < 0.22 && vUv.y > 0.86) {
+          col = vec3(1.0);
+          if (eyeDist > 0.15 && eyeDist < 0.19 && vUv.y > 0.88 && vUv.y < 0.92) col = vec3(0.0);
+        }
+        if (eyeDist < 0.18 && vUv.y > 0.83 && vUv.y < 0.86) col = vec3(0.1);
+      }
+      gl_FragColor = vec4(col, 1.0);
+    }`
+  });
+  const dancerMesh = new dt(new lr(.26, 12, 16), tubeDancerMat);
+  dancerMesh.scale.set(1, 4.2, 1); dancerMesh.position.set(0, 2.1, 0); dancerG.add(dancerMesh);
+
+  const rocketDarkBatch = ufoBatch();
+  const rocketTrimBatch = ufoBatch();
+  const rkSpecs = [
+    {x: 4.2, z: -2.0, h: 5.6, r: .65, tag: '999 CR', col: sm.orange},
+    {x: .2, z: 2.2, h: 6.2, r: .95, tag: 'SOLD', col: sm.teal},
+    {x: -3.8, z: 3.2, h: 3.8, r: .75, tag: 'AS-IS', col: sm.mint},
+    {x: 4.8, z: 3.8, h: 6.8, r: .55, tag: '500 CR', col: sm.red}
+  ];
+  for (const rk of rkSpecs) {
+    const rkG = new xi(); rkG.position.set(rk.x, 0, rk.z); ZR.add(rkG);
+    for (let k = 0; k < 3; k++) {
+      const a = k * Math.PI * 2 / 3;
+      rocketDarkBatch.add(ufoTubeGeo([[0, 1.2, 0], [Math.cos(a) * (rk.r + .5), 0, Math.sin(a) * (rk.r + .5)]], .04, 4), rk.x, 0, rk.z);
+    }
+    ufoAdd(rkG, ufoLatheGeo([[0, .8], [rk.r, 1.2], [rk.r, rk.h - 1.5], [rk.r * .6, rk.h - .6], [0, rk.h]], 14), rk.col);
+    rocketTrimBatch.add(ufoLatheGeo([[0, rk.h - .7], [rk.r * .62, rk.h - .7], [0, rk.h + .4]], 12), rk.x, 0, rk.z);
+    rocketDarkBatch.add(ufoLatheGeo([[0, .4], [rk.r * .55, .4], [rk.r * .35, .9], [0, .9]], 10), rk.x, 0, rk.z);
+    for (let k = 0; k < 3; k++) {
+      const a = k * Math.PI * 2 / 3;
+      rocketTrimBatch.add(new Cn(.06, 1.4, rk.r + .5), rk.x + Math.cos(a) * (rk.r * .5), 1.6, rk.z + Math.sin(a) * (rk.r * .5), 0, -a, 0);
+    }
+    const tagTex = ufoCanvasTex(128, 64, (tc, tw, th) => {
+      tc.fillStyle = rk.tag === 'SOLD' ? '#d62828' : '#ffd24d'; tc.fillRect(0, 0, tw, th);
+      tc.fillStyle = rk.tag === 'SOLD' ? '#ffffff' : '#1c1c1c';
+      tc.font = 'bold 22px "Arial Black",sans-serif'; tc.textAlign = 'center';
+      tc.fillText(rk.tag, tw / 2, 42);
+    });
+    const tagM = new dt(new ba(.65, .32), new wi({map: tagTex, side: 2, fog: false}));
+    tagM.position.set(0, 2.2, rk.r + .06);
+    if (rk.tag === 'SOLD') tagM.rotation.z = -.25;
+    rkG.add(tagM);
+  }
+  rocketDarkBatch.build(ZR, sm.dark);
+  rocketTrimBatch.build(ZR, ufoM.trim);
+
+  const pennantPoles = [[-7, -5], [7, -5], [7, 6], [-7, 6]];
+  for (let p = 0; p < 4; p++) {
+    const p1 = pennantPoles[p], p2 = pennantPoles[(p + 1) % 4];
+    rocketDarkBatch.add(ufoTubeGeo([[p1[0], 0, p1[1]], [p1[0], 4.2, p1[1]]], .035, 4));
+    rocketDarkBatch.add(ufoTubeGeo([[p1[0], 4.0, p1[1]], [(p1[0] + p2[0]) * .5, 3.4, (p1[1] + p2[1]) * .5], [p2[0], 4.0, p2[1]]], .015, 4));
+  }
+  Dt(SP.ax + 45 - 7.5, SP.az + 54 - 5.5, SP.ax + 45 - 1.5, SP.az + 54 - 1.5, SP.py, SP.py + 3.5);
+  Dt(SP.ax + 45 - 2.0, SP.az + 54 + .5, SP.ax + 45 + 7.5, SP.az + 54 + 6.5, SP.py, SP.py + 7.0);
+
+  // ---------- 5. GERTRUDE'S GREENHOUSE: geodesic dome, glowing plants, spores ----------
+  const GH = new xi(); GH.position.set(48, 0, -20); O.add(GH);
+  ufoAdd(GH, ufoLatheGeo([[0, 0], [5.8, 0], [5.8, .5], [5.4, .5], [0, .5]], 16), sm.dark);
+  const domeMat = new wi({color: 0x8be3c3, transparent: true, opacity: .32, side: 2});
+  const ghDome = new dt(new lr(5.5, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
+  ghDome.position.set(0, .5, 0); GH.add(ghDome);
+  const ghBrassBatch = ufoBatch();
+  for (let i = 0; i < 7; i++) {
+    const a = i * Math.PI / 7;
+    ghBrassBatch.add(ufoTubeGeo(ufoCircle(0, .5, 0, 5.5, 'y', 28, [0, Math.PI]), .035, 4), 0, 0, 0, 0, a, 0);
+  }
+  ghBrassBatch.add(ufoLatheGeo([[0, -.6], [.9, -.6], [.9, .6], [0, .6]], 12), -5.5, 1.4, 0, 0, 0, Math.PI / 2);
+  ghBrassBatch.build(GH, ufoM.brass);
+  ufoBox(GH, .08, 1.8, 1.4, sm.mint, -5.5, 1.4, 0);
+  ufoBall(GH, .25, new wi({color: 0x6ffcff}), -5.55, 1.5, 0);
+
+  const ghSignTex = ufoCanvasTex(256, 96, (gc, gw, gh) => {
+    gc.fillStyle = '#223d24'; gc.fillRect(0, 0, gw, gh);
+    gc.strokeStyle = '#8be3c3'; gc.lineWidth = 3; gc.strokeRect(4, 4, gw - 8, gh - 8);
+    gc.fillStyle = '#b6ff5a'; gc.font = 'bold 16px sans-serif'; gc.textAlign = 'center';
+    gc.fillText('FRESH AIR · BOTANICALS', gw / 2, 36);
+    gc.font = 'italic 12px sans-serif'; gc.fillStyle = '#8ff0d8';
+    gc.fillText("GERTRUDE'S GREENHOUSE", gw / 2, 68);
+  });
+  const ghSignM = new dt(new ba(1.8, .7), new wi({map: ghSignTex, side: 2, fog: false}));
+  ghSignM.position.set(-5.6, 2.6, 0); ghSignM.rotation.y = -Math.PI / 2; GH.add(ghSignM);
+
+  const treeG = new xi(); treeG.position.set(0, .5, 0); GH.add(treeG);
+  ufoAdd(treeG, ufoLatheGeo([[0, 0], [.65, 0], [.35, 1.8], [.25, 3.2], [0, 4.2]], 10), sm.dark);
+  const ghStemBatch = ufoBatch();
+  const ghBulbBatch = ufoBatch();
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI * .25, r1 = 1.2 + (k % 3) * .6, by = 1.6 + k * .35;
+    ghStemBatch.add(ufoTubeGeo([[0, by - .4, 0], [Math.cos(a) * r1, by, Math.sin(a) * r1]], .04, 4));
+    ghBulbBatch.add(new lr(.24, 8, 6), Math.cos(a) * r1, by, Math.sin(a) * r1);
+  }
+  ghStemBatch.build(treeG, sm.mint);
+  ghBulbBatch.build(treeG, new wi({color: 0xb6ff5a}));
+  const frondMeshList = [];
+  for (let k = 0; k < 6; k++) {
+    const a = k * Math.PI / 3;
+    const frond = ufoAdd(treeG, ufoLatheGeo([[0, 0], [.18, 0], [.32, .8], [0, 1.6]], 6), sm.lime, Math.cos(a) * 1.8, 0, Math.sin(a) * 1.8);
+    frond.rotation.set((Math.random() - .5) * .2, a, .35);
+    frondMeshList.push(frond);
+  }
+
+  const sporeGeo = new It();
+  const sporeCount = 20;
+  const sporePos = new Float32Array(sporeCount * 3);
+  for (let i = 0; i < sporeCount; i++) {
+    const sa = Math.random() * Math.PI * 2, sr = Math.random() * 3.5, sy = .8 + Math.random() * 3.2;
+    sporePos[i * 3] = Math.cos(sa) * sr; sporePos[i * 3 + 1] = sy; sporePos[i * 3 + 2] = Math.sin(sa) * sr;
+  }
+  sporeGeo.setAttribute('position', new Et(sporePos, 3));
+  const sporePoints = new or(sporeGeo, new Qi({color: 0xb6ff5a, size: .25, transparent: true, opacity: .65, fog: false}));
+  GH.add(sporePoints);
+  spSpin.push((t, dt) => {
+    for (let k = 0; k < frondMeshList.length; k++) {
+      frondMeshList[k].rotation.z = .35 + Math.sin(t * 1.5 + k) * .06;
+    }
+    const sp = sporeGeo.attributes.position.array;
+    for (let i = 0; i < sporeCount; i++) {
+      sp[i * 3 + 1] += Math.sin(t + i) * .003;
+      sp[i * 3] += Math.cos(t * .8 + i) * .002;
+      sp[i * 3 + 2] += Math.sin(t * .9 + i) * .002;
+    }
+    sporeGeo.attributes.position.needsUpdate = true;
+  });
+  Dt(SP.ax + 48 - 5.6, SP.az - 20 - 5.6, SP.ax + 48 + 5.6, SP.az - 20 + 5.6, SP.py, SP.py + 6.2);
+
+  // ---------- 6. PAR SEC MINI GOLF: 3-hole course with ringed-planet windmill ----------
+  const MG = new xi(); MG.position.set(-22, 0, -22); O.add(MG);
+  const turfBatch = ufoBatch();
+  const curbBatch = ufoBatch();
+  turfBatch.add(new Cn(2.2, .08, 6.4), 0, .04, 3.2);
+  curbBatch.add(new Cn(.18, .22, 6.6), -1.15, .11, 3.2);
+  curbBatch.add(new Cn(.18, .22, 6.6), 1.15, .11, 3.2);
+  turfBatch.add(new Cn(2.6, .08, 7.8), -3.5, .04, -2.0);
+  curbBatch.add(new Cn(.18, .22, 8.0), -4.85, .11, -2.0);
+  curbBatch.add(new Cn(.18, .22, 8.0), -2.15, .11, -2.0);
+  turfBatch.add(new Cn(4.8, .08, 2.4), .8, .04, -4.5);
+  curbBatch.add(new Cn(5.0, .22, .18), .8, .11, -5.75);
+  curbBatch.add(new Cn(5.0, .22, .18), .8, .11, -3.25);
+  turfBatch.build(MG, new ji({color: 0x48b842, roughness: .85}));
+  curbBatch.build(MG, sm.red);
+
+  const wmG = new xi(); wmG.position.set(-3.5, 0, -2.0); MG.add(wmG);
+  ufoAdd(wmG, ufoLatheGeo([[0, 0], [1.3, 0], [1.1, 2.0], [.8, 3.6], [0, 3.8]], 6), sm.pink);
+  ufoBox(wmG, .9, .9, 2.8, sm.dark, 0, .45, 0);
+  ufoAdd(wmG, ufoLatheGeo([[0, 3.8], [.95, 3.8], [0, 4.8]], 6), sm.teal);
+  const rotor = new xi(); rotor.position.set(0, 3.2, 1.15); wmG.add(rotor);
+  ufoBall(rotor, .22, sm.yellow, 0, 0, 0);
+  const wmBladeBatch = ufoBatch();
+  for (let k = 0; k < 4; k++) {
+    const a = k * Math.PI / 2;
+    wmBladeBatch.add(ufoTubeGeo(ufoCircle(0, 0, 0, .42, 'z', 12), .035, 4, true), Math.cos(a) * .9, Math.sin(a) * .9, 0);
+    wmBladeBatch.add(ufoTubeGeo([[0, 0, 0], [Math.cos(a) * .9, Math.sin(a) * .9, 0]], .025, 4));
+  }
+  wmBladeBatch.build(rotor, ufoM.brass);
+  spSpin.push({obj: rotor, axis: 'z', speed: .75});
+
+  ufoAdd(MG, ufoLatheGeo([[0, 0], [.42, 0], [.48, .12], [.38, .18], [0, .05]], 10), sm.dark, -3.5, .08, 0);
+  ufoBall(MG, .055, new wi({color: 0xffffff}), -3.5, .22, .38);
+
+  const flagDarkBatch = ufoBatch();
+  const flagCreamBatch = ufoBatch();
+  const flagYellowBatch = ufoBatch();
+  for (const [hx, hz] of [[0, 5.4], [-3.5, -4.8], [2.4, -4.5]]) {
+    flagDarkBatch.add(ufoLatheGeo([[0, 0], [.08, 0], [.08, .02], [0, .02]], 8), hx, .08, hz);
+    flagCreamBatch.add(new Cn(.02, 1.2, .02), hx, .68, hz);
+    flagYellowBatch.add(new Cn(.32, .18, .01), hx + .16, 1.18, hz);
+  }
+  flagDarkBatch.build(MG, sm.dark);
+  flagCreamBatch.build(MG, sm.cream);
+  flagYellowBatch.build(MG, sm.yellow);
+  ufoBox(MG, .02, .88, .02, ufoM.brass, .8, .42, 6.2).rotation.z = -.18;
+  ufoBox(MG, .14, .04, .04, ufoM.trim, .72, .02, 6.2);
+  ufoSign(MG, 'PAR SEC', 4.4, 1.6, '#ff4fa3', 0, 2.8, 6.4, 0, 'MINI GOLF · 18 HOLES IN 3');
+  Dt(SP.ax - 22 - 1.8, SP.az - 22 - 1.8, SP.ax - 22 + 1.8, SP.az - 22 + 1.8, SP.py, SP.py + 5.5);
+
+  // ---------- 7. SEE YOUR HOUSE OBSERVATION DECK: raised terrace, brass telescope ----------
+  const OD = new xi(); OD.position.set(32, 0, -65); O.add(OD);
+  ufoAdd(OD, ufoLatheGeo([[0, 0], [4.2, 0], [4.2, .55], [0, .55]], 18, [-Math.PI / 2, Math.PI]), sm.dark);
+  ufoAdd(OD, ufoLatheGeo([[0, .55], [4.15, .55], [4.15, .6], [0, .6]], 18, [-Math.PI / 2, Math.PI]), sm.cream);
+  const odRailingBatch = ufoBatch();
+  odRailingBatch.add(ufoTubeGeo(ufoCircle(0, 1.65, 0, 4.15, 'y', 24, [-Math.PI / 2, Math.PI]), .035, 4));
+  for (let k = 0; k < 8; k++) {
+    const a = -Math.PI / 2 + k * Math.PI / 7;
+    odRailingBatch.add(ufoTubeGeo([[Math.cos(a) * 4.15, .6, Math.sin(a) * 4.15], [Math.cos(a) * 4.15, 1.65, Math.sin(a) * 4.15]], .028, 4));
+  }
+  odRailingBatch.build(OD, ufoM.brass);
+
+  const teleG = new xi(); teleG.position.set(0, .6, -2.0); teleG.rotation.y = Math.PI; OD.add(teleG);
+  ufoAdd(teleG, ufoLatheGeo([[0, 0], [.42, 0], [.32, .18], [.14, 1.2], [.22, 1.35], [0, 1.35]], 12), sm.dark);
+  const barrelG = new xi(); barrelG.position.set(0, 1.45, 0); barrelG.rotation.x = .42; teleG.add(barrelG);
+  ufoAdd(barrelG, ufoLatheGeo([[0, -.6], [.11, -.6], [.09, .6], [.14, .8], [0, .8]], 12), ufoM.brass);
+  ufoBox(barrelG, .06, .06, .3, ufoM.trim, 0, .14, -.2);
+  ufoAdd(barrelG, ufoLatheGeo([[0, 0], [.06, 0], [.06, .08], [0, .08]], 8), ufoM.brass, .12, 0, 0).rotation.z = Math.PI / 2;
+  ufoBox(teleG, .24, .32, .18, ufoM.brass, .18, .9, 0);
+  const teleTex = ufoCanvasTex(128, 96, (tc, tw, th) => {
+    tc.fillStyle = '#b08a38'; tc.fillRect(0, 0, tw, th);
+    tc.strokeStyle = '#5c4515'; tc.lineWidth = 2; tc.strokeRect(3, 3, tw - 6, th - 6);
+    tc.fillStyle = '#1c1405'; tc.font = 'bold 12px sans-serif'; tc.textAlign = 'center';
+    tc.fillText('SEE YOUR HOUSE', tw / 2, 28);
+    tc.font = 'bold 16px monospace'; tc.fillText('25¢', tw / 2, 54);
+    tc.font = 'italic 9px sans-serif'; tc.fillText('NO REFUNDS ON CLOUDS', tw / 2, 80);
+  });
+  const telePlacM = new dt(new ba(.22, .16), new wi({map: teleTex, side: 2, fog: false}));
+  telePlacM.position.set(.28, .9, 0); telePlacM.rotation.y = Math.PI / 2; teleG.add(telePlacM);
+  // Telescope pedestal & rim edge railing colliders (leaving platform terrace walkable)
+  Dt(SP.ax + 32 - .6, SP.az - 67 - .6, SP.ax + 32 + .6, SP.az - 67 + .6, SP.py, SP.py + 2.2);
+  Dt(SP.ax + 32 - 4.3, SP.az - 69.5, SP.ax + 32 + 4.3, SP.az - 68.5, SP.py, SP.py + 1.8);
+
   // ---------- runway lights and the radio mast ----------
   const bulbGeo = new lr(.28, 8, 6), n = 34;
   const mq = new xi();
@@ -15577,21 +16072,25 @@ function spBuildOutpost(parent, rnd) {
   const mastBulb = ufoBall(O, .6, new wi({color: 0xff4d4d}), 130, 38.5, 60); spNeonPulse.push(mastBulb);
   ufoNeon(O, ufoCircle(130, 30, 60, 2.4, 'y', 24), 0x58ffa6, .08, true);
   col(0x58ffa6, 14, 40, 130, 31, 60);
-  // Faceted hexagonal crystal columns around the rim (amethyst and pale cyan mineral quartz)
+  // Faceted hexagonal crystal columns around the rim (amethyst and pale cyan mineral quartz, batched)
   const cryCols = [0x9d72d6, 0x6edbf5, 0xba88ea, 0xb8d9ea];
+  const cryBatches = [ufoBatch(), ufoBatch(), ufoBatch(), ufoBatch()];
   for (let k = 0; k < 22; k++) {
     const a = rnd() * Math.PI * 2, rad = 188 + rnd() * 30, x = Math.cos(a) * rad, z = Math.sin(a) * rad;
     if (z > 70 && z < 130 && x < 130) continue;
     const cg = new xi(); cg.position.set(x, 0, z); O.add(cg);
-    const colr = cryCols[k % 4];
-    const mat = new wi({color: colr});
+    const bIdx = k % 4;
+    const colr = cryCols[bIdx];
     for (let j = 0; j < 5; j++) {
       const h = 5 + rnd() * 11, w = .8 + rnd() * 1.5;
-      const m = ufoAdd(cg, ufoLatheGeo([[0, 0], [w, 0], [w, h * .75], [0, h]], 6), mat, (rnd() - .5) * 4, 0, (rnd() - .5) * 4);
-      m.rotation.set((rnd() - .5) * .4, rnd() * 3, (rnd() - .5) * .4);
+      const ox = (rnd() - .5) * 4, oz = (rnd() - .5) * 4;
+      cryBatches[bIdx].add(ufoLatheGeo([[0, 0], [w, 0], [w, h * .75], [0, h]], 6), x + ox, 0, z + oz, (rnd() - .5) * .4, rnd() * 3, (rnd() - .5) * .4);
     }
     ufoBall(cg, 4.5, ufoHaloMat(colr, .10), 0, 5, 0);
     if (k % 4 === 0) col(colr, 9, 36, x, 5, z);
+  }
+  for (let bIdx = 0; bIdx < 4; bIdx++) {
+    cryBatches[bIdx].build(O, new wi({color: cryCols[bIdx]}));
   }
   spLights.push({position: new P(SP.ax, SP.py, SP.az), range: 520, cull: 1100, lights, space: 'only'});
 }
@@ -15649,6 +16148,13 @@ function ufoInteraction() {
     const tx = SP.ax + 23, tz = SP.az + 44;
     if (Math.hypot(p.x - tx, p.z - (tz + 3.2)) < 6)
       return {label: 'Order a cosmic taco', action: () => { playInteractionSound('bell'); ufoNote('One toasted-stardust taco. It hums a little. Tastes like a warm evening.', 7); }};
+    const telX = SP.ax + 32, telZ = SP.az - 65;
+    if (Math.hypot(p.x - telX, p.z - telZ) < 4.5)
+      return {label: 'Look through telescope (25¢)', action: () => {
+        playInteractionSound('bell');
+        spTelescopeTimer = 5.0;
+        ufoNote('"See Your House: No refunds on clouds." Through the eyepiece, Earth gleams in blue and white.', 6);
+      }};
   }
   return null;
 }
@@ -16108,6 +16614,15 @@ function ufoFrame(dt, t) {
       const s = spSpin[si];
       if (s.obj) s.obj.rotation[s.axis || 'y'] = (s.offset || 0) + t * (s.speed || 0.5);
       else if (typeof s === 'function') s(t, dt);
+    }
+    spShaderTime.value = t;
+    if (spTelescopeTimer > 0) {
+      spTelescopeTimer -= dt;
+      Nn.fov = 22 + Math.max(0, 1 - spTelescopeTimer / 5.0) * (65 - 22);
+      Nn.updateProjectionMatrix();
+    } else if (spTelescopeTimer <= 0 && Nn.fov !== 65 && !ufo.flying) {
+      Nn.fov = 65;
+      Nn.updateProjectionMatrix();
     }
     if (spBellRingTimer > 0) {
       spBellRingTimer -= dt;
