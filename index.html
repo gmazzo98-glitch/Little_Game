@@ -5265,6 +5265,7 @@ desertMaterial.onBeforeCompile = shader => {
       natGround = mix(natGround, gorgeGround, nwH(bioS, 11200.0, 16800.0));
       natGround = mix(natGround, valleyFloor, nwH(bioS, 19500.0, 24800.0));
       vec3 pGlowCol = vec3(0.0);
+      vec3 nwSheen = vec3(0.0);
       float pGlowK = 0.0;
       if (p.x > 4600.0) {
         float plainsBiome = nwH(p.x, 42000.0, 48000.0);
@@ -5306,6 +5307,16 @@ desertMaterial.onBeforeCompile = shader => {
         vec3 soil = mix(tawny, conifer, smoothstep(0.16, 0.50, moist + 0.26 * (sandNoise(p * 0.0035) - 0.5)));
         soil = mix(soil, vec3(.030,.052,.034) * (.7 + .6 * crown), smoothstep(0.55, 1.0, moist) * 0.55);
         soil = mix(soil, vec3(.060,.092,.054), smoothstep(0.64, 0.80, crown) * (1.0 - moist) * 0.55);
+        // Forest floor close to the walker: moss cushions and rust-brown needle litter break the flat green up.
+        float dFloor = length(vDesertWorld - cameraPosition);
+        if (dFloor < 60.0 && moist > 0.22) {
+          float nearK = (1.0 - smoothstep(20.0, 60.0, dFloor)) * smoothstep(0.22, 0.6, moist);
+          float f1 = sandNoise(p * 0.85 + 3.0), f2 = sandNoise(p * 3.3 + 7.0);
+          float mossAmt = smoothstep(0.48, 0.70, f1);
+          float needleAmt = smoothstep(0.52, 0.78, f2) * (1.0 - mossAmt);
+          soil = mix(soil, vec3(.080,.155,.060) * (0.75 + 0.5 * f2), mossAmt * 0.70 * nearK);
+          soil = mix(soil, vec3(.120,.075,.042) * (0.70 + 0.6 * f1), needleAmt * 0.60 * nearK);
+        }
         vec3 slopeGround = mix(soil, rock, rockMask);
         vec3 roadside = mix(vec3(.25,.215,.145), vec3(.085,.125,.062), smoothstep(0.10, 0.52, moist)) * (0.88 + 0.24 * n);
         float hillStart = nwH(bioS, 5200.0, 8200.0);
@@ -5491,9 +5502,22 @@ desertMaterial.onBeforeCompile = shader => {
         float contact = 1.0 - smoothstep(.10,1.0,dot(tire,tire));
         ground *= 1.0 - max(body * .48, contact * .64);
       }
+      {
+        // Wet ground and wet asphalt mirror the sky at a grazing angle, so the road and the damp verge glow toward the
+        // horizon at dusk and carry the grey of the cloud by day. Patchy, so it reads as puddles and standing water.
+        float nwDamp = nwH(bioS, 9000.0, 14500.0) * (0.30 + 0.70 * uWetness);
+        if (nwDamp > 0.0 || wetFactor > 0.0) {
+          vec3 vdN = normalize(cameraPosition - vDesertWorld);
+          float fres = pow(1.0 - clamp(vdN.y, 0.0, 1.0), 4.0);
+          float pud = smoothstep(0.35, 0.8, sandNoise(p * 0.11 + 3.7));
+          float gloss = asphaltMask * (0.30 + 0.70 * max(wetFactor, nwDamp * 0.6)) * (0.72 + 0.28 * pud)
+                      + (1.0 - asphaltMask) * nwDamp * 0.20 * pud;
+          nwSheen = fogColor * fres * gloss * 0.62;
+        }
+      }
       diffuseColor.rgb *= ground;
       pGlowCol *= pGlowK * (1.0 - max(asphaltMask, max(pavedApron, max(plainsGravel, srTurnout))));`)
-    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n      totalEmissiveRadiance += pGlowCol;')
+    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n      totalEmissiveRadiance += pGlowCol + nwSheen;')
     .replace('#include <fog_fragment>', `
       #ifdef USE_FOG
         float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
@@ -5523,6 +5547,12 @@ function recenterDesert(x, z, budgetMs = Infinity) {
   // Initial placement and teleports finish synchronously. During travel the old
   // patch still has its full 96m dense core, so prepare its replacement offscreen.
   if (urgent) budgetMs = Infinity;
+  else if (budgetMs !== Infinity) {
+    // The wet valley height field costs about four times the desert's, so at driving speed a fixed 1.25 ms slice can fall
+    // behind and the build is then forced to finish in one frame. Grow the slice as the patch edge approaches instead.
+    const lag = Math.max(Math.abs(x - desertOriginX), Math.abs(z - desertOriginZ));
+    budgetMs *= 1 + Math.min(4, Math.max(0, (lag - 40) / 8));
+  }
   if (ox === desertOriginX && oz === desertOriginZ) { desertBuild = null; return; }
   if (!desertBuild || (budgetMs === Infinity && (desertBuild.x !== ox || desertBuild.z !== oz))) {
     mapDesertOverlap(desertOriginX, ox, desertOldColumns);
@@ -11337,10 +11367,12 @@ function makeConiferParts(species, height, seed) {
   for (const r in parts) addRoleMesh(Nt, r, parts[r]);
 })();
 
-// Streaming SR 14 forest, second pass. Every road cell owns a deterministic tree list, so the same trees return from
-// either direction. Six near species carry painted vertex colour (lit branch tips, dark crown interiors, moss on the
-// lower trunk); wooded flanks use one cheap silhouette; ferns, salal and sage share one instanced shrub; fallen
-// logs lie in the wet half. Species, density and ground cover all follow the moisture gradient along the route.
+// Streaming SR 14 forest, third pass. Every road cell owns a deterministic tree list, so the same trees return from
+// either direction. Cells are built in small time slices (never in one frame), baked into per-species matrix and tint
+// arrays, and composed into the instance buffers by block copy, so crossing a cell costs a few hundred microseconds
+// instead of re-deriving every tree. Conifers are stacks of drooping star-shaped boughs with painted vertex colour
+// (bright tips, dark undersides), wooded flanks use a cheaper three-tier silhouette of the same shape, understory is an
+// arching fern, and fallen logs lie in the wet half. Species, density and ground cover follow the moisture gradient.
 const FOREST_CELL = 40;
 const FOREST_NEAR_CELLS = 3;
 const FOREST_UNDER_CELLS = 2;
@@ -11356,6 +11388,7 @@ const forestBarkMats = [];
 // The bundled Material.clone() returns a blank material, so each forest material is built from its palette entry.
 function forestMaterial(role, white) {
   const m = new Lm({ color: white ? 0xffffff : PAL[role] });
+  m.flatShading = false;
   if (/Foliage$/.test(role)) { m.emissive = new Me(PAL[role]); m.emissiveIntensity = 0; forestFoliageMats.push(m); }
   else { m.emissive = new Me(0x4c4a40); m.emissiveIntensity = 0; forestBarkMats.push(m); }
   return m;
@@ -11379,16 +11412,90 @@ function forestPartsGeometry(parts, colorFn) {
   geometry.setIndex(merged.idx);
   return geometry;
 }
-function forestAlderParts() {
-  const parts = [];
-  const rand = Vm(205);
-  parts.push({ role: 'alderBark', part: latheGeom([[0.42, 0], [0.30, 0.6], [0.24, 5.5], [0.17, 9.5], [0, 10.2]], 7) });
-  for (let k = 0; k < 4; k++) {
-    const R = 3.1 + 1.5 * rand();
-    const a = rand() * 6.283, off = k === 0 ? 0 : 1.6 + rand() * 1.3;
-    parts.push({ role: 'alderFoliage', part: { ...latheGeom([[0.02, 0], [R * 0.78, R * 0.22], [R, R * 0.62], [R * 0.74, R * 1.05], [R * 0.3, R * 1.32], [0, R * 1.4]], 7), matrix: matTranslate(Math.cos(a) * off, 6.6 + k * 1.15 + rand() * 0.6, Math.sin(a) * off) } });
+// Small mesh accumulator: vertices carry a painted colour; normals are area-weighted averages unless given.
+function forestMeshBuilder() {
+  const pos = [], col = [], nor = [], idx = [];
+  let explicit = false;
+  return {
+    v(x, y, z, c, n) {
+      pos.push(x, y, z); col.push(c[0], c[1], c[2]);
+      if (n) { const l = Math.hypot(n[0], n[1], n[2]) || 1; nor.push(n[0] / l, n[1] / l, n[2] / l); explicit = true; } else nor.push(0, 0, 0);
+      return pos.length / 3 - 1;
+    },
+    tri(a, b, c) { idx.push(a, b, c); },
+    geometry() {
+      if (!explicit) {
+        for (let i = 0; i < idx.length; i += 3) {
+          const a = idx[i] * 3, b = idx[i + 1] * 3, c = idx[i + 2] * 3;
+          const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2];
+          const vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2];
+          const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+          for (const o of [a, b, c]) { nor[o] += nx; nor[o + 1] += ny; nor[o + 2] += nz; }
+        }
+        for (let i = 0; i < nor.length; i += 3) {
+          const l = Math.hypot(nor[i], nor[i + 1], nor[i + 2]);
+          if (l > 1e-9) { nor[i] /= l; nor[i + 1] /= l; nor[i + 2] /= l; } else { nor[i] = 0; nor[i + 1] = 1; nor[i + 2] = 0; }
+        }
+      }
+      const g = new It();
+      g.setAttribute('position', new Et(new Float32Array(pos), 3));
+      g.setAttribute('normal', new Et(new Float32Array(nor), 3));
+      g.setAttribute('color', new Et(new Float32Array(col), 3));
+      g.setIndex(idx);
+      return g;
+    }
+  };
+}
+// Conifer crown: stacked whorls of drooping, star-shaped boughs. Spikes alternate with notches, tips hang below the
+// whorl, the top is lit and bright at the tips, and the underside of every whorl is dark.
+function forestCrown(B, sp, seed) {
+  const rand = Vm(seed);
+  const crownH = sp.H * sp.crown, baseH = sp.H - crownH;
+  for (let t = 0; t < sp.tiers; t++) {
+    const f = sp.tiers > 1 ? t / (sp.tiers - 1) : 1;
+    const ty = baseH + 0.10 * crownH + f * crownH * 0.84;
+    const R = Math.max(0.5, sp.H * sp.R * (1 - sp.taper * f) * (0.86 + 0.28 * rand()));
+    const h = crownH / sp.tiers * sp.thick;
+    const droop = h * sp.droop * (1 - 0.35 * f);
+    const lum = 0.80 + 0.34 * f;
+    const top = t === sp.tiers - 1;
+    const apex = B.v(0, ty + h * 0.62 + (top ? h * 1.5 : 0), 0, [0.95 * lum, 1.04 * lum, 0.90 * lum]);
+    const bot = B.v(0, ty - h * 0.12, 0, [0.40, 0.46, 0.43]);
+    const twist = rand() * 6.2832, M = sp.N * 2, upper = [], lower = [];
+    for (let i = 0; i < M; i++) {
+      const a = twist + i / M * 6.2832, tip = (i & 1) === 0, ca = Math.cos(a), sa = Math.sin(a);
+      const rr = tip ? R * (0.78 + 0.46 * rand()) : R * (0.44 + 0.14 * rand());
+      const y = tip ? ty - droop * (0.75 + 0.5 * rand()) : ty + h * 0.12;
+      const j = 0.9 + 0.2 * rand();
+      const c = tip ? [sp.tip[0] * lum * j, sp.tip[1] * lum * j, sp.tip[2] * lum * j] : [0.80 * lum, 0.90 * lum, 0.78 * lum];
+      upper.push(B.v(ca * rr, y, sa * rr, c));
+      lower.push(B.v(ca * rr, y - 0.02, sa * rr, [c[0] * 0.40, c[1] * 0.43, c[2] * 0.42]));
+    }
+    for (let i = 0; i < M; i++) { const j = (i + 1) % M; B.tri(apex, upper[j], upper[i]); B.tri(bot, lower[i], lower[j]); }
   }
-  return parts;
+}
+// Broad-leaf crown (alder): overlapping rough lobes, lighter on top.
+const FOREST_ICO_V = (function () { const t = (1 + Math.sqrt(5)) / 2; return [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]]; })();
+const FOREST_ICO_F = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+function forestLobe(B, cx, cy, cz, rx, ry, rz, rand, base) {
+  const b0 = FOREST_ICO_V.map(v => {
+    const l = Math.hypot(v[0], v[1], v[2]), nx = v[0] / l, ny = v[1] / l, nz = v[2] / l;
+    const j = 0.82 + 0.34 * rand(), br = (0.62 + 0.55 * (ny * 0.5 + 0.5)) * (0.9 + 0.2 * rand());
+    return B.v(cx + nx * rx * j, cy + ny * ry * j, cz + nz * rz * j, [base[0] * br, base[1] * br, base[2] * br]);
+  });
+  for (const f of FOREST_ICO_F) B.tri(b0[f[0]], b0[f[1]], b0[f[2]]);
+}
+function forestAlderCrown() {
+  const B = forestMeshBuilder(), rand = Vm(205);
+  forestLobe(B, 0, 8.2, 0, 3.7, 3.0, 3.6, rand, [1.05, 1.12, 0.84]);
+  for (let k = 0; k < 5; k++) {
+    const a = k / 5 * 6.2832 + rand() * 0.8, off = 2.1 + 1.2 * rand();
+    forestLobe(B, Math.cos(a) * off, 6.4 + 2.6 * rand(), Math.sin(a) * off, 2.5 + 0.9 * rand(), 2.0 + 0.7 * rand(), 2.4 + 0.9 * rand(), rand, [1.02, 1.1, 0.82]);
+  }
+  return B.geometry();
+}
+function forestAlderTrunk() {
+  return forestPartsGeometry([{ part: latheGeom([[0.42, 0], [0.30, 0.6], [0.24, 5.5], [0.17, 9.5], [0, 10.2]], 7) }], () => [0.30, 0.30, 0.27]);
 }
 function forestSnagParts() {
   const parts = [];
@@ -11399,24 +11506,29 @@ function forestSnagParts() {
   }
   return parts;
 }
+const FOREST_SHAPES = {
+  fir:       { H: 18, crown: 0.76, tiers: 9, N: 8, R: 0.255, taper: 0.80, droop: 0.95, thick: 1.15, tip: [1.22, 1.36, 0.88] },
+  hemlock:   { H: 15, crown: 0.82, tiers: 9, N: 7, R: 0.275, taper: 0.84, droop: 1.35, thick: 1.10, tip: [1.15, 1.36, 0.98] },
+  cedar:     { H: 17, crown: 0.86, tiers: 8, N: 8, R: 0.330, taper: 0.88, droop: 1.25, thick: 1.20, tip: [1.10, 1.28, 0.86] },
+  ponderosa: { H: 22, crown: 0.44, tiers: 5, N: 6, R: 0.200, taper: 0.45, droop: 0.55, thick: 1.55, tip: [1.35, 1.42, 0.78] },
+  flank:     { H: 19.5, crown: 0.90, tiers: 3, N: 5, R: 0.260, taper: 0.62, droop: 1.0, thick: 1.25, tip: [1.15, 1.30, 1.05] }
+};
 const forestNear = (function initForestNear() {
   const table = [
-    { name: 'fir', parts: makeConiferParts('dougFir', 18.0, 77), H: 18, bark: [0.085, 0.064, 0.048], moss: 1.0 },
-    { name: 'hemlock', parts: makeConiferParts('hemlock', 15.0, 31), H: 15, bark: [0.100, 0.080, 0.060], moss: 1.0 },
-    { name: 'cedar', parts: makeConiferParts('cedar', 17.0, 53), H: 17, bark: [0.135, 0.082, 0.056], moss: 0.8 },
-    { name: 'alder', parts: forestAlderParts(), H: 13, bark: [0.30, 0.30, 0.27], moss: 1.0 },
-    { name: 'ponderosa', parts: makeConiferParts('ponderosa', 22.0, 19), H: 22, bark: [0.220, 0.110, 0.060], moss: 0 },
-    { name: 'snag', parts: forestSnagParts(), H: 15, bark: [0.28, 0.27, 0.24], moss: 0.15 }
+    { name: 'fir', trunk: makeConiferParts('dougFir', 18.0, 77), shape: FOREST_SHAPES.fir, seed: 77, role: 'firFoliage', H: 18, bark: [0.085, 0.064, 0.048], moss: 1.0 },
+    { name: 'hemlock', trunk: makeConiferParts('hemlock', 15.0, 31), shape: FOREST_SHAPES.hemlock, seed: 31, role: 'hemlockFoliage', H: 15, bark: [0.100, 0.080, 0.060], moss: 1.0 },
+    { name: 'cedar', trunk: makeConiferParts('cedar', 17.0, 53), shape: FOREST_SHAPES.cedar, seed: 53, role: 'cedarFoliage', H: 17, bark: [0.135, 0.082, 0.056], moss: 0.8 },
+    { name: 'alder', alder: true, role: 'alderFoliage', H: 13, bark: [0.30, 0.30, 0.27], moss: 1.0 },
+    { name: 'ponderosa', trunk: makeConiferParts('ponderosa', 22.0, 19), shape: FOREST_SHAPES.ponderosa, seed: 19, role: 'pineFoliage', H: 22, bark: [0.170, 0.088, 0.052], moss: 0 },
+    { name: 'snag', snag: true, H: 15, bark: [0.28, 0.27, 0.24], moss: 0.15 }
   ];
   const moss = [0.040, 0.120, 0.035];
-  const set = table.map((sp, si) => {
+  return table.map((sp, si) => {
     const cap = FOREST_NEAR_CAPS[si];
     const out = { cap, fol: null, bark: null };
-    const folParts = sp.parts.filter(p => /Foliage$/.test(p.role));
-    const barkParts = sp.parts.filter(p => !/Foliage$/.test(p.role));
-    const mk = (parts, role, colorFn, absolute, shadowReceive) => {
-      const mesh = new ar(forestPartsGeometry(parts.map(p => p.part), colorFn), forestPaintedMat(role, absolute), cap);
-      mesh.name = `Streaming forest ${sp.name} ${absolute ? 'bark' : 'crown'}`;
+    const mk = (geometry, role, absolute, shadowReceive, what) => {
+      const mesh = new ar(geometry, forestPaintedMat(role, absolute), cap);
+      mesh.name = `Streaming forest ${sp.name} ${what}`;
       mesh.castShadow = true;
       mesh.receiveShadow = shadowReceive;
       mesh.frustumCulled = false;
@@ -11425,33 +11537,26 @@ const forestNear = (function initForestNear() {
       Nt.add(mesh);
       return mesh;
     };
-    if (folParts.length) {
-      const H = sp.H, broad = sp.name === 'alder';
-      out.fol = mk(folParts, folParts[0].role, (x, y, z) => {
-        const r = Math.hypot(x, z) / (broad ? 4.2 : 0.30 * H);
-        const b = broad ? 0.82 + 0.30 * Math.min(r, 1) : 0.80 + 0.66 * Math.min(r, 1.15) + 0.34 * (y / H);
-        return [b * 0.96, b, b * 0.9];
-      }, false, true);
-    }
-    if (barkParts.length) {
-      out.bark = mk(barkParts, barkParts[0].role, (x, y, z) => {
-        const nz = Un(Math.floor(Math.atan2(z, x) * 2.6) + 11, Math.floor(y * 0.9));
-        const m = sp.moss * Math.max(0, 1 - y / (2.4 + 4.2 * nz)) * (0.55 + 0.45 * nz);
-        return [sp.bark[0] + (moss[0] - sp.bark[0]) * m, sp.bark[1] + (moss[1] - sp.bark[1]) * m, sp.bark[2] + (moss[2] - sp.bark[2]) * m];
-      }, true, false);
-    }
+    if (sp.alder) out.fol = mk(forestAlderCrown(), sp.role, false, true, 'crown');
+    else if (sp.shape) { const B = forestMeshBuilder(); forestCrown(B, sp.shape, sp.seed); out.fol = mk(B.geometry(), sp.role, false, true, 'crown'); }
+    const barkParts = sp.alder ? [{ role: 'alderBark', part: latheGeom([[0.42, 0], [0.30, 0.6], [0.24, 5.5], [0.17, 9.5], [0, 10.2]], 7) }]
+      : sp.snag ? forestSnagParts() : sp.trunk.filter(p => !/Foliage$/.test(p.role));
+    out.bark = mk(forestPartsGeometry(barkParts.map(p => p.part), (x, y, z) => {
+      const nz = Un(Math.floor(Math.atan2(z, x) * 2.6) + 11, Math.floor(y * 0.9));
+      const m = sp.moss * Math.max(0, 1 - y / (2.4 + 4.2 * nz)) * (0.55 + 0.45 * nz);
+      return [sp.bark[0] + (moss[0] - sp.bark[0]) * m, sp.bark[1] + (moss[1] - sp.bark[1]) * m, sp.bark[2] + (moss[2] - sp.bark[2]) * m];
+    }), barkParts[0].role, true, false, 'bark');
     return out;
   });
-  return set;
 })();
 const forestFar = (function initForestFar() {
-  const cone = mergeParts([latheGeom([[0.45, 0], [0.45, 2.0], [5.0, 2.0], [1.9, 9.0], [3.4, 9.0], [0, 19.5]], 5)]);
-  const g = new It();
-  g.setAttribute('position', new Et(new Float32Array(cone.pos), 3));
-  g.setAttribute('normal', new Et(new Float32Array(cone.nor), 3));
-  g.setIndex(cone.idx);
-  const m = forestMaterial('hemlockFoliage', false);
-  const mesh = new ar(g, m, FOREST_FAR_MAX);
+  const B = forestMeshBuilder();
+  forestCrown(B, FOREST_SHAPES.flank, 9);
+  // a thin dark trunk shows under the crown
+  const tc = [0.30, 0.24, 0.20], t0 = [], t1 = [];
+  for (let i = 0; i < 4; i++) { const a = i / 4 * 6.2832 + 0.4, ca = Math.cos(a), sa = Math.sin(a); t0.push(B.v(ca * 0.55, 0, sa * 0.55, tc)); t1.push(B.v(ca * 0.30, 3.0, sa * 0.30, tc)); }
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; B.tri(t0[i], t1[i], t0[j]); B.tri(t0[j], t1[i], t1[j]); }
+  const mesh = new ar(B.geometry(), forestPaintedMat('hemlockFoliage', false), FOREST_FAR_MAX);
   mesh.name = 'Streaming forest flank silhouettes';
   mesh.frustumCulled = false;
   mesh.count = 0;
@@ -11460,15 +11565,24 @@ const forestFar = (function initForestFar() {
   return mesh;
 })();
 const forestUnder = (function initForestUnder() {
-  const shrub = mergeParts([latheGeom([[0.03, 1.0], [0.22, 0.82], [0.52, 0.42], [0.92, 0.06], [0.62, 0]], 6)]);
-  const g = new It();
-  g.setAttribute('position', new Et(new Float32Array(shrub.pos), 3));
-  g.setAttribute('normal', new Et(new Float32Array(shrub.nor), 3));
-  g.setIndex(shrub.idx);
+  // Understory: an arching fern. Eight fronds rise from a dark crown, bend over and brighten toward the tip.
+  const B = forestMeshBuilder(), rand = Vm(311), K = 8;
+  for (let k = 0; k < K; k++) {
+    const a = k / K * 6.2832 + rand() * 0.5, ca = Math.cos(a), sa = Math.sin(a), L = 0.78 + 0.34 * rand();
+    const px = -sa, pz = ca;
+    const sect = [[0.00, 0.05, 0.035, [0.34, 0.44, 0.30]], [0.50, 0.40, 0.16, [0.80, 0.96, 0.62]], [1.00, 0.33, 0.015, [1.12, 1.24, 0.74]]];
+    const ids = [];
+    for (const [t, y, w, c] of sect) {
+      const d = L * t, n = [ca * 0.35, 1.0, sa * 0.35];
+      ids.push([B.v(ca * d + px * w * L, y * L * 1.3, sa * d + pz * w * L, c, n), B.v(ca * d - px * w * L, y * L * 1.3, sa * d - pz * w * L, c, n)]);
+    }
+    for (let s = 0; s < 2; s++) { const [l0, r0] = ids[s], [l1, r1] = ids[s + 1]; B.tri(l0, r0, l1); B.tri(r0, r1, l1); }
+  }
   const mat = new Lm({ color: 0xffffff });
+  mat.flatShading = false; mat.vertexColors = true; mat.side = 2;
   mat.emissive = new Me(0x23361c); mat.emissiveIntensity = 0;
   forestFoliageMats.push(mat);
-  const mesh = new ar(g, mat, FOREST_UNDER_MAX);
+  const mesh = new ar(B.geometry(), mat, FOREST_UNDER_MAX);
   mesh.name = 'Streaming understory ferns and scrub';
   mesh.frustumCulled = false; mesh.receiveShadow = true; mesh.count = 0;
   mesh.setColorAt(0, new Me(1, 1, 1));
@@ -11479,6 +11593,7 @@ const forestUnder = (function initForestUnder() {
   lg.setAttribute('normal', new Et(new Float32Array(log.nor), 3));
   lg.setIndex(log.idx);
   const lm = new Lm({ color: 0xffffff });
+  lm.flatShading = false;
   const logMesh = new ar(lg, lm, FOREST_LOG_MAX);
   logMesh.name = 'Streaming nurse logs';
   logMesh.frustumCulled = false; logMesh.castShadow = true; logMesh.count = 0;
@@ -11500,12 +11615,18 @@ function forestPickSpecies(m, h, nearWater) {
   if (m < 0.60) return h < 0.20 ? 4 : (h < 0.62 ? 0 : (h < 0.78 ? 1 : (h < 0.86 ? 3 : (h < 0.92 ? 2 : 5))));
   return h < 0.34 ? 0 : (h < 0.62 ? 1 : (h < 0.82 ? 2 : (h < 0.92 ? 3 : (h < 0.96 ? 5 : 0))));
 }
-function forestCellTrees(c) {
-  const list = [];
-  const x0 = c * FOREST_CELL;
-  if (x0 > forkX - 120) return list;
-  for (const side of [-1, 1]) {
-    for (let k = 0; k < FOREST_CANDIDATES; k++) {
+// A cell's tree list is produced by a resumable job: step() stops at the deadline and the next call carries on, so a
+// cell costs a few frames of a millisecond or two instead of one long stall.
+function forestTreeJob(c) { return { c, side: -1, k: 0, list: [], done: false }; }
+function forestTreeStep(job, deadline) {
+  const c = job.c, x0 = c * FOREST_CELL, list = job.list;
+  if (x0 > forkX - 120) { job.done = true; return; }
+  const token = () => job.k + (job.side + 1) * 1000, start = token();
+  while (job.side <= 1) {
+    const side = job.side;
+    for (; job.k < FOREST_CANDIDATES; job.k++) {
+      const k = job.k;
+      if ((k & 7) === 0 && deadline !== Infinity && token() !== start && performance.now() > deadline) return;
       const hx = Un(c * 7.13 + k * 1.91, side * 5.7 + 1.3);
       const hl = Un(c * 3.71 + k * 2.37, side * 9.1 + 4.2);
       const hd = Un(c * 11.3 + k * 0.77, side * 2.9 + 8.8);
@@ -11538,15 +11659,20 @@ function forestCellTrees(c) {
       if (sp === 3) sc *= 0.78;
       list.push(x, y - 0.25, z, sc * (0.80 + 0.24 * Un(z * 0.13, x * 0.29)), sc, Un(x * 0.77, z * 0.31) * 6.2832, sp, Un(x * 0.29, z * 0.61));
     }
+    job.side = side === -1 ? 1 : 2; job.k = 0;
   }
-  return list;
+  job.done = true;
 }
-function forestCellUnder(c) {
-  const list = [];
-  const x0 = c * FOREST_CELL;
-  if (x0 > forkX - 120) return list;
-  for (const side of [-1, 1]) {
-    for (let k = 0; k < FOREST_UNDER_CANDIDATES; k++) {
+function forestUnderJob(c) { return { c, side: -1, k: 0, list: [], done: false }; }
+function forestUnderStep(job, deadline) {
+  const c = job.c, x0 = c * FOREST_CELL, list = job.list;
+  if (x0 > forkX - 120) { job.done = true; return; }
+  const token = () => job.k + (job.side + 1) * 1000, start = token();
+  while (job.side <= 1) {
+    const side = job.side;
+    for (; job.k < FOREST_UNDER_CANDIDATES; job.k++) {
+      const k = job.k;
+      if ((k & 7) === 0 && deadline !== Infinity && token() !== start && performance.now() > deadline) return;
       const hx = Un(c * 5.31 + k * 1.37, side * 3.3 + 7.1);
       const hl = Un(c * 2.19 + k * 3.11, side * 6.7 + 2.9);
       const hd = Un(c * 9.7 + k * 0.53, side * 4.1 + 1.2);
@@ -11572,104 +11698,146 @@ function forestCellUnder(c) {
       if (grade > 1.1) continue;
       const kindHash = Un(x * 0.71, z * 0.67);
       const isLog = m > 0.5 && kindHash > 0.975;
-      const scale = isLog ? 0.8 + 0.7 * Un(x * 0.13, z * 0.17) : (0.55 + 0.55 * (1 - m)) + (0.55 + 0.6 * m) * Un(x * 0.31, z * 0.33);
+      const scale = isLog ? 0.8 + 0.7 * Un(x * 0.13, z * 0.17) : (0.42 + 0.40 * (1 - m)) + (0.50 + 0.55 * m) * Un(x * 0.31, z * 0.33);
       list.push(x, y, z, scale, Un(x * 0.43, z * 0.47) * 6.2832, isLog ? 1 : 0, m, Un(x * 0.57, z * 0.59));
     }
+    job.side = side === -1 ? 1 : 2; job.k = 0;
   }
-  return list;
+  job.done = true;
 }
-const forestCellCache = new Map();
-const forestUnderCache = new Map();
-const forestMatrix = new $e();
-let lastForestCell;
-function setForestInstance(mesh, i, x, y, z, sx, sy, rot) {
-  const c = Math.cos(rot), sn = Math.sin(rot), e = forestMatrix.elements;
-  e[0] = c * sx; e[1] = 0; e[2] = -sn * sx; e[3] = 0;
-  e[4] = 0; e[5] = sy; e[6] = 0; e[7] = 0;
-  e[8] = sn * sx; e[9] = 0; e[10] = c * sx; e[11] = 0;
-  e[12] = x; e[13] = y; e[14] = z; e[15] = 1;
-  mesh.setMatrixAt(i, forestMatrix);
+function forestWriteMatrix(a, o, x, y, z, sx, sy, rot) {
+  const c = Math.cos(rot), s = Math.sin(rot);
+  a[o] = c * sx; a[o + 1] = 0; a[o + 2] = -s * sx; a[o + 3] = 0;
+  a[o + 4] = 0; a[o + 5] = sy; a[o + 6] = 0; a[o + 7] = 0;
+  a[o + 8] = s * sx; a[o + 9] = 0; a[o + 10] = c * sx; a[o + 11] = 0;
+  a[o + 12] = x; a[o + 13] = y; a[o + 14] = z; a[o + 15] = 1;
 }
-function setForestTint(mesh, i, r, g, b) {
-  const a = mesh.instanceColor.array;
-  a[i * 3] = r; a[i * 3 + 1] = g; a[i * 3 + 2] = b;
-}
-function updateForestPool(camX) {
-  const currentCell = camX > forkX + 200 ? null : Math.floor(camX / FOREST_CELL);
-  if (currentCell === lastForestCell) return;
-  lastForestCell = currentCell;
-  const shrubMesh = forestUnder.shrub, logMesh = forestUnder.log;
-  if (currentCell === null) {
-    for (const sp of forestNear) { if (sp.fol) sp.fol.visible = false; if (sp.bark) sp.bark.visible = false; }
-    forestFar.visible = shrubMesh.visible = logMesh.visible = false;
-    return;
-  }
-  for (const key of forestCellCache.keys()) if (Math.abs(key - currentCell) > FOREST_FAR_CELLS + 8) forestCellCache.delete(key);
-  for (const key of forestUnderCache.keys()) if (Math.abs(key - currentCell) > FOREST_UNDER_CELLS + 6) forestUnderCache.delete(key);
+// Bake a finished tree list into the exact arrays the instance buffers take, so composing is a block copy.
+function forestBakeTrees(list) {
   const counts = [0, 0, 0, 0, 0, 0];
-  let farCount = 0, shrubCount = 0, logCount = 0, built = 0, pending = false;
-  for (let step = 0; step <= 2 * FOREST_FAR_CELLS; step++) {
-    // Nearest cells first; one new cell per frame keeps passing the fork or a teleport free of a long stall.
-    const c = currentCell + (step & 1 ? (step + 1) >> 1 : -(step >> 1));
-    let list = forestCellCache.get(c);
-    if (!list) {
-      if (built >= 1) { pending = true; continue; }
-      list = forestCellTrees(c); forestCellCache.set(c, list); built++;
+  let farN = 0;
+  for (let i = 0; i < list.length; i += 8) { const sp = list[i + 6]; counts[sp]++; if (sp !== 3 && sp !== 5) farN++; }
+  const rec = { baked: true, nearN: counts, nearM: [], nearF: [], nearB: [], farN, farM: new Float32Array(farN * 16), farC: new Float32Array(farN * 3) };
+  for (let sp = 0; sp < 6; sp++) { rec.nearM.push(new Float32Array(counts[sp] * 16)); rec.nearF.push(new Float32Array(counts[sp] * 3)); rec.nearB.push(new Float32Array(counts[sp] * 3)); }
+  const at = [0, 0, 0, 0, 0, 0];
+  let fi = 0;
+  for (let i = 0; i < list.length; i += 8) {
+    const sp = list[i + 6], tone = list[i + 7], n = at[sp]++;
+    forestWriteMatrix(rec.nearM[sp], n * 16, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
+    const t = 0.78 + 0.40 * tone, F = rec.nearF[sp], Bk = rec.nearB[sp];
+    F[n * 3] = t; F[n * 3 + 1] = t * (0.96 + 0.1 * tone); F[n * 3 + 2] = t * (1.0 - 0.18 * tone);
+    Bk[n * 3] = t; Bk[n * 3 + 1] = t; Bk[n * 3 + 2] = t;
+    if (sp !== 3 && sp !== 5) {
+      forestWriteMatrix(rec.farM, fi * 16, list[i], list[i + 1], list[i + 2], list[i + 3] * 0.95, list[i + 4] * 0.9, list[i + 5]);
+      const pine = sp === 4, tf = 0.72 + 0.36 * tone;
+      rec.farC[fi * 3] = tf * (pine ? 0.85 : 1.15); rec.farC[fi * 3 + 1] = tf * (pine ? 0.95 : 1.25); rec.farC[fi * 3 + 2] = tf * (pine ? 0.5 : 1.3);
+      fi++;
     }
-    const near = Math.abs(c - currentCell) <= FOREST_NEAR_CELLS;
-    for (let i = 0; i < list.length; i += 8) {
-      const sp = list[i + 6], tone = list[i + 7];
-      if (near) {
-        const ent = forestNear[sp];
-        const n = counts[sp];
-        if (n >= ent.cap) continue;
-        const t = 0.78 + 0.40 * tone;
-        if (ent.fol) {
-          setForestInstance(ent.fol, n, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
-          setForestTint(ent.fol, n, t, t * (0.96 + 0.1 * tone), t * (1.0 - 0.18 * tone));
+  }
+  return rec;
+}
+function forestBakeUnder(list) {
+  let shrubN = 0, logN = 0;
+  for (let i = 0; i < list.length; i += 8) { if (list[i + 5] === 1) logN++; else shrubN++; }
+  const rec = { baked: true, shrubN, logN, shrubM: new Float32Array(shrubN * 16), shrubC: new Float32Array(shrubN * 3), logM: new Float32Array(logN * 16), logC: new Float32Array(logN * 3) };
+  let si = 0, li = 0;
+  for (let i = 0; i < list.length; i += 8) {
+    const m = list[i + 6], v = list[i + 7];
+    if (list[i + 5] === 1) {
+      forestWriteMatrix(rec.logM, li * 16, list[i], list[i + 1] + 0.2, list[i + 2], list[i + 3], list[i + 3], list[i + 4]);
+      const g = 0.8 + 0.4 * v;
+      rec.logC[li * 3] = 0.043 * g; rec.logC[li * 3 + 1] = 0.044 * g; rec.logC[li * 3 + 2] = 0.026 * g;
+      li++;
+    } else {
+      const sc = list[i + 3];
+      forestWriteMatrix(rec.shrubM, si * 16, list[i], list[i + 1] - 0.05, list[i + 2], sc * (1.0 + 0.35 * m), sc * (0.9 + 0.6 * m), list[i + 4]);
+      // Dry side: pale sage and rabbitbrush. Wet side: deep sword fern and salal.
+      const dryR = 0.150, dryG = 0.130, dryB = 0.070, wetR = 0.060 + 0.040 * v, wetG = 0.200 + 0.090 * v, wetB = 0.040;
+      const w = Math.min(1, m * 1.5);
+      rec.shrubC[si * 3] = dryR + (wetR - dryR) * w; rec.shrubC[si * 3 + 1] = dryG + (wetG - dryG) * w; rec.shrubC[si * 3 + 2] = dryB + (wetB - dryB) * w;
+      si++;
+    }
+  }
+  return rec;
+}
+const forestTreeCache = new Map();
+const forestUnderCache = new Map();
+let forestVersion = 0, forestFrame = 0, forestBurst = 0, forestDir = -1;
+let forestNeed = [], forestNeedCell = null;
+const forestComposed = { cell: undefined, version: -1, frame: -9 };
+function forestBuildNeed(cur) {
+  const need = [];
+  for (let d = 0; d <= FOREST_FAR_CELLS; d++) {
+    for (let q = 0; q < (d ? 2 : 1); q++) {
+      const c = cur + (q ? -forestDir : forestDir) * d;   // the side the player is heading toward builds first
+      need.push({ kind: 0, c });
+      if (d <= FOREST_UNDER_CELLS) need.push({ kind: 1, c });
+    }
+  }
+  forestNeed = need;
+}
+function forestPump(cur) {
+  const budget = forestBurst > 0 ? (forestBurst--, 9) : 1.6;
+  const deadline = performance.now() + budget;
+  for (const n of forestNeed) {
+    const cache = n.kind ? forestUnderCache : forestTreeCache;
+    let ent = cache.get(n.c);
+    if (ent && ent.baked) continue;
+    if (!ent) { ent = { job: n.kind ? forestUnderJob(n.c) : forestTreeJob(n.c) }; cache.set(n.c, ent); }
+    const urgent = Math.abs(n.c - cur) <= 1;
+    (n.kind ? forestUnderStep : forestTreeStep)(ent.job, urgent ? Infinity : deadline);
+    if (!ent.job.done) break;
+    cache.set(n.c, n.kind ? forestBakeUnder(ent.job.list) : forestBakeTrees(ent.job.list));
+    forestVersion++;
+    if (performance.now() >= deadline) break;
+  }
+}
+function forestCompose(cur) {
+  const counts = [0, 0, 0, 0, 0, 0];
+  let farCount = 0, shrubCount = 0, logCount = 0;
+  const farM = forestFar.instanceMatrix.array, farC = forestFar.instanceColor.array;
+  const shM = forestUnder.shrub.instanceMatrix.array, shC = forestUnder.shrub.instanceColor.array;
+  const lgM = forestUnder.log.instanceMatrix.array, lgC = forestUnder.log.instanceColor.array;
+  for (let d = 0; d <= FOREST_FAR_CELLS; d++) {
+    for (let q = 0; q < (d ? 2 : 1); q++) {
+      const c = cur + (q ? -forestDir : forestDir) * d;
+      const rec = forestTreeCache.get(c);
+      if (rec && rec.baked) {
+        if (d <= FOREST_NEAR_CELLS) {
+          for (let sp = 0; sp < 6; sp++) {
+            const ent = forestNear[sp], take = Math.min(rec.nearN[sp], ent.cap - counts[sp]);
+            if (take <= 0) continue;
+            const o = counts[sp];
+            ent.bark.instanceMatrix.array.set(rec.nearM[sp].subarray(0, take * 16), o * 16);
+            ent.bark.instanceColor.array.set(rec.nearB[sp].subarray(0, take * 3), o * 3);
+            if (ent.fol) {
+              ent.fol.instanceMatrix.array.set(rec.nearM[sp].subarray(0, take * 16), o * 16);
+              ent.fol.instanceColor.array.set(rec.nearF[sp].subarray(0, take * 3), o * 3);
+            }
+            counts[sp] = o + take;
+          }
+        } else {
+          const take = Math.min(rec.farN, FOREST_FAR_MAX - farCount);
+          if (take > 0) {
+            farM.set(rec.farM.subarray(0, take * 16), farCount * 16);
+            farC.set(rec.farC.subarray(0, take * 3), farCount * 3);
+            farCount += take;
+          }
         }
-        if (ent.bark) {
-          setForestInstance(ent.bark, n, list[i], list[i + 1], list[i + 2], list[i + 3], list[i + 4], list[i + 5]);
-          setForestTint(ent.bark, n, t, t, t);
+      }
+      if (d <= FOREST_UNDER_CELLS) {
+        const ur = forestUnderCache.get(c);
+        if (ur && ur.baked) {
+          const ts = Math.min(ur.shrubN, FOREST_UNDER_MAX - shrubCount);
+          if (ts > 0) { shM.set(ur.shrubM.subarray(0, ts * 16), shrubCount * 16); shC.set(ur.shrubC.subarray(0, ts * 3), shrubCount * 3); shrubCount += ts; }
+          const tl = Math.min(ur.logN, FOREST_LOG_MAX - logCount);
+          if (tl > 0) { lgM.set(ur.logM.subarray(0, tl * 16), logCount * 16); lgC.set(ur.logC.subarray(0, tl * 3), logCount * 3); logCount += tl; }
         }
-        counts[sp] = n + 1;
-      } else if (farCount < FOREST_FAR_MAX && sp !== 3 && sp !== 5) {
-        setForestInstance(forestFar, farCount, list[i], list[i + 1], list[i + 2], list[i + 3] * 0.95, list[i + 4] * 0.9, list[i + 5]);
-        const pine = sp === 4;
-        const t = 0.72 + 0.36 * tone;
-        setForestTint(forestFar, farCount, t * (pine ? 0.85 : 1.15), t * (pine ? 0.95 : 1.25), t * (pine ? 0.5 : 1.3));
-        farCount++;
       }
     }
   }
-  for (let c = currentCell - FOREST_UNDER_CELLS; c <= currentCell + FOREST_UNDER_CELLS; c++) {
-    let list = forestUnderCache.get(c);
-    if (!list) {
-      if (built >= 1) { pending = true; continue; }
-      list = forestCellUnder(c); forestUnderCache.set(c, list); built++;
-    }
-    for (let i = 0; i < list.length; i += 8) {
-      const m = list[i + 6], v = list[i + 7];
-      if (list[i + 5] === 1) {
-        if (logCount >= FOREST_LOG_MAX) continue;
-        setForestInstance(logMesh, logCount, list[i], list[i + 1] + 0.2, list[i + 2], list[i + 3], list[i + 3], list[i + 4]);
-        const g = 0.8 + 0.4 * v;
-        setForestTint(logMesh, logCount, 0.043 * g, 0.044 * g, 0.026 * g);
-        logCount++;
-      } else {
-        if (shrubCount >= FOREST_UNDER_MAX) continue;
-        const sc = list[i + 3];
-        setForestInstance(shrubMesh, shrubCount, list[i], list[i + 1] - 0.05, list[i + 2], sc * (1.0 + 0.35 * m), sc * (0.9 + 0.6 * m), list[i + 4]);
-        // Dry side: pale sage and rabbitbrush. Wet side: deep sword fern and salal.
-        const dryR = 0.150, dryG = 0.130, dryB = 0.070, wetR = 0.045 + 0.030 * v, wetG = 0.150 + 0.070 * v, wetB = 0.034;
-        const w = Math.min(1, m * 1.5);
-        setForestTint(shrubMesh, shrubCount, dryR + (wetR - dryR) * w, dryG + (wetG - dryG) * w, dryB + (wetB - dryB) * w);
-        shrubCount++;
-      }
-    }
-  }
-  for (let si = 0; si < forestNear.length; si++) {
-    const ent = forestNear[si], n = counts[si];
+  for (let sp = 0; sp < 6; sp++) {
+    const ent = forestNear[sp], n = counts[sp];
     for (const mesh of [ent.fol, ent.bark]) {
       if (!mesh) continue;
       mesh.count = n; mesh.visible = n > 0;
@@ -11678,11 +11846,39 @@ function updateForestPool(camX) {
   }
   forestFar.count = farCount; forestFar.visible = farCount > 0;
   forestFar.instanceMatrix.needsUpdate = true; forestFar.instanceColor.needsUpdate = true;
-  shrubMesh.count = shrubCount; shrubMesh.visible = shrubCount > 0;
-  shrubMesh.instanceMatrix.needsUpdate = true; shrubMesh.instanceColor.needsUpdate = true;
-  logMesh.count = logCount; logMesh.visible = logCount > 0;
-  logMesh.instanceMatrix.needsUpdate = true; logMesh.instanceColor.needsUpdate = true;
-  if (pending) lastForestCell = undefined;
+  const sm = forestUnder.shrub, lm = forestUnder.log;
+  sm.count = shrubCount; sm.visible = shrubCount > 0;
+  sm.instanceMatrix.needsUpdate = true; sm.instanceColor.needsUpdate = true;
+  lm.count = logCount; lm.visible = logCount > 0;
+  lm.instanceMatrix.needsUpdate = true; lm.instanceColor.needsUpdate = true;
+}
+function updateForestPool(camX) {
+  forestFrame++;
+  const cur = camX > forkX + 200 ? null : Math.floor(camX / FOREST_CELL);
+  if (cur === null) {
+    if (forestComposed.cell !== null) {
+      for (const sp of forestNear) { if (sp.fol) sp.fol.visible = false; if (sp.bark) sp.bark.visible = false; }
+      forestFar.visible = forestUnder.shrub.visible = forestUnder.log.visible = false;
+      forestComposed.cell = null; forestNeedCell = null;
+    }
+    return;
+  }
+  if (cur !== forestNeedCell) {
+    // A jump of more than a couple of cells is a teleport: spend a larger slice for a few frames so the wood fills in.
+    if (forestNeedCell === null || Math.abs(cur - forestNeedCell) > 2) forestBurst = 8;
+    else forestDir = cur > forestNeedCell ? 1 : -1;
+    forestNeedCell = cur;
+    for (const key of forestTreeCache.keys()) if (Math.abs(key - cur) > FOREST_FAR_CELLS + 8) forestTreeCache.delete(key);
+    for (const key of forestUnderCache.keys()) if (Math.abs(key - cur) > FOREST_UNDER_CELLS + 6) forestUnderCache.delete(key);
+    forestBuildNeed(cur);
+  }
+  forestPump(cur);
+  const moved = cur !== forestComposed.cell;
+  // New cells finishing in the distance are folded in at most every third frame; a move recomposes at once.
+  if (moved || (forestVersion !== forestComposed.version && forestFrame - forestComposed.frame >= 3)) {
+    forestCompose(cur);
+    forestComposed.cell = cur; forestComposed.version = forestVersion; forestComposed.frame = forestFrame;
+  }
 }
 
 // Continuous Mileposts & Deterministic Turnout Signs along SR 14
@@ -18886,7 +19082,7 @@ for (const role of ['firFoliage', 'pineFoliage', 'hemlockFoliage', 'cedarFoliage
   if (ROLE_MATS[role]) ROLE_MATS[role].emissiveIntensity = foliageLift;
 }
 for (const fm of forestFoliageMats) fm.emissiveIntensity = foliageLift;
-for (const bm of forestBarkMats) bm.emissiveIntensity = 0.04 + 2.0 * foliageLift;
+for (const bm of forestBarkMats) bm.emissiveIntensity = 0.03 + 0.9 * foliageLift;   // enough to keep wet bark from going black, not enough to wash it pale
 let t=eg.elapsedTime;
 const duskFogR = .400 * (1 - uNight) + .026 * uNight;
 const duskFogG = .270 * (1 - uNight) + .031 * uNight;
@@ -19049,6 +19245,8 @@ if(Xm && Xm.material && Xm.material.uniforms) {
 
 // 2. Instanced Grass & Fence Streaming
 updatePlainsStreaming(camX, Nn.position.z, t);
+// The shelterbelt meshes skip frustum culling, so away from the Plains the GPU would still transform all of them.
+for (const m of plainsStaticTrees) m.visible = camX > 38000;
 
 // 3. Harvest Moon Sign & Concession Lamp flicker
 let hfl = .96 + .04 * Math.sin(t * 31 + 0.8);
