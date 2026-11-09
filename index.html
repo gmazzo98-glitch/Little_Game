@@ -13121,17 +13121,23 @@ function makeGrassLayer(name, geo, mat, cell, N, K, R, fill) {
   for (let i = 0; i < N * N * K; i++) { src[i * 16 + 3] = -1; src[i * 16 + 15] = 1; }
   mesh.count = 0;
   Nt.add(mesh);
-  return { mesh, src, cell, N, K, R, fill, ownX: new Int32Array(N * N).fill(1e9), ownZ: new Int32Array(N * N).fill(1e9), lastCx: 1e9, lastCz: 1e9 };
+  return { mesh, src, cell, N, K, R, fill, live: new Int32Array(N * N), pend: null, pendPos: 0, syncAll: false, ownX: new Int32Array(N * N).fill(1e9), ownZ: new Int32Array(N * N).fill(1e9), lastCx: 1e9, lastCz: 1e9 };
 }
+// Hot path of the cell fills: flat typed array and indexed loops, no per-instance allocation (iterators / result arrays caused GC stalls).
+const plainsPadFlat = new Float64Array(plainsPads.length * 4);
+plainsPads.forEach((p, i) => { plainsPadFlat[i * 4] = p[0] - 2.5; plainsPadFlat[i * 4 + 1] = p[1] - 2.5; plainsPadFlat[i * 4 + 2] = p[2] + 2.5; plainsPadFlat[i * 4 + 3] = p[3] + 2.5; });
 function plainsInKeepOut(gx, gz) {
   if (gx >= 64490 && gx <= 64710 && gz <= -6 && gz >= -216) return true;
-  for (const [x0, z0, x1, z1] of plainsPads) if (gx >= x0 - 2.5 && gx <= x1 + 2.5 && gz >= z0 - 2.5 && gz <= z1 + 2.5) return true;
+  const f = plainsPadFlat;
+  for (let i = 0; i < f.length; i += 4) if (gx >= f[i] && gx <= f[i + 2] && gz >= f[i + 1] && gz <= f[i + 3]) return true;
   return false;
 }
-function plainsWildPack(x, z) {
+let plainsWildHi = 0;
+function plainsWildPack(x, z) {   // returns the packed palette index; the high-frequency noise comes back in plainsWildHi
   const lowN = plainsGn(x * 0.0025 + 3.7, z * 0.0025 + 1.9), midN = plainsGn(x * 0.011 + 8.1, z * 0.011 + 2.2), hiN = plainsGn(x * 0.045 + 1.3, z * 0.045 + 6.4);
   const a = plainsSmooth(0.30, 0.70, lowN * 0.7 + midN * 0.5 - 0.15), b = plainsSmooth(0.55, 0.85, midN * 0.6 + hiN * 0.45);
-  return [Math.floor(a * 63) * 64 + Math.floor(b * 63), hiN];
+  plainsWildHi = hiN;
+  return Math.floor(a * 63) * 64 + Math.floor(b * 63);
 }
 function writeInstance(arr, o, gx, gy, gz, rot, sx, sy, seed, pk, hi) {
   const c = Math.cos(rot), s = Math.sin(rot);
@@ -13159,7 +13165,7 @@ function fillTuftCell(L, ix, iz, slotBase) {
     const hs = plainsHash(ix * 61 + k, iz * 53 + 11);
     const sc = (0.75 + 0.55 * plainsHash(ix * 7 + k * 5, iz * 3 + 1)) * L.scale;
     const wp = plainsWildPack(gx, gz);
-    writeInstance(arr, o, gx, os(gx, gz), gz, hs * 6.2832, sc, sc * (0.8 + 0.6 * plainsHash(ix + k * 11, iz * 5)), hs, wp[0], wp[1]);
+    writeInstance(arr, o, gx, os(gx, gz), gz, hs * 6.2832, sc, sc * (0.8 + 0.6 * plainsHash(ix + k * 11, iz * 5)), hs, wp, plainsWildHi);
   }
 }
 function fillForbCell(L, ix, iz, slotBase) {
@@ -13179,33 +13185,60 @@ function fillForbCell(L, ix, iz, slotBase) {
     writeInstance(arr, o, gx, os(gx, gz), gz, hs * 6.2832, sc, sc, hs);
   }
 }
+// Move a cell's live instances to the front of its slot range, so the draw list is a handful of block copies, not a per-instance scan.
+function packCell(L, slotBase) {
+  const a = L.src, K = L.K;
+  let w = 0;
+  for (let k = 0; k < K; k++) {
+    const o = (slotBase + k) * 16;
+    if (a[o + 3] < 0) continue;
+    if (w !== k) { const d = (slotBase + w) * 16; for (let q = 0; q < 16; q++) a[d + q] = a[o + q]; }
+    w++;
+  }
+  for (let k = w; k < K; k++) a[(slotBase + k) * 16 + 3] = -1;
+  return w;
+}
+// Crossing a cell queues the row of cells that just came into range; the queue drains on a small per-frame time budget (those cells
+// sit at the far fade edge, so a few frames of delay is invisible). A jump (warp, first frame) fills the whole window at once.
 function updateGrassLayer(L, camX, camZ) {
   const cx = Math.floor(camX / L.cell);
   const zc = L.free ? camZ : Math.max(-82 + L.R, Math.min(82 - L.R, camZ));
   const cz = Math.floor(zc / L.cell);
-  if (cx === L.lastCx && cz === L.lastCz) return;
-  L.lastCx = cx; L.lastCz = cz;
-  const half = L.N >> 1, N = L.N;
-  let changed = false;
-  for (let i = cx - half; i < cx - half + N; i++) {
-    for (let j = cz - half; j < cz - half + N; j++) {
-      const s = (((i % N) + N) % N) + N * (((j % N) + N) % N);
-      if (L.ownX[s] === i && L.ownZ[s] === j) continue;
-      L.fill(L, i, j, s * L.K);
-      L.ownX[s] = i; L.ownZ[s] = j; changed = true;
+  if (cx !== L.lastCx || cz !== L.lastCz) {
+    L.lastCx = cx; L.lastCz = cz;
+    const half = L.N >> 1, N = L.N, pend = [];
+    for (let i = cx - half; i < cx - half + N; i++) {
+      for (let j = cz - half; j < cz - half + N; j++) {
+        const s = (((i % N) + N) % N) + N * (((j % N) + N) % N);
+        if (L.ownX[s] === i && L.ownZ[s] === j) continue;
+        pend.push(i, j, s);
+      }
     }
+    L.pend = pend; L.pendPos = 0; L.syncAll = pend.length > 6 * N;
   }
-  if (changed) compactGrassLayer(L);
+  const pend = L.pend;
+  if (!pend || L.pendPos >= pend.length) return;
+  const t0 = performance.now(), budget = L.syncAll ? Infinity : 2.0;
+  let p = L.pendPos;
+  while (p < pend.length) {
+    const i = pend[p], j = pend[p + 1], s = pend[p + 2];
+    p += 3;
+    L.fill(L, i, j, s * L.K);
+    L.live[s] = packCell(L, s * L.K);
+    L.ownX[s] = i; L.ownZ[s] = j;
+    if (performance.now() - t0 > budget) break;
+  }
+  L.pendPos = p;
+  compactGrassLayer(L);
 }
 function compactGrassLayer(L) {
-  const src = L.src, dst = L.mesh.instanceMatrix.array, total = L.N * L.N * L.K;
+  const src = L.src, dst = L.mesh.instanceMatrix.array, K = L.K, cells = L.N * L.N, live = L.live;
   let n = 0;
-  for (let i = 0; i < total; i++) {
-    const o = i * 16;
-    if (src[o + 3] < 0) continue;
-    const d = n * 16;
-    for (let k = 0; k < 16; k++) dst[d + k] = src[o + k];
-    n++;
+  for (let s = 0; s < cells; s++) {
+    const c = live[s];
+    if (!c) continue;
+    dst.set(src.subarray(s * K * 16, (s * K + c) * 16), n * 16);
+    n += c;
   }
   L.mesh.count = n;
   L.mesh.instanceMatrix.needsUpdate = true;
