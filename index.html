@@ -4637,10 +4637,13 @@ var PLAINS_SKY_GLSL=`
         vec3 dc = mix(dHor, dMid, smoothstep(0.0, 0.20, h));
         dc = mix(dc, dZen, smoothstep(0.15, 0.80, h));
         dc = mix(dc, dc * vec3(1.06, 1.0, 0.90) + vec3(.07, .04, 0.0), tow * (1.0 - smoothstep(0.0, .35, h)) * 0.6);
-        return mix(c, dc, uDay);
+        vec3 res = mix(c, dc, uDay);
+        // Under rain the whole sky is one grey deck, so the horizon haze and the terrain fog take its colour too.
+        float lumR = dot(res, vec3(.30, .55, .15));
+        return mix(res, vec3(lumR) * vec3(0.88, 0.95, 1.04) * 0.80, uRain * 0.92);
       }
 `;
-var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.985,.062,-.15).normalize()},moonDir:{value:new P(52,26,20).normalize()},uNight:{value:0},uDay:{value:0},uOvercast:{value:0},uForestSkyline:{value:0},uPlains:{value:0},uStormGlow:{value:0},uHeatLightning:{value:0},uStormDrift:{value:0},uStormPower:{value:0},uBoltFlash:{value:0},uBoltKind:{value:0},uBoltOff:{value:0},uBoltSeed:{value:0},uTime:{value:0},uCover:{value:.5}},vertexShader:`
+var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{sunDir:{value:new P(-.985,.062,-.15).normalize()},moonDir:{value:new P(52,26,20).normalize()},uNight:{value:0},uDay:{value:0},uOvercast:{value:0},uForestSkyline:{value:0},uPlains:{value:0},uStormGlow:{value:0},uHeatLightning:{value:0},uStormDrift:{value:0},uStormPower:{value:0},uRain:{value:0},uBoltFlash:{value:0},uBoltKind:{value:0},uBoltOff:{value:0},uBoltSeed:{value:0},uTime:{value:0},uCover:{value:.5}},vertexShader:`
       varying vec3 vDir;
       void main(){
         vDir = normalize(position);
@@ -4665,6 +4668,7 @@ var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{s
       uniform float uBoltSeed;
       uniform float uTime;
       uniform float uCover;
+      uniform float uRain;
 
       // Periodic angular ridges close seamlessly around the entire sky.
       // Their shallow angles place them on the far horizon, never beside the station.
@@ -4836,12 +4840,23 @@ var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{s
           col = mix(col, plainsSkyCol(direction), pl);
           haze = mix(haze, plainsSkyCol(vec3(direction.x, 0.0, direction.z)), pl);
         }
+        if (uRain > 0.01) {
+          // A rain deck: a mottled grey blanket that takes the light of the hour, hides the sun, moon and stars, and
+          // leaves the horizon a little paler than the zenith.
+          float yy = max(direction.y, 0.0);
+          vec2 ruv = direction.xz / (yy + 0.22) * 0.9 + vec2(uTime * 0.006, uTime * 0.002);
+          float rn = 0.55 * vn(ruv) + 0.30 * vn(ruv * 2.3 + 7.0) + 0.15 * vn(ruv * 5.1 + 3.0);
+          float lumC = dot(col, vec3(.30, .55, .15)), lumH = dot(haze, vec3(.30, .55, .15));
+          col = mix(col, vec3(lumC) * vec3(0.88, 0.95, 1.04) * 0.80, uRain * 0.92 * (1.0 - pl));
+          haze = mix(haze, vec3(lumH) * vec3(0.88, 0.95, 1.04) * 0.80, uRain * 0.92 * (1.0 - pl));
+          col *= mix(1.0, 0.70 + 0.55 * rn, uRain * smoothstep(-0.02, 0.12, direction.y));
+        }
         float s = max(dot(direction, sunDir), 0.0);
         float sunDisc = smoothstep(.99920, .99962, s);
-        float sunVis = (1.0 - uNight) * (1.0 - 0.82 * uOvercast);
+        float sunVis = (1.0 - uNight) * (1.0 - 0.82 * uOvercast) * (1.0 - 0.96 * uRain);
         col += (vec3(1.0, .82, .52) * sunDisc * 1.45 + vec3(1.0, .62, .30) * pow(s, 500.0) * 1.6 + vec3(1.0, .48, .20) * pow(s, 10.0) * .38) * sunVis;
         float m = max(dot(direction, moonDir), 0.0);
-        float moonVis = smoothstep(.08, .82, uNight) * (1.0 - uDay) * (1.0 - 0.75 * uOvercast);
+        float moonVis = smoothstep(.08, .82, uNight) * (1.0 - uDay) * (1.0 - 0.75 * uOvercast) * (1.0 - 0.94 * uRain);
         float moonDisc = smoothstep(.99938, .99964, m);
         col += (vec3(.84, .90, .98) * moonDisc * 1.55 + vec3(.22, .28, .42) * pow(m, 95.0) * .28 + vec3(.09, .13, .22) * pow(m, 12.0) * .08) * moonVis;
         col = mix(haze, col, smoothstep(-.025, .16 - .13 * pl, h));
@@ -4854,7 +4869,9 @@ var Xm=new dt(new lr(900,32,20),new rt({side:_t,depthWrite:!1,fog:!1,uniforms:{s
           stormProx = exp(-dA * dA / 0.8);
           if (direction.y > 0.002) {
             if (uNight > 0.01 && uDay < 0.99) col += milkyWay(direction) * uNight * (1.0 - uDay) * smoothstep(0.03, 0.30, direction.y) * pl * (1.0 - 0.7 * uCover);
+            vec3 colDry = col;
             plainsClouds(col, direction, haze, fwb, stormProx);
+            col = mix(col, mix(colDry, col, 0.35), uRain);   // under a rain deck the puffy sunlit decks fade into it, the storm cell stays
             col += plainsRays(direction) * pl;
           }
         }
@@ -5076,6 +5093,7 @@ desertMaterial.onBeforeCompile = shader => {
   shader.uniforms.uDay = Xm.material.uniforms.uDay;
   shader.uniforms.uOvercast = Xm.material.uniforms.uOvercast;
   shader.uniforms.uStormWind = plainsStormWindUniform;
+  shader.uniforms.uRain = Xm.material.uniforms.uRain;
   shader.uniforms.PLAINS_LANES = plainsLanesUniform;
   shader.vertexShader = shader.vertexShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vDesertWorld;\nvarying vec3 vDesertWorldNormal;')
@@ -5137,6 +5155,7 @@ desertMaterial.onBeforeCompile = shader => {
       uniform float uDay;
       uniform float uOvercast;
       uniform float uStormWind;
+      uniform float uRain;
       ${PLAINS_SKY_GLSL}
       // ---------- Great Plains ground ----------
       ${PLAINS_NOISE_GLSL}
@@ -5440,7 +5459,15 @@ desertMaterial.onBeforeCompile = shader => {
       ground = mix(ground, vec3(.155,.148,.135) * mix(1.0, 0.62, wetFactor), srTurnout * 0.92);
       ground = mix(ground, vec3(.185,.174,.157), apron);
       ground = mix(ground, vec3(.145,.138,.128) * mix(1.0, 0.60, wetFactor), pavedApron);
-      ground = mix(ground, vec3(.24,.23,.20) * (0.85 + 0.25 * n), plainsGravel);
+      if (plainsGravel > 0.0) {
+        // A worn gravel lot, not a grey slab: speckle, darker polished ruts, weeds pushing through, and a ragged edge.
+        vec2 pgv = p - 5000.0 * floor(p / 5000.0);
+        float gA = gn(pgv * 2.3), gB = gn(pgv * 17.0), gC = gn(pgv * 0.21 + 9.0);
+        vec3 gravC = vec3(.26, .245, .21) * (0.66 + 0.34 * gA + 0.24 * gB);
+        gravC = mix(gravC, vec3(.15, .165, .09), smoothstep(0.52, 0.78, gC) * 0.6);
+        gravC = mix(gravC, vec3(.115, .11, .10), smoothstep(0.60, 0.78, gn(pgv * vec2(0.9, 0.14) + 3.0)) * 0.55);
+        ground = mix(ground, gravC, smoothstep(0.12, 0.8, plainsGravel * (0.65 + 0.7 * gA)));
+      }
       if (asphaltMask > 0.0) {
         vec3 asphalt = vec3(.040,.042,.050) * (.93 + .14 * n);
         float aPlains = nwH(p.x, 4600.0, 14000.0);
@@ -5516,7 +5543,9 @@ desertMaterial.onBeforeCompile = shader => {
         }
       }
       diffuseColor.rgb *= ground;
-      pGlowCol *= pGlowK * (1.0 - max(asphaltMask, max(pavedApron, max(plainsGravel, srTurnout))));`)
+      // The grass carries a small self-lit floor at dusk; the gravel lots need the same, in their own colour, or they read as black holes.
+      pGlowCol = mix(pGlowCol, ground * 0.85, plainsGravel);
+      pGlowCol *= pGlowK * (1.0 - max(asphaltMask, max(pavedApron, srTurnout)));`)
     .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n      totalEmissiveRadiance += pGlowCol + nwSheen;')
     .replace('#include <fog_fragment>', `
       #ifdef USE_FOG
@@ -12615,15 +12644,18 @@ let redCoalMesh = (function() {
   const s = 1.6;
   const pos = [-s,-s,0,  s,-s,0,  s,s,0,  -s,-s,0,  s,s,0,  -s,s,0];
   geo.setAttribute('position', new Et(new Float32Array(pos), 3));
-  const mat = new ji({
-    color: 0xff1515,
-    emissive: 0xff1515,
-    emissiveIntensity: 2.5,
-    fog: false,
-    depthWrite: false,
-    transparent: true,
-    opacity: 0
-  });
+  geo.setAttribute('uv', new Et(new Float32Array([0,0, 1,0, 1,1, 0,0, 1,1, 0,1]), 2));
+  // An unlit, additive, soft-edged glow. The quad has no normals, so a lit material (as this was) rendered it as a solid
+  // black square for the whole approach; a glowing coal needs no lighting at all.
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const cx = cv.getContext('2d');
+  const gr = cx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,170,150,1)'); gr.addColorStop(0.18, 'rgba(255,60,40,0.85)'); gr.addColorStop(0.55, 'rgba(230,20,10,0.25)'); gr.addColorStop(1, 'rgba(200,0,0,0)');
+  cx.fillStyle = gr; cx.fillRect(0, 0, 64, 64);
+  const tex = new qt(cv); tex.colorSpace = 'srgb'; tex.needsUpdate = true;
+  const mat = new wi({ map: tex, color: 0xffffff, depthWrite: false, transparent: true, opacity: 0 });
+  mat.fog = false;
+  mat.blending = 2;   // additive
   const m = new dt(geo, mat);
   m.position.set(64570, 9.8, -14);
   m.renderOrder = 999;
@@ -19045,6 +19077,9 @@ terrainWetnessUniform.value = Math.max(0, Math.min(1, Math.max(wetRegion * (0.45
 Xm.material.uniforms.uNight.value = uNight;
 Xm.material.uniforms.uDay.value = uDay;
 Xm.material.uniforms.uOvercast.value = nwCloud;
+// Rain falls out of cloud everywhere: the sky closes over a little before the first drops, and opens after the last.
+const rainCloud = Math.min(1, Math.max(wetRegion * nwH(weatherSwing, 0.26, 0.66), nwH(stormNow, 0.28, 0.80), rainFactor * 1.2));
+Xm.material.uniforms.uRain.value = rainCloud;
 Xm.material.uniforms.uTime.value = eg.elapsedTime;
 terrainTimeUniform.value = eg.elapsedTime;
 plainsStormWindUniform.value = plainsStormWind;
@@ -19114,6 +19149,11 @@ Nt.fog.near = 70 - 46 * gloom;
     Nt.fog.near = Nt.fog.near * (1 - pf) + 160 * pf;
   }
 }
+if (rainCloud > 0.01) {
+  // Same grey the sky deck uses (see plainsSkyCol), so the far land and the cloud still meet without a seam.
+  const fc = Nt.fog.color, fl = 0.30 * fc.r + 0.55 * fc.g + 0.15 * fc.b, rw = rainCloud * 0.92;
+  fc.r += (fl * 0.88 * 0.80 - fc.r) * rw; fc.g += (fl * 0.95 * 0.80 - fc.g) * rw; fc.b += (fl * 1.04 * 0.80 - fc.b) * rw;
+}
 terrainSkyTone.value.setRGB(Nt.fog.color.r, Nt.fog.color.g, Nt.fog.color.b).multiplyScalar(0.55);
 // Under cloud the fill light takes the cool grey-green of the overcast instead of the clear-dusk violet.
 {
@@ -19124,7 +19164,8 @@ terrainSkyTone.value.setRGB(Nt.fog.color.r, Nt.fog.color.g, Nt.fog.color.b).mult
 let sk=Math.max(0,(uNight-.3)/.7);
 sk=sk*sk*(3-2*sk) * (1.0 - uDay) * (1.0 - 0.95 * gloom);
 Nt.userData.stars.visible = sk > 0;
-Nt.userData.stars.material.opacity = .85 * sk;
+Nt.userData.stars.material.opacity = .85 * sk * (1 - rainCloud);
+if (rainCloud > 0.98) Nt.userData.stars.visible = false;
 ufoFrame(i, t);
 updateLocalLightVisibility();
 
@@ -19269,6 +19310,7 @@ if(redCoalMesh) {
   else if(distSign > 4500 && distSign < 6000) coalAlpha = 1.0 - (distSign - 4500) / 1500.0;
   const coalShimmer = 1.0 + 0.08 * Math.sin(t * 3.4 + distSign * 0.01) * plainsGust(64570, -14, t);
   redCoalMesh.material.opacity = Math.max(0, Math.min(1, coalAlpha * 0.85 * coalShimmer));
+  redCoalMesh.scale.setScalar(Math.min(4, Math.max(1, distSign / 1200)));   // keeps the ember a visible point from a long way off
 }
 
 // 5. Windmill animation
